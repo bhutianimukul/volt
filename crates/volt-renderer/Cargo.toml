@@ -1,0 +1,21 @@
+[package]
+name = "volt-renderer"
+description = "Metal rendering, glyph atlas, and damage tracking"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+volt-core = { path = "../volt-core" }
+objc2.workspace = true
+objc2-foundation.workspace = true
+objc2-metal.workspace = true
+objc2-quartz-core.workspace = true
+cosmic-text.workspace = true
+bitvec.workspace = true
+tracing.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]

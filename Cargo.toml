@@ -1,0 +1,77 @@
+[workspace]
+members = ["crates/*"]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0-alpha"
+edition = "2024"
+license = "MIT"
+repository = "https://github.com/bhutianimukul/volt"
+rust-version = "1.85"
+
+[workspace.dependencies]
+# VT parsing
+vte = "0.15"
+
+# macOS native (objc2 ecosystem)
+objc2 = "0.6"
+objc2-foundation = { version = "0.3", features = ["NSString", "NSRunLoop", "NSThread"] }
+objc2-app-kit = { version = "0.3", features = [
+    "NSApplication",
+    "NSWindow",
+    "NSView",
+    "NSEvent",
+    "NSResponder",
+    "NSRunningApplication",
+    "NSMenu",
+    "NSMenuItem",
+    "NSPasteboard",
+    "NSScreen",
+    "NSColor",
+    "NSGraphics",
+    "NSText",
+] }
+objc2-metal = { version = "0.3", features = [
+    "MTLDevice",
+    "MTLCommandQueue",
+    "MTLCommandBuffer",
+    "MTLRenderPipeline",
+    "MTLRenderCommandEncoder",
+    "MTLRenderPass",
+    "MTLTexture",
+    "MTLBuffer",
+    "MTLLibrary",
+    "MTLResource",
+    "MTLPixelFormat",
+    "MTLVertexDescriptor",
+    "MTLDepthStencil",
+    "MTLDrawable",
+] }
+objc2-quartz-core = { version = "0.3", features = ["CAMetalLayer", "CAMetalDisplayLink", "objc2-metal"] }
+
+# Text pipeline
+cosmic-text = "0.12"
+
+# Threading & channels
+crossbeam-channel = "0.5"
+
+# Config
+serde = { version = "1", features = ["derive"] }
+toml = "0.8"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Error handling
+thiserror = "2"
+
+# Bit operations (damage tracking)
+bitvec = "1"
+
+# Async (for AI/SSH only)
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "io-util"] }
+
+# PTY (raw libc forkpty)
+libc = "0.2"
+mio = { version = "1", features = ["os-poll", "os-ext"] }
