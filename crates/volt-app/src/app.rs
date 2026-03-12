@@ -203,6 +203,30 @@ pub fn handle_command_key(key_char: &str, has_shift: bool) -> bool {
     }
 }
 
+/// Write all bytes to a raw fd, retrying on `EINTR`. Returns `true` on success.
+fn pty_write_all(fd: std::os::fd::RawFd, data: &[u8]) -> bool {
+    let mut offset = 0;
+    while offset < data.len() {
+        // SAFETY: fd is a valid PTY master fd that outlives this call.
+        let n = unsafe {
+            libc::write(
+                fd,
+                data[offset..].as_ptr() as *const libc::c_void,
+                data.len() - offset,
+            )
+        };
+        if n < 0 {
+            let err = std::io::Error::last_os_error();
+            if err.kind() == std::io::ErrorKind::Interrupted {
+                continue;
+            }
+            return false;
+        }
+        offset += n as usize;
+    }
+    true
+}
+
 /// Paste system clipboard contents into the PTY.
 ///
 /// Wraps in bracketed paste sequences if the terminal has bracketed paste mode enabled.
@@ -231,27 +255,21 @@ fn paste_from_clipboard() {
             return;
         }
 
-        // Write directly to the PTY master fd from the background thread.
-        use std::io::Write;
-        // SAFETY: fd is a valid PTY master file descriptor that outlives this thread.
-        let file: std::fs::File =
-            unsafe { std::os::unix::io::FromRawFd::from_raw_fd(fd) };
-        let mut file = file;
-
+        // Write directly to the PTY master fd using libc::write.
+        // We intentionally avoid File::from_raw_fd because it takes ownership
+        // of the fd — if a panic unwinds before mem::forget, the destructor
+        // closes the PTY master fd, crashing subsequent I/O.
         if bracketed {
-            let _ = file.write_all(b"\x1b[200~");
+            pty_write_all(fd, b"\x1b[200~");
         }
         for chunk in output.stdout.chunks(4096) {
-            if file.write_all(chunk).is_err() {
+            if !pty_write_all(fd, chunk) {
                 break;
             }
         }
         if bracketed {
-            let _ = file.write_all(b"\x1b[201~");
+            pty_write_all(fd, b"\x1b[201~");
         }
-
-        // Don't close the fd — it's owned by PtyHandle
-        std::mem::forget(file);
     });
 }
 
