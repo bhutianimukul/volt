@@ -1,2 +1,3 @@
-//! Renderer-side damage tracking — consumes dirty bits from volt-core's damage
-//! tracker to determine which instance buffer regions need rebuilding.
+//! Renderer-side damage tracking — bridges volt-core DamageState to render decisions.
+
+pub use volt_core::damage::{DamageState, DamageTracker};

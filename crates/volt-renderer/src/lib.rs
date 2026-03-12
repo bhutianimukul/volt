@@ -1,13 +1,7 @@
-//! volt-renderer: Metal rendering pipeline, glyph atlas, and damage tracking.
+//! volt-renderer: Metal rendering pipeline, glyph atlas, and text shaping.
 //!
-//! Uses `objc2-metal` (NOT deprecated `metal-rs`) for direct Metal API access.
-//! Text pipeline uses `cosmic-text` (fontdb + harfrust shaping + swash rasterization).
-//!
-//! Render passes (instanced, one draw call per pass):
-//! 1. Background colors
-//! 2. Underlines/strikethrough/decorations
-//! 3. Text glyphs (sampling atlas texture)
-//! 4. Cursor + selection overlay
+//! Uses `objc2-metal` for direct Metal API access and `cosmic-text` for
+//! font discovery, shaping (harfrust), and rasterization (swash).
 
 pub mod atlas;
 pub mod damage;
@@ -15,3 +9,7 @@ pub mod pipeline;
 pub mod renderer;
 pub mod shaders;
 pub mod text;
+
+pub use pipeline::MetalPipeline;
+pub use renderer::Renderer;
+pub use text::{CellMetrics, TextSystem};
