@@ -286,21 +286,43 @@ impl Renderer {
     ) {
         encoder.setRenderPipelineState(pipeline_state);
 
-        // Set instance buffer (buffer 0)
-        let instance_bytes = unsafe {
-            std::slice::from_raw_parts(
-                instances.as_ptr() as *const u8,
-                instances.len() * size_of::<Instance>(),
-            )
-        };
-        unsafe {
-            encoder.setVertexBytes_length_atIndex(
-                std::ptr::NonNull::new(instance_bytes.as_ptr() as *mut _).unwrap(),
-                instance_bytes.len(),
-                0,
-            );
+        let byte_len = std::mem::size_of_val(instances);
 
-            // Set uniforms (buffer 1)
+        // Metal's setVertexBytes has a 4KB limit. For larger data, create
+        // a shared MTLBuffer. Terminal grids can easily exceed 4KB when the
+        // screen is full of text (~3000 instances × 48 bytes = ~144KB).
+        const MAX_INLINE_BYTES: usize = 4096;
+
+        if byte_len <= MAX_INLINE_BYTES {
+            let instance_bytes =
+                unsafe { std::slice::from_raw_parts(instances.as_ptr() as *const u8, byte_len) };
+            unsafe {
+                encoder.setVertexBytes_length_atIndex(
+                    std::ptr::NonNull::new(instance_bytes.as_ptr() as *mut _).unwrap(),
+                    instance_bytes.len(),
+                    0,
+                );
+            }
+        } else {
+            // Allocate a shared buffer and memcpy instance data into it.
+            let Some(buffer) = self.pipeline.create_instance_buffer(byte_len) else {
+                return;
+            };
+            unsafe {
+                std::ptr::copy_nonoverlapping(
+                    instances.as_ptr() as *const u8,
+                    buffer.contents().as_ptr() as *mut u8,
+                    byte_len,
+                );
+            }
+            // SAFETY: buffer contains valid Instance data we just copied above.
+            unsafe {
+                encoder.setVertexBuffer_offset_atIndex(Some(&buffer), 0, 0);
+            }
+        }
+
+        unsafe {
+            // Set uniforms (buffer 1) — always small, inline is fine.
             encoder.setVertexBytes_length_atIndex(
                 std::ptr::NonNull::new(uniform_bytes.as_ptr() as *mut _).unwrap(),
                 uniform_bytes.len(),
