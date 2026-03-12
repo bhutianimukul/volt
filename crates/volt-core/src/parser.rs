@@ -98,12 +98,7 @@ impl Handler<'_> {
         if row == bottom {
             // At bottom of scroll region: scroll up
             let bg = self.cursor.template.bg;
-            let scrolled = self.grid.scroll_up(
-                self.scroll_region.top,
-                bottom,
-                1,
-                bg,
-            );
+            let scrolled = self.grid.scroll_up(self.scroll_region.top, bottom, 1, bg);
             self.scrollback_rows.extend(scrolled);
         } else if row + 1 < self.rows {
             self.cursor.pos.row += 1;
@@ -136,40 +131,118 @@ impl Handler<'_> {
         while i < flat.len() {
             match flat[i] {
                 0 => self.cursor.template.reset(),
-                1 => self.cursor.template.flags = self.cursor.template.flags.insert(CellFlags::BOLD),
+                1 => {
+                    self.cursor.template.flags = self.cursor.template.flags.insert(CellFlags::BOLD)
+                }
                 2 => self.cursor.template.flags = self.cursor.template.flags.insert(CellFlags::DIM),
-                3 => self.cursor.template.flags = self.cursor.template.flags.insert(CellFlags::ITALIC),
+                3 => {
+                    self.cursor.template.flags =
+                        self.cursor.template.flags.insert(CellFlags::ITALIC)
+                }
                 4 => {
                     // Underline — check for subparameter for style
-                    self.cursor.template.flags = self.cursor.template.flags.remove(CellFlags::ALL_UNDERLINES);
-                    if i + 1 < flat.len() && params.len() > 0 && params[0].len() > 1 {
+                    self.cursor.template.flags =
+                        self.cursor.template.flags.remove(CellFlags::ALL_UNDERLINES);
+                    if i + 1 < flat.len() && !params.is_empty() && params[0].len() > 1 {
                         // Subparameter style: 4:0 = none, 4:1 = single, 4:2 = double, 4:3 = curly, etc.
                         match flat[i + 1] {
                             0 => {} // No underline
-                            1 => self.cursor.template.flags = self.cursor.template.flags.insert(CellFlags::UNDERLINE),
-                            2 => self.cursor.template.flags = self.cursor.template.flags.insert(CellFlags::DOUBLE_UNDERLINE),
-                            3 => self.cursor.template.flags = self.cursor.template.flags.insert(CellFlags::CURLY_UNDERLINE),
-                            4 => self.cursor.template.flags = self.cursor.template.flags.insert(CellFlags::DOTTED_UNDERLINE),
-                            5 => self.cursor.template.flags = self.cursor.template.flags.insert(CellFlags::DASHED_UNDERLINE),
-                            _ => self.cursor.template.flags = self.cursor.template.flags.insert(CellFlags::UNDERLINE),
+                            1 => {
+                                self.cursor.template.flags =
+                                    self.cursor.template.flags.insert(CellFlags::UNDERLINE)
+                            }
+                            2 => {
+                                self.cursor.template.flags = self
+                                    .cursor
+                                    .template
+                                    .flags
+                                    .insert(CellFlags::DOUBLE_UNDERLINE)
+                            }
+                            3 => {
+                                self.cursor.template.flags = self
+                                    .cursor
+                                    .template
+                                    .flags
+                                    .insert(CellFlags::CURLY_UNDERLINE)
+                            }
+                            4 => {
+                                self.cursor.template.flags = self
+                                    .cursor
+                                    .template
+                                    .flags
+                                    .insert(CellFlags::DOTTED_UNDERLINE)
+                            }
+                            5 => {
+                                self.cursor.template.flags = self
+                                    .cursor
+                                    .template
+                                    .flags
+                                    .insert(CellFlags::DASHED_UNDERLINE)
+                            }
+                            _ => {
+                                self.cursor.template.flags =
+                                    self.cursor.template.flags.insert(CellFlags::UNDERLINE)
+                            }
                         }
                         i += 1;
                     } else {
-                        self.cursor.template.flags = self.cursor.template.flags.insert(CellFlags::UNDERLINE);
+                        self.cursor.template.flags =
+                            self.cursor.template.flags.insert(CellFlags::UNDERLINE);
                     }
                 }
-                5 => self.cursor.template.flags = self.cursor.template.flags.insert(CellFlags::BLINK),
-                7 => self.cursor.template.flags = self.cursor.template.flags.insert(CellFlags::INVERSE),
-                8 => self.cursor.template.flags = self.cursor.template.flags.insert(CellFlags::HIDDEN),
-                9 => self.cursor.template.flags = self.cursor.template.flags.insert(CellFlags::STRIKETHROUGH),
-                21 => self.cursor.template.flags = self.cursor.template.flags.insert(CellFlags::DOUBLE_UNDERLINE),
-                22 => self.cursor.template.flags = self.cursor.template.flags.remove(CellFlags::BOLD).remove(CellFlags::DIM),
-                23 => self.cursor.template.flags = self.cursor.template.flags.remove(CellFlags::ITALIC),
-                24 => self.cursor.template.flags = self.cursor.template.flags.remove(CellFlags::ALL_UNDERLINES),
-                25 => self.cursor.template.flags = self.cursor.template.flags.remove(CellFlags::BLINK),
-                27 => self.cursor.template.flags = self.cursor.template.flags.remove(CellFlags::INVERSE),
-                28 => self.cursor.template.flags = self.cursor.template.flags.remove(CellFlags::HIDDEN),
-                29 => self.cursor.template.flags = self.cursor.template.flags.remove(CellFlags::STRIKETHROUGH),
+                5 => {
+                    self.cursor.template.flags = self.cursor.template.flags.insert(CellFlags::BLINK)
+                }
+                7 => {
+                    self.cursor.template.flags =
+                        self.cursor.template.flags.insert(CellFlags::INVERSE)
+                }
+                8 => {
+                    self.cursor.template.flags =
+                        self.cursor.template.flags.insert(CellFlags::HIDDEN)
+                }
+                9 => {
+                    self.cursor.template.flags =
+                        self.cursor.template.flags.insert(CellFlags::STRIKETHROUGH)
+                }
+                21 => {
+                    self.cursor.template.flags = self
+                        .cursor
+                        .template
+                        .flags
+                        .insert(CellFlags::DOUBLE_UNDERLINE)
+                }
+                22 => {
+                    self.cursor.template.flags = self
+                        .cursor
+                        .template
+                        .flags
+                        .remove(CellFlags::BOLD)
+                        .remove(CellFlags::DIM)
+                }
+                23 => {
+                    self.cursor.template.flags =
+                        self.cursor.template.flags.remove(CellFlags::ITALIC)
+                }
+                24 => {
+                    self.cursor.template.flags =
+                        self.cursor.template.flags.remove(CellFlags::ALL_UNDERLINES)
+                }
+                25 => {
+                    self.cursor.template.flags = self.cursor.template.flags.remove(CellFlags::BLINK)
+                }
+                27 => {
+                    self.cursor.template.flags =
+                        self.cursor.template.flags.remove(CellFlags::INVERSE)
+                }
+                28 => {
+                    self.cursor.template.flags =
+                        self.cursor.template.flags.remove(CellFlags::HIDDEN)
+                }
+                29 => {
+                    self.cursor.template.flags =
+                        self.cursor.template.flags.remove(CellFlags::STRIKETHROUGH)
+                }
                 // Foreground colors
                 30 => self.cursor.template.fg = Color::Named(NamedColor::Black),
                 31 => self.cursor.template.fg = Color::Named(NamedColor::Red),
@@ -240,9 +313,7 @@ fn parse_color(params: &[u16]) -> Option<(Color, usize)> {
             let b = params[3] as u8;
             Some((Color::Rgb(Rgb::new(r, g, b)), 4))
         }
-        Some(5) if params.len() >= 2 => {
-            Some((Color::Indexed(params[1] as u8), 2))
-        }
+        Some(5) if params.len() >= 2 => Some((Color::Indexed(params[1] as u8), 2)),
         _ => None,
     }
 }
@@ -289,7 +360,7 @@ impl vte::Perform for Handler<'_> {
                 self.cursor.pending_wrap = false;
             }
             // LF, VT, FF — Line Feed (and vertical tab, form feed treated same)
-            0x0A | 0x0B | 0x0C => {
+            0x0A..=0x0C => {
                 self.linefeed();
             }
             // CR — Carriage Return
@@ -417,24 +488,17 @@ impl vte::Perform for Handler<'_> {
             ('S', false) => {
                 let n = csi_param(&params, 0, 1) as usize;
                 let bg = self.cursor.template.bg;
-                let scrolled = self.grid.scroll_up(
-                    self.scroll_region.top,
-                    self.scroll_region.bottom,
-                    n,
-                    bg,
-                );
+                let scrolled =
+                    self.grid
+                        .scroll_up(self.scroll_region.top, self.scroll_region.bottom, n, bg);
                 self.scrollback_rows.extend(scrolled);
             }
             // SD — Scroll Down
             ('T', false) => {
                 let n = csi_param(&params, 0, 1) as usize;
                 let bg = self.cursor.template.bg;
-                self.grid.scroll_down(
-                    self.scroll_region.top,
-                    self.scroll_region.bottom,
-                    n,
-                    bg,
-                );
+                self.grid
+                    .scroll_down(self.scroll_region.top, self.scroll_region.bottom, n, bg);
             }
 
             // --- Insert/Delete ---
@@ -642,8 +706,7 @@ impl vte::Perform for Handler<'_> {
             }
             osc::OscCommand::Clipboard { clipboard, data } => {
                 if data == "?" {
-                    self.events
-                        .push(TerminalEvent::ClipboardLoad { clipboard });
+                    self.events.push(TerminalEvent::ClipboardLoad { clipboard });
                 } else {
                     self.events
                         .push(TerminalEvent::ClipboardStore { clipboard, data });
@@ -665,7 +728,8 @@ impl vte::Perform for Handler<'_> {
     }
 
     /// DCS hook — start of a DCS sequence. Ignored for now.
-    fn hook(&mut self, _params: &vte::Params, _intermediates: &[u8], _ignore: bool, _action: char) {}
+    fn hook(&mut self, _params: &vte::Params, _intermediates: &[u8], _ignore: bool, _action: char) {
+    }
 
     /// DCS put — data within a DCS sequence. Ignored.
     fn put(&mut self, _byte: u8) {}

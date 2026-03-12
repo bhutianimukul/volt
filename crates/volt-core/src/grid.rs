@@ -234,15 +234,16 @@ impl Grid {
     ///
     /// Lines at the top of the region are removed (returned for scrollback)
     /// and blank lines are inserted at the bottom.
-    pub fn scroll_up(&mut self, region_top: usize, region_bottom: usize, count: usize, bg: Color) -> Vec<Row> {
+    pub fn scroll_up(
+        &mut self,
+        region_top: usize,
+        region_bottom: usize,
+        count: usize,
+        bg: Color,
+    ) -> Vec<Row> {
         let count = count.min(region_bottom - region_top + 1);
         // Drain the lines that scroll off
-        let scrolled_off: Vec<Row> = (0..count)
-            .map(|_| {
-                let row = self.rows.remove(region_top);
-                row
-            })
-            .collect();
+        let scrolled_off: Vec<Row> = (0..count).map(|_| self.rows.remove(region_top)).collect();
 
         // Insert blank lines at the bottom of the region
         let insert_at = region_bottom + 1 - count;
@@ -266,7 +267,13 @@ impl Grid {
     ///
     /// Lines at the bottom of the region are discarded and blank lines
     /// are inserted at the top.
-    pub fn scroll_down(&mut self, region_top: usize, region_bottom: usize, count: usize, bg: Color) {
+    pub fn scroll_down(
+        &mut self,
+        region_top: usize,
+        region_bottom: usize,
+        count: usize,
+        bg: Color,
+    ) {
         let count = count.min(region_bottom - region_top + 1);
 
         // Remove lines from bottom of region

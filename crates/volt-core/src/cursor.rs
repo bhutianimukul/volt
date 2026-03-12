@@ -3,18 +3,12 @@
 use crate::cell::CellTemplate;
 
 /// Cursor position in the terminal grid.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct CursorPos {
     /// Row (0-indexed from top of visible area).
     pub row: usize,
     /// Column (0-indexed).
     pub col: usize,
-}
-
-impl Default for CursorPos {
-    fn default() -> Self {
-        Self { row: 0, col: 0 }
-    }
 }
 
 /// Cursor visual style.
@@ -106,23 +100,12 @@ impl Cursor {
 ///
 /// Per the VT spec, DECSC saves: cursor position, character attributes (SGR),
 /// character set designations, origin mode, and selective erase attribute.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct SavedCursor {
     pub pos: CursorPos,
     pub template: CellTemplate,
     pub origin_mode: bool,
     pub pending_wrap: bool,
-}
-
-impl Default for SavedCursor {
-    fn default() -> Self {
-        Self {
-            pos: CursorPos::default(),
-            template: CellTemplate::default(),
-            origin_mode: false,
-            pending_wrap: false,
-        }
-    }
 }
 
 impl SavedCursor {

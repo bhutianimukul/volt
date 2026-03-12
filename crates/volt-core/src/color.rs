@@ -95,13 +95,11 @@ pub fn default_indexed_color(index: u8) -> Rgb {
         // 16-231: 6x6x6 color cube
         16..=231 => {
             let idx = index - 16;
-            let b = (idx % 6) as u8;
-            let g = ((idx / 6) % 6) as u8;
-            let r = (idx / 36) as u8;
+            let b = idx % 6;
+            let g = (idx / 6) % 6;
+            let r = idx / 36;
 
-            let component = |c: u8| -> u8 {
-                if c == 0 { 0 } else { 55 + 40 * c }
-            };
+            let component = |c: u8| -> u8 { if c == 0 { 0 } else { 55 + 40 * c } };
 
             Rgb::new(component(r), component(g), component(b))
         }
@@ -118,22 +116,22 @@ pub fn default_indexed_color(index: u8) -> Rgb {
 /// Default ANSI colors (indices 0-15). Matches xterm defaults.
 fn default_ansi_color(index: u8) -> Rgb {
     match index {
-        0 => Rgb::new(0, 0, 0),         // Black
-        1 => Rgb::new(205, 0, 0),       // Red
-        2 => Rgb::new(0, 205, 0),       // Green
-        3 => Rgb::new(205, 205, 0),     // Yellow
-        4 => Rgb::new(0, 0, 238),       // Blue
-        5 => Rgb::new(205, 0, 205),     // Magenta
-        6 => Rgb::new(0, 205, 205),     // Cyan
-        7 => Rgb::new(229, 229, 229),   // White
-        8 => Rgb::new(127, 127, 127),   // Bright Black
-        9 => Rgb::new(255, 0, 0),       // Bright Red
-        10 => Rgb::new(0, 255, 0),      // Bright Green
-        11 => Rgb::new(255, 255, 0),    // Bright Yellow
-        12 => Rgb::new(92, 92, 255),    // Bright Blue
-        13 => Rgb::new(255, 0, 255),    // Bright Magenta
-        14 => Rgb::new(0, 255, 255),    // Bright Cyan
-        15 => Rgb::new(255, 255, 255),  // Bright White
+        0 => Rgb::new(0, 0, 0),        // Black
+        1 => Rgb::new(205, 0, 0),      // Red
+        2 => Rgb::new(0, 205, 0),      // Green
+        3 => Rgb::new(205, 205, 0),    // Yellow
+        4 => Rgb::new(0, 0, 238),      // Blue
+        5 => Rgb::new(205, 0, 205),    // Magenta
+        6 => Rgb::new(0, 205, 205),    // Cyan
+        7 => Rgb::new(229, 229, 229),  // White
+        8 => Rgb::new(127, 127, 127),  // Bright Black
+        9 => Rgb::new(255, 0, 0),      // Bright Red
+        10 => Rgb::new(0, 255, 0),     // Bright Green
+        11 => Rgb::new(255, 255, 0),   // Bright Yellow
+        12 => Rgb::new(92, 92, 255),   // Bright Blue
+        13 => Rgb::new(255, 0, 255),   // Bright Magenta
+        14 => Rgb::new(0, 255, 255),   // Bright Cyan
+        15 => Rgb::new(255, 255, 255), // Bright White
         _ => Rgb::new(0, 0, 0),
     }
 }
