@@ -15,7 +15,7 @@ vte = "0.15"
 
 # macOS native (objc2 ecosystem)
 objc2 = "0.6"
-objc2-foundation = { version = "0.3", features = ["NSString", "NSRunLoop", "NSThread"] }
+objc2-foundation = { version = "0.3", features = ["NSString", "NSRunLoop", "NSThread", "NSNotification", "NSGeometry"] }
 objc2-app-kit = { version = "0.3", features = [
     "NSApplication",
     "NSWindow",
@@ -47,7 +47,7 @@ objc2-metal = { version = "0.3", features = [
     "MTLDepthStencil",
     "MTLDrawable",
 ] }
-objc2-quartz-core = { version = "0.3", features = ["CAMetalLayer", "CAMetalDisplayLink", "objc2-metal"] }
+objc2-quartz-core = { version = "0.3", features = ["CALayer", "CAMetalLayer", "CAMetalDisplayLink", "objc2-metal"] }
 
 # Text pipeline
 cosmic-text = "0.12"

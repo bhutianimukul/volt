@@ -1,5 +1,5 @@
 [package]
-name = "volt-app"
+name = "volt"
 description = "macOS app shell — AppKit window, event loop, config, tabs/splits"
 version.workspace = true
 edition.workspace = true

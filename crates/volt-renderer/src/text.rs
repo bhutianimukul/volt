@@ -114,6 +114,15 @@ impl TextSystem {
         }
     }
 
+    /// Change the font size, recomputing cell metrics and clearing caches.
+    ///
+    /// `font_size` and `line_height` should be in physical pixels (already scaled for Retina).
+    pub fn set_font_size(&mut self, font_size: f32, line_height: f32) {
+        self.metrics = compute_cell_metrics(&self.font_system, None, font_size, line_height);
+        self.char_cache.clear();
+        self.prepopulate_ascii();
+    }
+
     /// Get a mutable reference to the font system (for advanced use).
     pub fn font_system_mut(&mut self) -> &mut FontSystem {
         &mut self.font_system
@@ -147,13 +156,11 @@ fn compute_cell_metrics(
     let mut cell_width = font_size * 0.6; // fallback
     let mut baseline = line_height * 0.8;
 
-    for run in buffer.layout_runs() {
-        for glyph in run.glyphs.iter() {
+    if let Some(run) = buffer.layout_runs().next() {
+        if let Some(glyph) = run.glyphs.iter().next() {
             cell_width = glyph.w;
             baseline = run.line_y;
-            break;
         }
-        break;
     }
 
     // Drop the temporary font system, use the real one
@@ -197,13 +204,11 @@ fn shape_single_char(
         buffer.shape_until_scroll(true);
     }
 
-    for run in buffer.layout_runs() {
-        for glyph in run.glyphs.iter() {
-            return Some(glyph.physical((0.0, 0.0), 1.0).cache_key);
-        }
-    }
-
-    None
+    buffer
+        .layout_runs()
+        .next()
+        .and_then(|run| run.glyphs.iter().next())
+        .map(|glyph| glyph.physical((0.0, 0.0), 1.0).cache_key)
 }
 
 /// Convert a cosmic-text SwashImage to our GlyphImage format (always RGBA).

@@ -96,11 +96,31 @@ impl Renderer {
         self.viewport_height = height;
     }
 
+    /// Change font size dynamically (for Cmd+Plus / Cmd+Minus zoom).
+    ///
+    /// Both `font_size` and `line_height` should be in physical pixels.
+    /// Clears glyph caches and atlas, recomputes cell metrics.
+    pub fn set_font_size(&mut self, font_size: f32, line_height: f32) {
+        self.text.set_font_size(font_size, line_height);
+        self.atlas = GlyphAtlas::with_default_size();
+        if let Ok(tex) = self.pipeline.create_atlas_texture(ATLAS_SIZE, ATLAS_SIZE) {
+            self.atlas_texture = tex;
+        }
+    }
+
     /// Render the terminal to a drawable.
     ///
     /// Builds instance buffers from the terminal grid, uploads atlas changes,
     /// and executes solid + textured render passes.
-    pub fn draw(&mut self, terminal: &Terminal, render_pass_desc: &MTLRenderPassDescriptor) {
+    ///
+    /// If `present_drawable` is provided, it will be scheduled for presentation
+    /// on the command buffer before commit (required for CAMetalDisplayLink flow).
+    pub fn draw(
+        &mut self,
+        terminal: &Terminal,
+        render_pass_desc: &MTLRenderPassDescriptor,
+        present_drawable: Option<&ProtocolObject<dyn MTLDrawable>>,
+    ) {
         let cell = self.text.cell_metrics();
         let grid = terminal.grid();
         let cursor = terminal.cursor();
@@ -248,6 +268,11 @@ impl Renderer {
         }
 
         encoder.endEncoding();
+
+        if let Some(drawable) = present_drawable {
+            command_buffer.presentDrawable(drawable);
+        }
+
         command_buffer.commit();
     }
 

@@ -11,7 +11,7 @@ mod view;
 mod window;
 
 fn main() {
-    // Initialize tracing
+    // Initialize tracing (respects RUST_LOG env var)
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::from_default_env()
@@ -21,5 +21,10 @@ fn main() {
 
     tracing::info!("Volt v{} starting", env!("CARGO_PKG_VERSION"));
 
-    // TODO: Load config, create NSApplication, open window, start PTY, enter run loop
+    // Load configuration
+    let config = config::load_config();
+    tracing::debug!("config: {config:?}");
+
+    // Run the app (does not return)
+    app::run_app(config);
 }
