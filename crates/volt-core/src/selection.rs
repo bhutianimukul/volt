@@ -127,10 +127,7 @@ mod tests {
 
     #[test]
     fn selection_bounds_normalized() {
-        let sel = Selection::new(
-            SelectionMode::Normal,
-            SelectionPoint::new(5, 10),
-        );
+        let sel = Selection::new(SelectionMode::Normal, SelectionPoint::new(5, 10));
         let mut sel = sel;
         sel.update(SelectionPoint::new(2, 5));
         let (start, end) = sel.bounds();
@@ -140,10 +137,7 @@ mod tests {
 
     #[test]
     fn normal_selection_contains() {
-        let mut sel = Selection::new(
-            SelectionMode::Normal,
-            SelectionPoint::new(1, 5),
-        );
+        let mut sel = Selection::new(SelectionMode::Normal, SelectionPoint::new(1, 5));
         sel.update(SelectionPoint::new(3, 10));
 
         // Middle row — all columns included
@@ -161,10 +155,7 @@ mod tests {
 
     #[test]
     fn block_selection_contains() {
-        let mut sel = Selection::new(
-            SelectionMode::Block,
-            SelectionPoint::new(1, 5),
-        );
+        let mut sel = Selection::new(SelectionMode::Block, SelectionPoint::new(1, 5));
         sel.update(SelectionPoint::new(3, 10));
 
         // Inside block
@@ -176,10 +167,7 @@ mod tests {
 
     #[test]
     fn empty_selection() {
-        let sel = Selection::new(
-            SelectionMode::Normal,
-            SelectionPoint::new(1, 5),
-        );
+        let sel = Selection::new(SelectionMode::Normal, SelectionPoint::new(1, 5));
         assert!(sel.is_empty());
     }
 }

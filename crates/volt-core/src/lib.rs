@@ -190,12 +190,8 @@ impl Terminal {
         self.size = new_size;
 
         // Clamp cursor
-        self.cursor.goto(
-            self.cursor.pos.row,
-            self.cursor.pos.col,
-            rows,
-            cols,
-        );
+        self.cursor
+            .goto(self.cursor.pos.row, self.cursor.pos.col, rows, cols);
     }
 
     /// Clear scrollback buffer.
@@ -264,13 +260,13 @@ mod tests {
     fn cursor_up_down_left_right() {
         let mut t = term(24, 80);
         t.feed(b"\x1b[10;10H"); // Go to row 10, col 10
-        t.feed(b"\x1b[3A");     // Up 3
+        t.feed(b"\x1b[3A"); // Up 3
         assert_eq!(t.cursor().pos.row, 6); // 9 - 3
-        t.feed(b"\x1b[2B");     // Down 2
+        t.feed(b"\x1b[2B"); // Down 2
         assert_eq!(t.cursor().pos.row, 8); // 6 + 2
-        t.feed(b"\x1b[4D");     // Left 4
+        t.feed(b"\x1b[4D"); // Left 4
         assert_eq!(t.cursor().pos.col, 5); // 9 - 4
-        t.feed(b"\x1b[10C");    // Right 10
+        t.feed(b"\x1b[10C"); // Right 10
         assert_eq!(t.cursor().pos.col, 15); // 5 + 10
     }
 
@@ -325,8 +321,8 @@ mod tests {
     fn erase_in_line() {
         let mut t = term(24, 80);
         t.feed(b"ABCDE");
-        t.feed(b"\x1b[3D");    // Move left 3 (cursor now at col 2)
-        t.feed(b"\x1b[0K");    // Erase from cursor to end of line
+        t.feed(b"\x1b[3D"); // Move left 3 (cursor now at col 2)
+        t.feed(b"\x1b[0K"); // Erase from cursor to end of line
         assert_eq!(t.row_text(0), "AB");
     }
 
@@ -413,9 +409,9 @@ mod tests {
     fn save_restore_cursor() {
         let mut t = term(24, 80);
         t.feed(b"\x1b[5;10H"); // Move to row 5, col 10
-        t.feed(b"\x1b7");       // Save cursor (DECSC)
-        t.feed(b"\x1b[1;1H");   // Move to home
-        t.feed(b"\x1b8");       // Restore cursor (DECRC)
+        t.feed(b"\x1b7"); // Save cursor (DECSC)
+        t.feed(b"\x1b[1;1H"); // Move to home
+        t.feed(b"\x1b8"); // Restore cursor (DECRC)
         assert_eq!(t.cursor().pos.row, 4);
         assert_eq!(t.cursor().pos.col, 9);
     }
@@ -424,21 +420,30 @@ mod tests {
     fn osc_title() {
         let mut t = term(24, 80);
         let events = t.feed(b"\x1b]0;My Title\x07");
-        assert!(events.iter().any(|e| matches!(e, TerminalEvent::TitleChanged(s) if s == "My Title")));
+        assert!(
+            events
+                .iter()
+                .any(|e| matches!(e, TerminalEvent::TitleChanged(s) if s == "My Title"))
+        );
     }
 
     #[test]
     fn osc_working_directory() {
         let mut t = term(24, 80);
         let events = t.feed(b"\x1b]7;file:///Users/test\x07");
-        assert!(events.iter().any(|e| matches!(e, TerminalEvent::WorkingDirectoryChanged(s) if s == "file:///Users/test")));
+        assert!(events.iter().any(
+            |e| matches!(e, TerminalEvent::WorkingDirectoryChanged(s) if s == "file:///Users/test")
+        ));
     }
 
     #[test]
     fn resize() {
         let mut t = term(24, 80);
         t.feed(b"Hello");
-        t.resize(TermSize { rows: 30, cols: 100 });
+        t.resize(TermSize {
+            rows: 30,
+            cols: 100,
+        });
         assert_eq!(t.size().rows, 30);
         assert_eq!(t.size().cols, 100);
         assert_eq!(t.row_text(0), "Hello");
@@ -448,8 +453,8 @@ mod tests {
     fn insert_characters() {
         let mut t = term(24, 80);
         t.feed(b"ABCDE");
-        t.feed(b"\x1b[3D");    // Move left 3 (cursor at col 2)
-        t.feed(b"\x1b[2@");    // Insert 2 characters
+        t.feed(b"\x1b[3D"); // Move left 3 (cursor at col 2)
+        t.feed(b"\x1b[2@"); // Insert 2 characters
         // "AB  CDE" (CD shifted right by 2, E may fall off if narrow)
         assert_eq!(t.cell(0, 0).c, 'A');
         assert_eq!(t.cell(0, 1).c, 'B');
@@ -462,8 +467,8 @@ mod tests {
     fn delete_characters() {
         let mut t = term(24, 80);
         t.feed(b"ABCDE");
-        t.feed(b"\x1b[4D");    // Move left 4 (cursor at col 1)
-        t.feed(b"\x1b[2P");    // Delete 2 characters
+        t.feed(b"\x1b[4D"); // Move left 4 (cursor at col 1)
+        t.feed(b"\x1b[2P"); // Delete 2 characters
         // "ADEE" → "ADE" (BC deleted, DE shifted left)
         assert_eq!(t.cell(0, 0).c, 'A');
         assert_eq!(t.cell(0, 1).c, 'D');

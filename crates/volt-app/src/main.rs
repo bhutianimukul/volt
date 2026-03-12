@@ -5,10 +5,10 @@
 //! and Services integration that leak through winit's abstractions).
 
 mod app;
-mod window;
-mod view;
-mod event;
 mod config;
+mod event;
+mod view;
+mod window;
 
 fn main() {
     // Initialize tracing

@@ -33,8 +33,13 @@ impl CellFlags {
     pub const HYPERLINK: Self = Self(1 << 15);
 
     /// Mask covering all underline styles.
-    pub const ALL_UNDERLINES: Self =
-        Self(Self::UNDERLINE.0 | Self::DOUBLE_UNDERLINE.0 | Self::CURLY_UNDERLINE.0 | Self::DOTTED_UNDERLINE.0 | Self::DASHED_UNDERLINE.0);
+    pub const ALL_UNDERLINES: Self = Self(
+        Self::UNDERLINE.0
+            | Self::DOUBLE_UNDERLINE.0
+            | Self::CURLY_UNDERLINE.0
+            | Self::DOTTED_UNDERLINE.0
+            | Self::DASHED_UNDERLINE.0,
+    );
 
     #[inline]
     pub const fn contains(self, other: Self) -> bool {
@@ -103,7 +108,10 @@ impl Default for Cell {
 impl Cell {
     /// Create a cell with a character and default colors.
     pub fn new(c: char) -> Self {
-        Self { c, ..Default::default() }
+        Self {
+            c,
+            ..Default::default()
+        }
     }
 
     /// Reset this cell to a blank space with default attributes.

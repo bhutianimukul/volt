@@ -10,8 +10,8 @@
 //! 4. Cursor + selection overlay
 
 pub mod atlas;
+pub mod damage;
 pub mod pipeline;
+pub mod renderer;
 pub mod shaders;
 pub mod text;
-pub mod damage;
-pub mod renderer;

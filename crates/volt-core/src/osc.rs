@@ -16,10 +16,7 @@ pub enum OscCommand {
     /// OSC 7: Set current working directory.
     SetWorkingDirectory(String),
     /// OSC 8: Set/clear hyperlink. `params` is the URI parameters, `uri` is the link.
-    SetHyperlink {
-        params: String,
-        uri: Option<String>,
-    },
+    SetHyperlink { params: String, uri: Option<String> },
     /// OSC 10: Query/set default foreground color.
     DefaultForeground(Option<String>),
     /// OSC 11: Query/set default background color.
@@ -28,10 +25,7 @@ pub enum OscCommand {
     CursorColor(Option<String>),
     /// OSC 52: Clipboard operation. `clipboard` is which clipboard (c, p, s, etc.),
     /// `data` is base64-encoded content or "?" to query.
-    Clipboard {
-        clipboard: String,
-        data: String,
-    },
+    Clipboard { clipboard: String, data: String },
     /// OSC 133: Shell integration marker.
     ShellIntegration(ShellIntegrationMark),
     /// Unrecognized OSC.
@@ -83,7 +77,11 @@ pub fn parse_osc(params: &[&[u8]]) -> OscCommand {
             let uri = get_param_str(params, 2);
             OscCommand::SetHyperlink {
                 params: osc_params,
-                uri: if uri.as_deref() == Some("") { None } else { uri },
+                uri: if uri.as_deref() == Some("") {
+                    None
+                } else {
+                    uri
+                },
             }
         }
         "10" => OscCommand::DefaultForeground(get_param_str(params, 1)),
