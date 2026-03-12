@@ -9,6 +9,7 @@
 //! Rendering is driven externally by CAMetalDisplayLink (see `app.rs`).
 
 use objc2::rc::Retained;
+use objc2::runtime::Bool;
 use objc2::{MainThreadMarker, MainThreadOnly, define_class, msg_send};
 use objc2_app_kit::{NSEvent, NSEventModifierFlags, NSView};
 use objc2_foundation::{NSObjectProtocol, NSSize};
@@ -50,7 +51,29 @@ define_class!(
             true
         }
 
-        /// Handle key press: check for Cmd+key shortcuts first, then translate to PTY bytes.
+        /// Intercept Cmd+key events before the menu system can consume them.
+        ///
+        /// macOS calls performKeyEquivalent: before keyDown:. Without this
+        /// override, Cmd+C is consumed by the responder chain (standard
+        /// copy: action) and never reaches keyDown.
+        #[unsafe(method(performKeyEquivalent:))]
+        fn perform_key_equivalent(&self, ns_event: &NSEvent) -> Bool {
+            let modifiers = ns_event.modifierFlags();
+            if modifiers.contains(NSEventModifierFlags::Command) {
+                if let Some(key_char) = ns_event
+                    .charactersIgnoringModifiers()
+                    .map(|s| s.to_string())
+                {
+                    let has_shift = modifiers.contains(NSEventModifierFlags::Shift);
+                    if app::handle_command_key(&key_char, has_shift) {
+                        return Bool::YES; // Handled — stop event propagation.
+                    }
+                }
+            }
+            Bool::NO // Not handled — let the responder chain continue.
+        }
+
+        /// Handle key press: non-Cmd keys are translated to PTY bytes.
         #[unsafe(method(keyDown:))]
         fn key_down(&self, ns_event: &NSEvent) {
             let key_code = ns_event.keyCode();
@@ -60,14 +83,10 @@ define_class!(
                 .map(|s| s.to_string());
             let modifiers = ns_event.modifierFlags();
 
-            // Intercept Cmd+key shortcuts before passing to terminal
+            // Cmd+key shortcuts are handled in performKeyEquivalent above.
+            // This fallthrough catches any Cmd+key combos we don't handle.
             if modifiers.contains(NSEventModifierFlags::Command) {
-                if let Some(key_char) = chars_no_mods.as_deref() {
-                    let has_shift = modifiers.contains(NSEventModifierFlags::Shift);
-                    if app::handle_command_key(key_char, has_shift) {
-                        return;
-                    }
-                }
+                return;
             }
 
             if let Some(bytes) = event::translate_key(

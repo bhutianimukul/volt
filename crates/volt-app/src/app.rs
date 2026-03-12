@@ -8,6 +8,7 @@
 //! This is safe because both run on the main thread (enforced by MainThreadOnly).
 
 use std::cell::RefCell;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use objc2::rc::Retained;
 use objc2::runtime::ProtocolObject;
@@ -39,6 +40,12 @@ const MIN_FONT_SIZE: f32 = 8.0;
 const MAX_FONT_SIZE: f32 = 72.0;
 /// Font size step for zoom in/out.
 const FONT_SIZE_STEP: f32 = 1.0;
+
+/// Set to `true` to cancel an in-progress paste. The paste thread checks this
+/// between chunks and exits early when set. Reset to `false` at paste start.
+static PASTE_CANCEL: AtomicBool = AtomicBool::new(false);
+/// `true` while a paste thread is actively writing to the PTY.
+static PASTE_ACTIVE: AtomicBool = AtomicBool::new(false);
 
 /// All mutable application state. Lives in a thread-local because both the
 /// view's keyboard handler and the display link's render callback need it,
@@ -136,7 +143,14 @@ pub fn handle_command_key(key_char: &str, has_shift: bool) -> bool {
             true
         }
         "c" => {
-            copy_to_clipboard();
+            if PASTE_ACTIVE.load(Ordering::Relaxed) {
+                // Cancel in-progress paste.
+                PASTE_CANCEL.store(true, Ordering::Relaxed);
+            }
+            // Send Ctrl+C (SIGINT) to the shell. When selection support is
+            // added (Phase 2), this should copy if there's a selection and
+            // send Ctrl+C only when there isn't.
+            write_to_pty(&[0x03]);
             true
         }
         "k" => {
@@ -203,14 +217,16 @@ pub fn handle_command_key(key_char: &str, has_shift: bool) -> bool {
     }
 }
 
-/// Write all bytes to a raw fd, retrying on `EINTR` and `WouldBlock`.
+/// Write all bytes to a non-blocking fd, using `poll` to wait for writability.
 ///
-/// The PTY master fd is non-blocking, so large writes can return `EAGAIN`
-/// when the kernel buffer is full. We back off briefly and retry rather
-/// than dropping the remaining data.
-fn pty_write_all(fd: std::os::fd::RawFd, data: &[u8]) -> bool {
+/// Checks `PASTE_CANCEL` between writes so Cmd+C can abort a large paste.
+/// Returns `false` on I/O error or cancellation.
+fn pty_write_all_cancellable(fd: std::os::fd::RawFd, data: &[u8]) -> bool {
     let mut offset = 0;
     while offset < data.len() {
+        if PASTE_CANCEL.load(Ordering::Relaxed) {
+            return false;
+        }
         // SAFETY: fd is a valid PTY master fd that outlives this call.
         let n = unsafe {
             libc::write(
@@ -224,8 +240,13 @@ fn pty_write_all(fd: std::os::fd::RawFd, data: &[u8]) -> bool {
             match err.kind() {
                 std::io::ErrorKind::Interrupted => continue,
                 std::io::ErrorKind::WouldBlock => {
-                    // PTY buffer full — let the reader drain it, then retry.
-                    std::thread::sleep(std::time::Duration::from_millis(1));
+                    // Wait up to 50ms for the fd to become writable.
+                    let mut pfd = libc::pollfd {
+                        fd,
+                        events: libc::POLLOUT,
+                        revents: 0,
+                    };
+                    unsafe { libc::poll(&mut pfd, 1, 50) };
                     continue;
                 }
                 _ => return false,
@@ -239,10 +260,8 @@ fn pty_write_all(fd: std::os::fd::RawFd, data: &[u8]) -> bool {
 /// Paste system clipboard contents into the PTY.
 ///
 /// Wraps in bracketed paste sequences if the terminal has bracketed paste mode enabled.
+/// Sets `PASTE_ACTIVE` while running so Cmd+C can cancel via `PASTE_CANCEL`.
 fn paste_from_clipboard() {
-    // Get the PTY master fd and bracketed paste state from the main thread,
-    // then do the actual clipboard read + write on a background thread so
-    // the display link isn't blocked by large pastes.
     let pty_info = APP.with(|cell| {
         let borrow = cell.borrow();
         borrow.as_ref().map(|state| {
@@ -256,29 +275,34 @@ fn paste_from_clipboard() {
         return;
     };
 
-    std::thread::spawn(move || {
-        let Ok(output) = std::process::Command::new("pbpaste").output() else {
-            return;
-        };
-        if !output.status.success() || output.stdout.is_empty() {
-            return;
-        }
+    // Reset cancel flag before starting.
+    PASTE_CANCEL.store(false, Ordering::Relaxed);
 
-        // Write directly to the PTY master fd using libc::write.
-        // We intentionally avoid File::from_raw_fd because it takes ownership
-        // of the fd — if a panic unwinds before mem::forget, the destructor
-        // closes the PTY master fd, crashing subsequent I/O.
-        if bracketed {
-            pty_write_all(fd, b"\x1b[200~");
-        }
-        for chunk in output.stdout.chunks(4096) {
-            if !pty_write_all(fd, chunk) {
-                break;
+    std::thread::spawn(move || {
+        PASTE_ACTIVE.store(true, Ordering::Relaxed);
+
+        (|| {
+            let Ok(output) = std::process::Command::new("pbpaste").output() else {
+                return;
+            };
+            if !output.status.success() || output.stdout.is_empty() {
+                return;
             }
-        }
-        if bracketed {
-            pty_write_all(fd, b"\x1b[201~");
-        }
+
+            if bracketed {
+                pty_write_all_cancellable(fd, b"\x1b[200~");
+            }
+            for chunk in output.stdout.chunks(4096) {
+                if !pty_write_all_cancellable(fd, chunk) {
+                    break;
+                }
+            }
+            if bracketed {
+                pty_write_all_cancellable(fd, b"\x1b[201~");
+            }
+        })();
+
+        PASTE_ACTIVE.store(false, Ordering::Relaxed);
     });
 }
 
