@@ -98,6 +98,11 @@ impl PtyHandle {
         self.pty.write_all(data)
     }
 
+    /// Get the raw master file descriptor (for cross-thread writes like paste).
+    pub fn master_fd(&self) -> std::os::fd::RawFd {
+        self.pty.as_raw_fd()
+    }
+
     /// Get the receiver channel for PTY output.
     ///
     /// The reader thread sends `PtyRead::Data(bytes)` for output,

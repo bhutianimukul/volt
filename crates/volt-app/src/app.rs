@@ -207,40 +207,51 @@ pub fn handle_command_key(key_char: &str, has_shift: bool) -> bool {
 ///
 /// Wraps in bracketed paste sequences if the terminal has bracketed paste mode enabled.
 fn paste_from_clipboard() {
-    // Read clipboard text via msg_send! to avoid type mismatches with
-    // NSPasteboard::stringForType in objc2-app-kit bindings.
-    let text: Option<String> = unsafe {
-        let pb: &objc2_foundation::NSObject =
-            msg_send![objc2::class!(NSPasteboard), generalPasteboard];
-        let ns_str: Option<&NSString> = msg_send![
-            pb,
-            stringForType: ns_string!("public.utf8-plain-text")
-        ];
-        ns_str.map(|s| s.to_string())
-    };
-
-    let Some(text) = text else {
-        tracing::debug!("clipboard empty or no string type");
-        return;
-    };
-    if text.is_empty() {
-        return;
-    }
-
-    tracing::debug!("pasting {} bytes", text.len());
-
-    APP.with(|cell| {
+    // Get the PTY master fd and bracketed paste state from the main thread,
+    // then do the actual clipboard read + write on a background thread so
+    // the display link isn't blocked by large pastes.
+    let pty_info = APP.with(|cell| {
         let borrow = cell.borrow();
-        let Some(state) = borrow.as_ref() else { return };
+        borrow.as_ref().map(|state| {
+            let fd = state.pty_handle.master_fd();
+            let bracketed = state.terminal.modes().bracketed_paste;
+            (fd, bracketed)
+        })
+    });
 
-        let bracketed = state.terminal.modes().bracketed_paste;
-        if bracketed {
-            let _ = state.pty_handle.write(b"\x1b[200~");
+    let Some((fd, bracketed)) = pty_info else {
+        return;
+    };
+
+    std::thread::spawn(move || {
+        let Ok(output) = std::process::Command::new("pbpaste").output() else {
+            return;
+        };
+        if !output.status.success() || output.stdout.is_empty() {
+            return;
         }
-        let _ = state.pty_handle.write(text.as_bytes());
+
+        // Write directly to the PTY master fd from the background thread.
+        use std::io::Write;
+        // SAFETY: fd is a valid PTY master file descriptor that outlives this thread.
+        let file: std::fs::File =
+            unsafe { std::os::unix::io::FromRawFd::from_raw_fd(fd) };
+        let mut file = file;
+
         if bracketed {
-            let _ = state.pty_handle.write(b"\x1b[201~");
+            let _ = file.write_all(b"\x1b[200~");
         }
+        for chunk in output.stdout.chunks(4096) {
+            if file.write_all(chunk).is_err() {
+                break;
+            }
+        }
+        if bracketed {
+            let _ = file.write_all(b"\x1b[201~");
+        }
+
+        // Don't close the fd — it's owned by PtyHandle
+        std::mem::forget(file);
     });
 }
 
