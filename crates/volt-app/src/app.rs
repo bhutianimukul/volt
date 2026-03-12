@@ -203,7 +203,11 @@ pub fn handle_command_key(key_char: &str, has_shift: bool) -> bool {
     }
 }
 
-/// Write all bytes to a raw fd, retrying on `EINTR`. Returns `true` on success.
+/// Write all bytes to a raw fd, retrying on `EINTR` and `WouldBlock`.
+///
+/// The PTY master fd is non-blocking, so large writes can return `EAGAIN`
+/// when the kernel buffer is full. We back off briefly and retry rather
+/// than dropping the remaining data.
 fn pty_write_all(fd: std::os::fd::RawFd, data: &[u8]) -> bool {
     let mut offset = 0;
     while offset < data.len() {
@@ -217,10 +221,15 @@ fn pty_write_all(fd: std::os::fd::RawFd, data: &[u8]) -> bool {
         };
         if n < 0 {
             let err = std::io::Error::last_os_error();
-            if err.kind() == std::io::ErrorKind::Interrupted {
-                continue;
+            match err.kind() {
+                std::io::ErrorKind::Interrupted => continue,
+                std::io::ErrorKind::WouldBlock => {
+                    // PTY buffer full — let the reader drain it, then retry.
+                    std::thread::sleep(std::time::Duration::from_millis(1));
+                    continue;
+                }
+                _ => return false,
             }
-            return false;
         }
         offset += n as usize;
     }
