@@ -1240,6 +1240,50 @@ impl Screen<'_> {
         self.render();
     }
 
+    /// Check if a click position (in logical pixels) is on a tab in the TopTab bar.
+    /// Returns the tab index if hit.
+    pub fn tab_index_at_position(&self, x: f64, y: f64) -> Option<usize> {
+        use rio_backend::config::navigation::NavigationMode;
+
+        let nav_mode = self.renderer.navigation.navigation.mode;
+        if nav_mode != NavigationMode::TopTab && nav_mode != NavigationMode::BottomTab {
+            return None;
+        }
+
+        let num_tabs = self.context_manager.len();
+        if num_tabs <= 1 && self.renderer.navigation.navigation.hide_if_single {
+            return None;
+        }
+
+        // Tab bar height = PADDING_Y_BOTTOM_TABS = 22.0
+        let tab_bar_height = 22.0_f64;
+        let tab_width = 125.0_f64;
+        let tab_spacing = 130.0_f64; // name_modifier(90) + 40
+
+        let (bar_y_start, bar_y_end) = if nav_mode == NavigationMode::TopTab {
+            (0.0, tab_bar_height)
+        } else {
+            // BottomTab
+            let win_height = self.context_manager.current().dimension.height as f64
+                / self.context_manager.current().dimension.dimension.scale as f64;
+            (win_height - tab_bar_height, win_height)
+        };
+
+        if y < bar_y_start || y > bar_y_end {
+            return None;
+        }
+
+        // Determine which tab was clicked
+        let tab_idx = (x / tab_spacing) as usize;
+        // Verify click is within the tab's rendered width (not in gap)
+        let tab_start = tab_idx as f64 * tab_spacing;
+        if x >= tab_start && x <= tab_start + tab_width && tab_idx < num_tabs {
+            Some(tab_idx)
+        } else {
+            None
+        }
+    }
+
     pub fn close_split_or_tab(&mut self) {
         if self.context_manager.current_grid_len() > 1 {
             self.clear_selection();
