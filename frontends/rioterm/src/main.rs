@@ -44,13 +44,13 @@ pub fn setup_environment_variables(config: &rio_backend::config::Config) {
     #[cfg(unix)]
     {
         let terminfo = match (
-            teletypewriter::terminfo_exists("xterm-rio"),
-            teletypewriter::terminfo_exists("rio"),
+            teletypewriter::terminfo_exists("xterm-volt"),
+            teletypewriter::terminfo_exists("volt"),
         ) {
-            // In case `xterm-rio` exists we prioritize it
-            (true, _) => "xterm-rio",
-            // If is only `rio` installed (which was the default for versions under 0.2.27)
-            (false, true) => "rio",
+            // In case `xterm-volt` exists we prioritize it
+            (true, _) => "xterm-volt",
+            // If is only `volt` installed
+            (false, true) => "volt",
             // If none, then fallback to `xterm-256color`
             (false, false) => "xterm-256color",
         };

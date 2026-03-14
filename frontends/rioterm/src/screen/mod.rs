@@ -1262,8 +1262,9 @@ impl Screen<'_> {
 
         // Must match constants in navigation.rs
         let tab_bar_height = 22.0_f64; // PADDING_Y_BOTTOM_TABS
-        let tab_width = 50.0_f64; // TAB_WIDTH
-        let tab_gap = 4.0_f64; // TAB_GAP
+        let tab_width = 54.0_f64; // TAB_WIDTH
+        let tab_gap = 3.0_f64; // TAB_GAP
+        let left_margin = 4.0_f64;
         let tab_step = tab_width + tab_gap;
 
         let (bar_y_start, bar_y_end) = if nav_mode == NavigationMode::TopTab {
@@ -1279,7 +1280,7 @@ impl Screen<'_> {
 
         // Account for scroll offset
         let scroll_offset = self.renderer.navigation.tab_scroll_offset as f64;
-        let scrolled_x = x + scroll_offset;
+        let scrolled_x = x - left_margin + scroll_offset;
 
         let tab_idx = (scrolled_x / tab_step) as usize;
         let tab_start = tab_idx as f64 * tab_step;

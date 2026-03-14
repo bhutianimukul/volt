@@ -17,7 +17,7 @@ rebranded and customized. macOS-focused but cross-platform capable.
 | Text shaping | `skrifa` + `font-kit` |
 | PTY | `teletypewriter` crate (forkpty on Unix) |
 | VT parsing | Alacritty-derived parser in `rio-backend` |
-| Config | TOML via `serde` + `toml` (~/.config/rio/config.toml) |
+| Config | TOML via `serde` + `toml` (~/.config/volt/config.toml) |
 | Logging | `tracing` |
 
 ## Build & Run
@@ -63,7 +63,7 @@ volt/
 - `cargo clippy` must pass
 - `cargo fmt` before every commit
 - Logging: `tracing` macros, never `println!`
-- Config lives at `~/.config/rio/config.toml` (will migrate to volt path later)
+- Config lives at `~/.config/volt/config.toml`
 
 ## Origin
 Forked from [Rio Terminal](https://github.com/raphamorim/rio) v0.2.37 (MIT license).

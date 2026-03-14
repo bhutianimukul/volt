@@ -1377,7 +1377,7 @@ fn encode_hex_string(s: &str) -> String {
 fn get_termcap_capability(name: &str) -> Option<String> {
     match name {
         // Terminal name
-        "TN" | "name" => Some("rio".to_string()),
+        "TN" | "name" => Some("volt".to_string()),
 
         // Colors capability - from terminfo: colors#0x100 (256), pairs#0x7FFF
         "Co" | "colors" => Some("256".to_string()),
@@ -1810,7 +1810,7 @@ mod tests {
 
     #[test]
     fn test_capability_lookup() {
-        assert_eq!(get_termcap_capability("TN"), Some("rio".to_string()));
+        assert_eq!(get_termcap_capability("TN"), Some("volt".to_string()));
         assert_eq!(get_termcap_capability("Co"), Some("256".to_string()));
         assert_eq!(get_termcap_capability("RGB"), Some("8/8/8".to_string()));
         assert_eq!(get_termcap_capability("invalid"), None);

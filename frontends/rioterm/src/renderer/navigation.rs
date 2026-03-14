@@ -7,8 +7,11 @@ use rustc_hash::FxHashMap;
 use std::collections::HashMap;
 
 /// Tab rendering constants
-const TAB_WIDTH: f32 = 50.0; // Compact tabs — just numbers
-const TAB_GAP: f32 = 4.0; // Gap between tabs
+const TAB_WIDTH: f32 = 54.0; // Compact tabs with slight padding
+const TAB_GAP: f32 = 3.0; // Tight gap between tabs
+const TAB_INNER_HEIGHT: f32 = 18.0; // Tab pill height (smaller than bar)
+const TAB_BORDER_RADIUS: f32 = 5.0; // Rounded corners
+const TAB_Y_OFFSET: f32 = 2.0; // Vertical centering offset in bar
 
 pub struct ScreenNavigation {
     pub navigation: Navigation,
@@ -209,10 +212,11 @@ impl ScreenNavigation {
         }));
 
         let tab_step = TAB_WIDTH + TAB_GAP;
+        let left_margin = 4.0; // Small left margin
 
         for i in 0..len {
-            // Calculate position with scroll offset
-            let tab_x = i as f32 * tab_step - self.tab_scroll_offset;
+            let tab_x =
+                left_margin + i as f32 * tab_step - self.tab_scroll_offset;
 
             // Skip tabs that are off-screen
             if tab_x + TAB_WIDTH < 0.0 || tab_x > visible_width {
@@ -221,62 +225,63 @@ impl ScreenNavigation {
 
             let is_current = i == current;
 
-            // Get per-tab accent color
+            // Per-tab accent color
             let tab_accent = titles
                 .get(&i)
                 .map(|t| t.accent_color)
                 .unwrap_or(colors.tabs_active_highlight);
 
-            // Tab background
-            let background_color = if is_current {
-                colors.tabs_active
-            } else {
-                colors.bar
-            };
-            let foreground_color = if is_current {
-                colors.tabs_active_foreground
-            } else {
-                colors.tabs_foreground
-            };
+            let pill_y = position_y + TAB_Y_OFFSET;
 
-            objects.push(Object::Quad(Quad {
-                position: [tab_x, position_y],
-                color: background_color,
-                size: [TAB_WIDTH, PADDING_Y_BOTTOM_TABS],
-                ..Quad::default()
-            }));
-
-            // Accent color strip at bottom of tab
-            let strip_y = if position_y == 0.0 {
-                PADDING_Y_BOTTOM_TABS - 3.0
+            if is_current {
+                // Active tab: accent-colored rounded pill
+                objects.push(Object::Quad(Quad {
+                    position: [tab_x, pill_y],
+                    color: tab_accent,
+                    size: [TAB_WIDTH, TAB_INNER_HEIGHT],
+                    border_radius: [
+                        TAB_BORDER_RADIUS,
+                        TAB_BORDER_RADIUS,
+                        TAB_BORDER_RADIUS,
+                        TAB_BORDER_RADIUS,
+                    ],
+                    ..Quad::default()
+                }));
             } else {
-                position_y
-            };
-            let strip_height = if is_current { 3.0 } else { 2.0 };
-            let strip_color = if is_current {
-                tab_accent
-            } else {
-                [
-                    tab_accent[0] * 0.5,
-                    tab_accent[1] * 0.5,
-                    tab_accent[2] * 0.5,
-                    0.6,
-                ]
-            };
+                // Inactive tab: subtle rounded pill with dimmed accent border
+                let inactive_bg = [
+                    colors.bar[0] + 0.03,
+                    colors.bar[1] + 0.03,
+                    colors.bar[2] + 0.03,
+                    0.8,
+                ];
+                objects.push(Object::Quad(Quad {
+                    position: [tab_x, pill_y],
+                    color: inactive_bg,
+                    size: [TAB_WIDTH, TAB_INNER_HEIGHT],
+                    border_radius: [
+                        TAB_BORDER_RADIUS,
+                        TAB_BORDER_RADIUS,
+                        TAB_BORDER_RADIUS,
+                        TAB_BORDER_RADIUS,
+                    ],
+                    border_color: [
+                        tab_accent[0] * 0.4,
+                        tab_accent[1] * 0.4,
+                        tab_accent[2] * 0.4,
+                        0.3,
+                    ],
+                    border_width: 1.0,
+                    ..Quad::default()
+                }));
+            }
 
-            objects.push(Object::Quad(Quad {
-                position: [tab_x, strip_y],
-                color: strip_color,
-                size: [TAB_WIDTH, strip_height],
-                ..Quad::default()
-            }));
-
-            // Tab label: just number, or custom name if set
+            // Tab label
             let label = if let Some(title) = titles.get(&i) {
                 if let Some(ref custom) = title.custom_name {
                     let mut s = custom.clone();
                     if s.len() > 5 {
-                        s = s[..5].to_string();
+                        s.truncate(5);
                     }
                     s
                 } else {
@@ -286,8 +291,15 @@ impl ScreenNavigation {
                 format!("{}", i + 1)
             };
 
+            let fg = if is_current {
+                // Dark text on accent bg for readability
+                [0.05, 0.05, 0.05, 1.0]
+            } else {
+                colors.tabs_foreground
+            };
+
             let tab_rt = sugarloaf.create_temp_rich_text();
-            sugarloaf.set_rich_text_font_size(&tab_rt, 13.);
+            sugarloaf.set_rich_text_font_size(&tab_rt, 12.);
             let content = sugarloaf.content();
 
             content
@@ -297,7 +309,7 @@ impl ScreenNavigation {
                 .add_text(
                     &label,
                     FragmentStyle {
-                        color: foreground_color,
+                        color: fg,
                         ..FragmentStyle::default()
                     },
                 )
@@ -305,7 +317,7 @@ impl ScreenNavigation {
 
             objects.push(Object::RichText(RichText {
                 id: tab_rt,
-                position: [tab_x + 4.0, position_y],
+                position: [tab_x + 6.0, pill_y - 1.0],
                 lines: None,
             }));
         }
