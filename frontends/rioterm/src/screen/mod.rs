@@ -995,6 +995,9 @@ impl Screen<'_> {
                         self.resize_top_or_bottom_line(1);
                         self.render();
                     }
+                    Act::RenameTab => {
+                        self.prompt_rename_tab();
+                    }
                     Act::Quit => {
                         self.context_manager.quit();
                     }
@@ -1259,6 +1262,104 @@ impl Screen<'_> {
         let num_tabs = self.ctx().len().wrapping_sub(1);
         self.resize_top_or_bottom_line(num_tabs);
         self.render();
+    }
+
+    /// Prompt the user to rename the current tab via a native dialog.
+    pub fn prompt_rename_tab(&mut self) {
+        #[cfg(target_os = "macos")]
+        {
+            self.prompt_rename_tab_macos();
+        }
+
+        #[cfg(not(target_os = "macos"))]
+        {
+            // On non-macOS platforms, fall back to a no-op for now.
+            // Users can still rename tabs via OSC sequences or config bindings.
+            tracing::warn!("Rename tab dialog is currently only supported on macOS");
+        }
+    }
+
+    #[cfg(target_os = "macos")]
+    fn prompt_rename_tab_macos(&mut self) {
+        use objc::runtime::{Class, Object};
+        use objc::{msg_send, sel, sel_impl};
+        use std::ffi::CString;
+
+        unsafe {
+            // Create NSAlert
+            let alert_class = Class::get("NSAlert").unwrap();
+            let alert: *mut Object = msg_send![alert_class, new];
+
+            // Set message text
+            let ns_string_class = Class::get("NSString").unwrap();
+
+            let msg_cstr = CString::new("Rename Tab").unwrap();
+            let msg_ns: *mut Object = msg_send![ns_string_class,
+                stringWithUTF8String: msg_cstr.as_ptr()];
+            let _: () = msg_send![alert, setMessageText: msg_ns];
+
+            let info_cstr = CString::new("Enter a new name for this tab:").unwrap();
+            let info_ns: *mut Object = msg_send![ns_string_class,
+                stringWithUTF8String: info_cstr.as_ptr()];
+            let _: () = msg_send![alert, setInformativeText: info_ns];
+
+            // Add OK and Cancel buttons
+            let ok_cstr = CString::new("OK").unwrap();
+            let ok_ns: *mut Object = msg_send![ns_string_class,
+                stringWithUTF8String: ok_cstr.as_ptr()];
+            let _: () = msg_send![alert, addButtonWithTitle: ok_ns];
+
+            let cancel_cstr = CString::new("Cancel").unwrap();
+            let cancel_ns: *mut Object = msg_send![ns_string_class,
+                stringWithUTF8String: cancel_cstr.as_ptr()];
+            let _: () = msg_send![alert, addButtonWithTitle: cancel_ns];
+
+            // Create text input field
+            let text_field_class = Class::get("NSTextField").unwrap();
+            let frame: ((f64, f64), (f64, f64)) = ((0.0, 0.0), (300.0, 24.0));
+            let input: *mut Object = msg_send![text_field_class, alloc];
+            let input: *mut Object = msg_send![input, initWithFrame: frame];
+
+            // Pre-fill with current custom name if any
+            if let Some(current_name) = self
+                .context_manager
+                .titles
+                .display_title(self.context_manager.current_index())
+            {
+                let current_cstr = CString::new(current_name).unwrap_or_default();
+                let current_ns: *mut Object = msg_send![ns_string_class,
+                    stringWithUTF8String: current_cstr.as_ptr()];
+                let _: () = msg_send![input, setStringValue: current_ns];
+            }
+
+            let _: () = msg_send![alert, setAccessoryView: input];
+
+            // Make the text field the first responder when the dialog opens
+            let window: *mut Object = msg_send![alert, window];
+            let _: () = msg_send![window, setInitialFirstResponder: input];
+
+            // Run modal dialog
+            let response: i64 = msg_send![alert, runModal];
+
+            // NSAlertFirstButtonReturn = 1000
+            if response == 1000 {
+                let value: *mut Object = msg_send![input, stringValue];
+                let utf8: *const std::ffi::c_char = msg_send![value, UTF8String];
+                let name = std::ffi::CStr::from_ptr(utf8)
+                    .to_string_lossy()
+                    .to_string();
+                if !name.is_empty() {
+                    self.context_manager.set_custom_tab_name(name);
+                    self.render();
+                } else {
+                    // Empty name clears the custom name
+                    let idx = self.context_manager.current_index();
+                    self.context_manager.titles.clear_custom_name(idx);
+                    self.context_manager.titles.last_title_update = None;
+                    self.render();
+                }
+            }
+        }
     }
 
     pub fn resize_top_or_bottom_line(&mut self, num_tabs: usize) {

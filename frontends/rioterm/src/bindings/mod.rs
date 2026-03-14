@@ -239,6 +239,7 @@ impl From<String> for Action {
             "movecurrenttabtoprev" => Some(Action::MoveCurrentTabToPrev),
             "movecurrenttabtonext" => Some(Action::MoveCurrentTabToNext),
             "closetab" => Some(Action::TabCloseCurrent),
+            "renametab" => Some(Action::RenameTab),
             "closesplitortab" => Some(Action::CloseCurrentSplitOrTab),
             "closeunfocusedtabs" => Some(Action::TabCloseUnfocused),
             "openconfigeditor" => Some(Action::ConfigEditor),
@@ -496,6 +497,9 @@ pub enum Action {
 
     /// Move divider right
     MoveDividerRight,
+
+    /// Rename the current tab via a dialog prompt.
+    RenameTab,
 
     /// Allow receiving char input.
     ReceiveChar,
@@ -1018,6 +1022,7 @@ pub fn platform_key_bindings(
         key_bindings.extend(bindings!(
             KeyBinding;
             "t", ModifiersState::SUPER; Action::TabCreateNew;
+            "r", ModifiersState::SUPER | ModifiersState::SHIFT; Action::RenameTab;
             Key::Named(Tab), ModifiersState::CONTROL; Action::SelectNextTab;
             Key::Named(Tab), ModifiersState::CONTROL | ModifiersState::SHIFT; Action::SelectPrevTab;
             "w", ModifiersState::SUPER; Action::CloseCurrentSplitOrTab;
@@ -1101,6 +1106,7 @@ pub fn platform_key_bindings(
         key_bindings.extend(bindings!(
             KeyBinding;
             "t", ModifiersState::CONTROL | ModifiersState::SHIFT; Action::TabCreateNew;
+            Key::Named(F2), ModifiersState::CONTROL; Action::RenameTab;
             Key::Named(Tab), ModifiersState::CONTROL; Action::SelectNextTab;
             Key::Named(Tab), ModifiersState::CONTROL | ModifiersState::SHIFT; Action::SelectPrevTab;
             "[", ModifiersState::CONTROL | ModifiersState::SHIFT; Action::SelectPrevTab;

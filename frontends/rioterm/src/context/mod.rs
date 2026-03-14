@@ -3,7 +3,9 @@ pub mod renderable;
 pub mod title;
 
 use crate::ansi::CursorShape;
-use crate::context::grid::{ContextDimension, ContextGrid, ContextGridItem, Delta};
+use crate::context::grid::{
+    ContextDimension, ContextGrid, ContextGridItem, Delta, DividerHit,
+};
 use crate::context::title::{
     create_title_extra_from_context, update_title, ContextManagerTitles,
 };
@@ -607,6 +609,16 @@ impl<T: EventListener + Clone + std::marker::Send + 'static> ContextManager<T> {
     }
 
     #[inline]
+    pub fn divider_at_position(&self, x: f32, y: f32) -> Option<DividerHit> {
+        self.contexts[self.current_index].divider_at_position(x, y)
+    }
+
+    #[inline]
+    pub fn drag_divider(&mut self, hit: &DividerHit, delta_x: f32, delta_y: f32) -> bool {
+        self.contexts[self.current_index].drag_divider(hit, delta_x, delta_y)
+    }
+
+    #[inline]
     pub fn select_tab(&mut self, tab_index: usize) {
         if self.config.is_native {
             self.event_proxy
@@ -691,10 +703,18 @@ impl<T: EventListener + Clone + std::marker::Send + 'static> ContextManager<T> {
             for (i, context) in self.contexts.iter_mut().enumerate() {
                 let content = update_title(&self.config.title.content, context.current());
 
-                self.event_proxy
-                    .send_event(RioEvent::Title(content.to_owned()), self.window_id);
+                // Use custom name if set, otherwise use the template-generated title
+                let display_content = self
+                    .titles
+                    .titles
+                    .get(&i)
+                    .and_then(|t| t.custom_name.clone())
+                    .unwrap_or_else(|| content.clone());
 
-                id.push_str(&format!("{i}{content};"));
+                self.event_proxy
+                    .send_event(RioEvent::Title(display_content.clone()), self.window_id);
+
+                id.push_str(&format!("{i}{display_content};"));
 
                 if self.config.should_update_title_extra {
                     self.titles.set_key_val(
@@ -709,6 +729,14 @@ impl<T: EventListener + Clone + std::marker::Send + 'static> ContextManager<T> {
 
             self.titles.set_key(id);
         }
+    }
+
+    /// Set a custom name for the current tab.
+    pub fn set_custom_tab_name(&mut self, name: String) {
+        let idx = self.current_index;
+        self.titles.set_custom_name(idx, name);
+        // Force an immediate title update
+        self.titles.last_title_update = None;
     }
 
     #[inline]

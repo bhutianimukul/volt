@@ -5,12 +5,28 @@ use rio_backend::event::EventListener;
 use rio_backend::sugarloaf::{
     layout::SugarDimensions, Object, Quad, RichText, Sugarloaf,
 };
+use std::collections::hash_map::RandomState;
 use std::collections::HashMap;
+use std::hash::{BuildHasher, Hasher};
 
 const MIN_COLS: usize = 2;
 const MIN_LINES: usize = 1;
 
 const PADDING: f32 = 2.;
+const DIVIDER_HIT_ZONE: f32 = 6.0;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum DividerOrientation {
+    Horizontal,
+    Vertical,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct DividerHit {
+    pub orientation: DividerOrientation,
+    /// The pane above (for horizontal) or to the left (for vertical) of the divider.
+    pub pane_id: usize,
+}
 
 fn compute(
     width: f32,
@@ -70,6 +86,27 @@ fn create_border(color: [f32; 4], position: [f32; 2], size: [f32; 2]) -> Object 
     })
 }
 
+/// Generate a random dark background color with subtle hue variation.
+/// Colors stay in the 0.04-0.12 range per channel so text remains readable.
+fn random_dark_background() -> [f32; 4] {
+    let s = RandomState::new();
+    let mut hasher = s.build_hasher();
+    hasher.write_u64(
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_nanos() as u64,
+    );
+    let hash = hasher.finish();
+
+    // Subtle dark colors with slight hue tints
+    let r = 0.04 + ((hash & 0xFF) as f32 / 255.0 * 0.08);
+    let g = 0.04 + (((hash >> 8) & 0xFF) as f32 / 255.0 * 0.08);
+    let b = 0.04 + (((hash >> 16) & 0xFF) as f32 / 255.0 * 0.08);
+
+    [r, g, b, 1.0]
+}
+
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Delta<T: Default> {
     pub x: T,
@@ -94,6 +131,8 @@ pub struct ContextGridItem<T: EventListener> {
     down: Option<usize>,
     parent: Option<usize>,
     rich_text_object: Object,
+    /// Per-pane random dark background color
+    pub background_color: [f32; 4],
 }
 
 impl<T: rio_backend::event::EventListener> ContextGridItem<T> {
@@ -110,6 +149,7 @@ impl<T: rio_backend::event::EventListener> ContextGridItem<T> {
             down: None,
             parent: None,
             rich_text_object,
+            background_color: random_dark_background(),
         }
     }
 }
@@ -372,10 +412,26 @@ impl<T: rio_backend::event::EventListener> ContextGrid<T> {
         // Reserve space for more objects
         target.reserve(len);
 
-        // In case there's only 1 context then ignore quad
+        // In case there's only 1 context then ignore quad borders
         if len == 1 {
             if let Some(root) = self.root {
                 if let Some(item) = self.inner.get(&root) {
+                    let scale = item.val.dimension.dimension.scale;
+                    // Draw per-pane background quad
+                    target.push(Object::Quad(Quad {
+                        color: item.background_color,
+                        position: [0.0, 0.0],
+                        size: [
+                            self.width / scale,
+                            self.height / scale,
+                        ],
+                        shadow_blur_radius: 0.0,
+                        shadow_offset: [0.0, 0.0],
+                        shadow_color: [0.0, 0.0, 0.0, 0.0],
+                        border_color: [0.0, 0.0, 0.0, 0.0],
+                        border_width: 0.0,
+                        border_radius: [0.0, 0.0, 0.0, 0.0],
+                    }));
                     target.push(item.rich_text_object.clone());
                 }
             }
@@ -393,10 +449,25 @@ impl<T: rio_backend::event::EventListener> ContextGrid<T> {
 
         let mut objects = Vec::with_capacity(len);
 
-        // In case there's only 1 context then ignore quad
+        // In case there's only 1 context then ignore quad borders
         if len == 1 {
             if let Some(root) = self.root {
                 if let Some(item) = self.inner.get(&root) {
+                    let scale = item.val.dimension.dimension.scale;
+                    objects.push(Object::Quad(Quad {
+                        color: item.background_color,
+                        position: [0.0, 0.0],
+                        size: [
+                            self.width / scale,
+                            self.height / scale,
+                        ],
+                        shadow_blur_radius: 0.0,
+                        shadow_offset: [0.0, 0.0],
+                        shadow_color: [0.0, 0.0, 0.0, 0.0],
+                        border_color: [0.0, 0.0, 0.0, 0.0],
+                        border_width: 0.0,
+                        border_radius: [0.0, 0.0, 0.0, 0.0],
+                    }));
                     objects.push(item.rich_text_object.clone());
                 }
             }
@@ -524,10 +595,27 @@ impl<T: rio_backend::event::EventListener> ContextGrid<T> {
 
     fn plot_objects_recursive(&self, objects: &mut Vec<Object>, key: usize) {
         if let Some(item) = self.inner.get(&key) {
+            let item_pos = item.position();
+            let scale = item.val.dimension.dimension.scale;
+
+            // Draw per-pane background quad before content
+            objects.push(Object::Quad(Quad {
+                color: item.background_color,
+                position: item_pos,
+                size: [
+                    item.val.dimension.width / scale,
+                    item.val.dimension.height / scale,
+                ],
+                shadow_blur_radius: 0.0,
+                shadow_offset: [0.0, 0.0],
+                shadow_color: [0.0, 0.0, 0.0, 0.0],
+                border_color: [0.0, 0.0, 0.0, 0.0],
+                border_width: 0.0,
+                border_radius: [0.0, 0.0, 0.0, 0.0],
+            }));
+
             // Add pre-computed rich text object
             objects.push(item.rich_text_object.clone());
-
-            let item_pos = item.position();
 
             // Always create horizontal border
             objects.push(create_border(
@@ -1841,6 +1929,107 @@ impl<T: rio_backend::event::EventListener> ContextGrid<T> {
                 }
             }
         }
+    }
+
+    /// Detect if the mouse position (x, y) in physical pixels is near a pane divider border.
+    /// Returns the divider hit info if within the hit zone.
+    pub fn divider_at_position(&self, x: f32, y: f32) -> Option<DividerHit> {
+        if self.inner.len() <= 1 {
+            return None;
+        }
+        if let Some(root) = self.root {
+            return self.divider_at_position_recursive(root, x, y);
+        }
+        None
+    }
+
+    fn divider_at_position_recursive(
+        &self,
+        key: usize,
+        x: f32,
+        y: f32,
+    ) -> Option<DividerHit> {
+        let item = self.inner.get(&key)?;
+        let item_pos = item.position();
+        let scale = item.val.dimension.dimension.scale;
+        let scaled_pos_x = item_pos[0] * scale;
+        let scaled_pos_y = item_pos[1] * scale;
+        let w = item.val.dimension.width;
+        let h = item.val.dimension.height;
+
+        // Check horizontal divider (bottom edge of this pane) — only if there is a down child
+        if item.down.is_some() {
+            let border_y = scaled_pos_y + h;
+            if (y - border_y).abs() < DIVIDER_HIT_ZONE * scale
+                && x >= scaled_pos_x
+                && x <= scaled_pos_x + w
+            {
+                return Some(DividerHit {
+                    orientation: DividerOrientation::Horizontal,
+                    pane_id: key,
+                });
+            }
+        }
+
+        // Check vertical divider (right edge of this pane) — only if there is a right child
+        if item.right.is_some() {
+            let border_x = scaled_pos_x + w;
+            if (x - border_x).abs() < DIVIDER_HIT_ZONE * scale
+                && y >= scaled_pos_y
+                && y <= scaled_pos_y + h
+            {
+                return Some(DividerHit {
+                    orientation: DividerOrientation::Vertical,
+                    pane_id: key,
+                });
+            }
+        }
+
+        // Recurse into children
+        if let Some(down_key) = item.down {
+            if let Some(hit) = self.divider_at_position_recursive(down_key, x, y) {
+                return Some(hit);
+            }
+        }
+        if let Some(right_key) = item.right {
+            if let Some(hit) = self.divider_at_position_recursive(right_key, x, y) {
+                return Some(hit);
+            }
+        }
+
+        None
+    }
+
+    /// Drag a divider by (delta_x, delta_y) in physical pixels.
+    /// Temporarily sets `self.current` to the appropriate pane so the existing
+    /// `move_divider_*` methods operate on the correct split pair.
+    pub fn drag_divider(&mut self, hit: &DividerHit, delta_x: f32, delta_y: f32) -> bool {
+        let saved_current = self.current;
+        self.current = hit.pane_id;
+
+        let result = match hit.orientation {
+            DividerOrientation::Horizontal => {
+                if delta_y > 0.0 {
+                    self.move_divider_down(delta_y)
+                } else if delta_y < 0.0 {
+                    self.move_divider_up(-delta_y)
+                } else {
+                    false
+                }
+            }
+            DividerOrientation::Vertical => {
+                if delta_x > 0.0 {
+                    self.move_divider_right(delta_x)
+                } else if delta_x < 0.0 {
+                    self.move_divider_left(-delta_x)
+                } else {
+                    false
+                }
+            }
+        };
+
+        self.current = saved_current;
+        result
     }
 }
 

@@ -1,24 +1,20 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
   <defs>
     <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#1a1a2e"/>
-      <stop offset="100%" style="stop-color:#0d0d1a"/>
+      <stop offset="0%" style="stop-color:#1e1e2e"/>
+      <stop offset="100%" style="stop-color:#11111b"/>
     </linearGradient>
     <linearGradient id="bolt" x1="30%" y1="0%" x2="70%" y2="100%">
-      <stop offset="0%" style="stop-color:#ffd700"/>
-      <stop offset="50%" style="stop-color:#ffaa00"/>
-      <stop offset="100%" style="stop-color:#ff8c00"/>
+      <stop offset="0%" style="stop-color:#ffe14d"/>
+      <stop offset="50%" style="stop-color:#f5c211"/>
+      <stop offset="100%" style="stop-color:#e09500"/>
     </linearGradient>
-    <filter id="glow">
-      <feGaussianBlur stdDeviation="12" result="blur"/>
-      <feMerge>
-        <feMergeNode in="blur"/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="6" stdDeviation="14" flood-color="#000000" flood-opacity="0.55"/>
     </filter>
-    <filter id="outerGlow">
-      <feGaussianBlur stdDeviation="25" result="blur"/>
-      <feFlood flood-color="#ffd700" flood-opacity="0.3" result="color"/>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="22" result="blur"/>
+      <feFlood flood-color="#f5c211" flood-opacity="0.2" result="color"/>
       <feComposite in="color" in2="blur" operator="in" result="colorBlur"/>
       <feMerge>
         <feMergeNode in="colorBlur"/>
@@ -27,38 +23,16 @@
     </filter>
   </defs>
 
-  <!-- Background: rounded square -->
+  <!-- Background: macOS rounded square -->
   <rect x="32" y="32" width="960" height="960" rx="215" ry="215" fill="url(#bg)"/>
+  <rect x="32" y="32" width="960" height="960" rx="215" ry="215" fill="none" stroke="#2a2a3e" stroke-width="2"/>
 
-  <!-- Subtle border -->
-  <rect x="32" y="32" width="960" height="960" rx="215" ry="215" fill="none" stroke="#333355" stroke-width="3"/>
-
-  <!-- Terminal prompt lines (subtle background detail) -->
-  <g opacity="0.12">
-    <rect x="160" y="200" width="280" height="8" rx="4" fill="#ffffff"/>
-    <rect x="160" y="240" width="420" height="8" rx="4" fill="#ffffff"/>
-    <rect x="160" y="280" width="180" height="8" rx="4" fill="#ffffff"/>
-    <rect x="160" y="680" width="350" height="8" rx="4" fill="#ffffff"/>
-    <rect x="160" y="720" width="240" height="8" rx="4" fill="#ffffff"/>
-    <rect x="160" y="760" width="400" height="8" rx="4" fill="#ffffff"/>
-    <rect x="160" y="800" width="160" height="8" rx="4" fill="#ffffff"/>
-  </g>
-
-  <!-- Lightning bolt - the main icon -->
-  <g filter="url(#outerGlow)">
+  <!-- Clean geometric lightning bolt — matches reference silhouette -->
+  <g filter="url(#glow)">
     <polygon
-      points="570,120 340,530 480,530 420,900 700,440 540,440 620,120"
+      points="590,105 295,510 475,510 420,920 725,440 535,440 620,105"
       fill="url(#bolt)"
-      filter="url(#glow)"
+      filter="url(#shadow)"
     />
   </g>
-
-  <!-- Highlight edge on bolt -->
-  <polygon
-    points="570,120 340,530 480,530 420,900 700,440 540,440 620,120"
-    fill="none"
-    stroke="#ffffff"
-    stroke-width="2"
-    opacity="0.15"
-  />
 </svg>

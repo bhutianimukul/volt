@@ -10,6 +10,49 @@ pub struct ContextTitleExtra {
 pub struct ContextTitle {
     pub content: String,
     pub extra: Option<ContextTitleExtra>,
+    /// User-set custom name that overrides the template-generated title.
+    pub custom_name: Option<String>,
+    /// Per-tab accent color for the navigation bar (random, assigned at creation).
+    pub accent_color: [f32; 4],
+}
+
+/// Generate a random vibrant accent color for tab/window identification.
+pub fn random_accent_color() -> [f32; 4] {
+    use std::collections::hash_map::RandomState;
+    use std::hash::{BuildHasher, Hasher};
+
+    let s = RandomState::new();
+    let mut hasher = s.build_hasher();
+    hasher.write_u64(
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_nanos() as u64,
+    );
+    let hash = hasher.finish();
+
+    // HSL with random hue, fixed saturation/lightness for vibrant but readable colors
+    let hue = (hash % 360) as f32;
+    let c = 0.7_f32 * (1.0_f32 - (2.0_f32 * 0.55 - 1.0).abs());
+    let x = c * (1.0 - ((hue / 60.0) % 2.0 - 1.0).abs());
+    let m = 0.55 - c / 2.0;
+
+    let h = hue as u32;
+    let (r, g, b) = if h < 60 {
+        (c, x, 0.0)
+    } else if h < 120 {
+        (x, c, 0.0)
+    } else if h < 180 {
+        (0.0, c, x)
+    } else if h < 240 {
+        (0.0, x, c)
+    } else if h < 300 {
+        (x, 0.0, c)
+    } else {
+        (c, 0.0, x)
+    };
+
+    [r + m, g + m, b + m, 1.0]
 }
 
 pub struct ContextManagerTitles {
@@ -26,7 +69,15 @@ impl ContextManagerTitles {
     ) -> ContextManagerTitles {
         let key = format!("{idx}{content};");
         let mut map = FxHashMap::default();
-        map.insert(idx, ContextTitle { content, extra });
+        map.insert(
+            idx,
+            ContextTitle {
+                content,
+                extra,
+                custom_name: None,
+                accent_color: random_accent_color(),
+            },
+        );
         ContextManagerTitles {
             key,
             titles: map,
@@ -41,7 +92,48 @@ impl ContextManagerTitles {
         content: String,
         extra: Option<ContextTitleExtra>,
     ) {
-        self.titles.insert(idx, ContextTitle { content, extra });
+        // Preserve any existing custom_name and accent_color when updating title
+        let (custom_name, accent_color) = self
+            .titles
+            .get(&idx)
+            .map(|t| (t.custom_name.clone(), t.accent_color))
+            .unwrap_or((None, random_accent_color()));
+        self.titles.insert(
+            idx,
+            ContextTitle {
+                content,
+                extra,
+                custom_name,
+                accent_color,
+            },
+        );
+    }
+
+    /// Set a user-defined custom name for a tab, overriding the template title.
+    #[inline]
+    pub fn set_custom_name(&mut self, idx: usize, name: String) {
+        if let Some(title) = self.titles.get_mut(&idx) {
+            title.custom_name = Some(name);
+        }
+    }
+
+    /// Clear the custom name for a tab, reverting to template-generated title.
+    #[inline]
+    #[allow(dead_code)]
+    pub fn clear_custom_name(&mut self, idx: usize) {
+        if let Some(title) = self.titles.get_mut(&idx) {
+            title.custom_name = None;
+        }
+    }
+
+    /// Get the display title for a tab (custom name takes priority).
+    #[inline]
+    pub fn display_title(&self, idx: usize) -> Option<&str> {
+        self.titles.get(&idx).map(|t| {
+            t.custom_name
+                .as_deref()
+                .unwrap_or(&t.content)
+        })
     }
 
     #[inline]

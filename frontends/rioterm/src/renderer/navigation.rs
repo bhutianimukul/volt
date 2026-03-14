@@ -112,10 +112,13 @@ impl ScreenNavigation {
         let mut initial_position = (width / scale) - PADDING_X_COLLAPSED_TABS;
         let position_modifier = 20.;
         for i in (0..len).rev() {
-            let mut color = colors.tabs;
             let mut size = INACTIVE_TAB_WIDTH_SIZE;
+            // Use per-tab accent color if available, otherwise fall back to config colors
+            let mut color = titles
+                .get(&i)
+                .map(|t| t.accent_color)
+                .unwrap_or(colors.tabs);
             if i == current {
-                color = colors.tabs_active_highlight;
                 size = ACTIVE_TAB_WIDTH_SIZE;
             }
 
@@ -188,6 +191,12 @@ impl ScreenNavigation {
             let mut background_color = colors.bar;
             let mut foreground_color = colors.tabs_foreground;
 
+            // Get per-tab accent color
+            let tab_accent = titles
+                .get(&i)
+                .map(|t| t.accent_color)
+                .unwrap_or(colors.tabs_active_highlight);
+
             let is_current = i == current;
             if is_current {
                 foreground_color = colors.tabs_active_foreground;
@@ -196,7 +205,12 @@ impl ScreenNavigation {
 
             let mut name = String::from("tab");
             if let Some(title) = titles.get(&i) {
-                name = title.content.to_owned();
+                // Use custom_name if set, otherwise use the template-generated title
+                name = title
+                    .custom_name
+                    .as_deref()
+                    .unwrap_or(&title.content)
+                    .to_owned();
 
                 if !self.color_automation.is_empty() {
                     if let Some(extra) = &title.extra {
@@ -224,18 +238,36 @@ impl ScreenNavigation {
                 ..Quad::default()
             }));
 
-            if is_current {
-                // TopBar case should render on bottom
+            // Highlight strip uses per-tab accent color (always visible, thicker for active)
+            {
                 let position = if position_y == 0.0 {
                     PADDING_Y_BOTTOM_TABS - (PADDING_Y_BOTTOM_TABS / 10.)
                 } else {
                     position_y
                 };
 
+                let strip_height = if is_current {
+                    PADDING_Y_BOTTOM_TABS / 10.
+                } else {
+                    PADDING_Y_BOTTOM_TABS / 20.
+                };
+
+                // Dim inactive tab accent colors
+                let strip_color = if is_current {
+                    tab_accent
+                } else {
+                    [
+                        tab_accent[0] * 0.5,
+                        tab_accent[1] * 0.5,
+                        tab_accent[2] * 0.5,
+                        0.6,
+                    ]
+                };
+
                 objects.push(Object::Quad(Quad {
                     position: [initial_position_x, position],
-                    color: colors.tabs_active_highlight,
-                    size: [125., PADDING_Y_BOTTOM_TABS / 10.],
+                    color: strip_color,
+                    size: [125., strip_height],
                     ..Quad::default()
                 }));
             }

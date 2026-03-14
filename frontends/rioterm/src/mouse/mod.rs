@@ -1,3 +1,4 @@
+use crate::context::grid::DividerHit;
 use crate::crosswords::pos::Column;
 use crate::crosswords::pos::Line;
 use crate::crosswords::pos::Side;
@@ -16,6 +17,14 @@ pub struct AccumulatedScroll {
     pub y: f64,
 }
 
+/// Tracks state for an active mouse-based divider drag operation.
+#[derive(Debug, Clone, Copy)]
+pub struct DividerDragState {
+    pub hit: DividerHit,
+    pub last_x: f32,
+    pub last_y: f32,
+}
+
 #[derive(Debug)]
 pub struct Mouse {
     pub multiplier: f64,
@@ -31,6 +40,7 @@ pub struct Mouse {
     pub inside_text_area: bool,
     pub x: usize,
     pub y: usize,
+    pub divider_drag: Option<DividerDragState>,
 }
 
 impl Default for Mouse {
@@ -49,6 +59,7 @@ impl Default for Mouse {
             accumulated_scroll: AccumulatedScroll::default(),
             x: Default::default(),
             y: Default::default(),
+            divider_drag: None,
         }
     }
 }

@@ -167,6 +167,30 @@ impl Application<'_> {
         }
     }
 
+    #[cfg(target_os = "macos")]
+    fn set_dock_icon() {
+        use objc::runtime::{Class, Object};
+        use objc::{msg_send, sel, sel_impl};
+
+        let icon_data: &[u8] =
+            include_bytes!("../../../misc/osx/Volt.app/Contents/Resources/icon.icns");
+
+        unsafe {
+            let ns_data_class = Class::get("NSData").unwrap();
+            let ns_data: *mut Object = msg_send![ns_data_class,
+                dataWithBytes:icon_data.as_ptr()
+                length:icon_data.len()];
+
+            let ns_image_class = Class::get("NSImage").unwrap();
+            let ns_image: *mut Object = msg_send![ns_image_class, alloc];
+            let ns_image: *mut Object = msg_send![ns_image, initWithData: ns_data];
+
+            let ns_app_class = Class::get("NSApplication").unwrap();
+            let ns_app: *mut Object = msg_send![ns_app_class, sharedApplication];
+            let _: () = msg_send![ns_app, setApplicationIconImage: ns_image];
+        }
+    }
+
     pub fn run(
         &mut self,
         event_loop: EventLoop<EventPayload>,
@@ -189,6 +213,15 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
 
         if cause == StartCause::MacOSReopen && !self.router.routes.is_empty() {
             return;
+        }
+
+        #[cfg(target_os = "macos")]
+        {
+            // Set the dock icon programmatically for cargo run (no .app bundle)
+            static ICON_SET: std::sync::Once = std::sync::Once::new();
+            ICON_SET.call_once(|| {
+                Self::set_dock_icon();
+            });
         }
 
         update_colors_based_on_theme(&mut self.config, event_loop.system_theme());
@@ -928,6 +961,35 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
 
                 match state {
                     ElementState::Pressed => {
+                        // Check if click is on a split pane divider
+                        if button == MouseButton::Left {
+                            let mx = route.window.screen.mouse.x as f32;
+                            let my = route.window.screen.mouse.y as f32;
+                            if let Some(hit) = route
+                                .window
+                                .screen
+                                .context_manager
+                                .divider_at_position(mx, my)
+                            {
+                                use crate::mouse::DividerDragState;
+                                route.window.screen.mouse.divider_drag =
+                                    Some(DividerDragState {
+                                        hit,
+                                        last_x: mx,
+                                        last_y: my,
+                                    });
+                                use crate::context::grid::DividerOrientation;
+                                let cursor = match hit.orientation {
+                                    DividerOrientation::Vertical => CursorIcon::ColResize,
+                                    DividerOrientation::Horizontal => {
+                                        CursorIcon::RowResize
+                                    }
+                                };
+                                route.window.winit_window.set_cursor(cursor);
+                                return;
+                            }
+                        }
+
                         // In case need to switch grid current
                         route.window.screen.select_current_based_on_mouse();
 
@@ -997,6 +1059,15 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                         route.window.screen.process_mouse_bindings(button);
                     }
                     ElementState::Released => {
+                        // End divider drag if active
+                        if button == MouseButton::Left
+                            && route.window.screen.mouse.divider_drag.is_some()
+                        {
+                            route.window.screen.mouse.divider_drag = None;
+                            route.window.winit_window.set_cursor(CursorIcon::Text);
+                            return;
+                        }
+
                         if !route.window.screen.modifiers.state().shift_key()
                             && route.window.screen.mouse_mode()
                         {
@@ -1043,6 +1114,40 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
 
                 let x = position.x;
                 let y = position.y;
+
+                // Handle active divider drag
+                if let Some(drag_state) = route.window.screen.mouse.divider_drag {
+                    let cur_x = x as f32;
+                    let cur_y = y as f32;
+                    let delta_x = cur_x - drag_state.last_x;
+                    let delta_y = cur_y - drag_state.last_y;
+
+                    let hit = drag_state.hit;
+                    if route
+                        .window
+                        .screen
+                        .context_manager
+                        .drag_divider(&hit, delta_x, delta_y)
+                    {
+                        route.window.screen.mouse.divider_drag =
+                            Some(crate::mouse::DividerDragState {
+                                hit,
+                                last_x: cur_x,
+                                last_y: cur_y,
+                            });
+                        route.window.screen.render();
+                        route.request_redraw();
+                    } else {
+                        // Update position even if drag didn't succeed (e.g. at min size)
+                        route.window.screen.mouse.divider_drag =
+                            Some(crate::mouse::DividerDragState {
+                                hit,
+                                last_x: cur_x,
+                                last_y: cur_y,
+                            });
+                    }
+                    return;
+                }
 
                 let lmb_pressed =
                     route.window.screen.mouse.left_button_state == ElementState::Pressed;
@@ -1094,7 +1199,43 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                     && route.window.screen.mouse.square_side == square_side
                     && route.window.screen.mouse.inside_text_area == inside_text_area
                 {
+                    // Even if the cell hasn't changed, update divider hover cursor
+                    if !lmb_pressed {
+                        if let Some(hit) = route
+                            .window
+                            .screen
+                            .context_manager
+                            .divider_at_position(x as f32, y as f32)
+                        {
+                            use crate::context::grid::DividerOrientation;
+                            let cursor = match hit.orientation {
+                                DividerOrientation::Vertical => CursorIcon::ColResize,
+                                DividerOrientation::Horizontal => CursorIcon::RowResize,
+                            };
+                            route.window.winit_window.set_cursor(cursor);
+                        }
+                    }
                     return;
+                }
+
+                // Check if hovering over a divider (only when not dragging)
+                if !lmb_pressed && !rmb_pressed {
+                    if let Some(hit) = route
+                        .window
+                        .screen
+                        .context_manager
+                        .divider_at_position(x as f32, y as f32)
+                    {
+                        use crate::context::grid::DividerOrientation;
+                        let cursor = match hit.orientation {
+                            DividerOrientation::Vertical => CursorIcon::ColResize,
+                            DividerOrientation::Horizontal => CursorIcon::RowResize,
+                        };
+                        route.window.winit_window.set_cursor(cursor);
+                        route.window.screen.mouse.inside_text_area = inside_text_area;
+                        route.window.screen.mouse.square_side = square_side;
+                        return;
+                    }
                 }
 
                 if route.window.screen.update_highlighted_hints() {
