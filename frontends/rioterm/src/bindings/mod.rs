@@ -265,6 +265,8 @@ impl From<String> for Action {
             "movedividerright" => Some(Action::MoveDividerRight),
             "togglevimode" => Some(Action::ToggleViMode),
             "togglefullscreen" => Some(Action::ToggleFullscreen),
+            "togglepanezoom" => Some(Action::TogglePaneZoom),
+            "togglebroadcast" => Some(Action::ToggleBroadcast),
             "none" => Some(Action::None),
             _ => None,
         };
@@ -500,6 +502,12 @@ pub enum Action {
 
     /// Rename the current tab via a dialog prompt.
     RenameTab,
+
+    /// Toggle zoom on the current pane (full screen / restore split).
+    TogglePaneZoom,
+
+    /// Toggle broadcast mode (type into all panes simultaneously).
+    ToggleBroadcast,
 
     /// Allow receiving char input.
     ReceiveChar,
@@ -1182,6 +1190,15 @@ pub fn platform_key_bindings(
             "w", ModifiersState::CONTROL | ModifiersState::SHIFT; Action::CloseCurrentSplitOrTab;
             "[", ModifiersState::CONTROL | ModifiersState::SHIFT; Action::SelectPrevTab;
             "]", ModifiersState::CONTROL | ModifiersState::SHIFT; Action::SelectNextTab;
+            "1", ModifiersState::ALT; Action::SelectTab(0);
+            "2", ModifiersState::ALT; Action::SelectTab(1);
+            "3", ModifiersState::ALT; Action::SelectTab(2);
+            "4", ModifiersState::ALT; Action::SelectTab(3);
+            "5", ModifiersState::ALT; Action::SelectTab(4);
+            "6", ModifiersState::ALT; Action::SelectTab(5);
+            "7", ModifiersState::ALT; Action::SelectTab(6);
+            "8", ModifiersState::ALT; Action::SelectTab(7);
+            "9", ModifiersState::ALT; Action::SelectLastTab;
         ));
     }
 

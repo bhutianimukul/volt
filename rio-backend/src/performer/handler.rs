@@ -144,6 +144,18 @@ pub trait Handler {
     /// OSC to set current directory.
     fn set_current_directory(&mut self, _: std::path::PathBuf) {}
 
+    /// OSC 133;A — shell prompt started.
+    fn shell_prompt_start(&mut self) {}
+
+    /// OSC 133;B — command input started (user typing).
+    fn shell_command_start(&mut self) {}
+
+    /// OSC 133;C — command output started (execution began).
+    fn shell_output_start(&mut self) {}
+
+    /// OSC 133;D;{exit_code} — command finished with given exit code.
+    fn shell_command_finish(&mut self, _exit_code: i32) {}
+
     /// Set the cursor style.
     fn set_cursor_style(&mut self, _style: Option<CursorShape>, _blinking: bool) {}
 

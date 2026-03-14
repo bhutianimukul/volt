@@ -7,6 +7,7 @@
 mod application;
 mod bindings;
 mod cli;
+mod consequences;
 mod constants;
 mod context;
 mod hints;

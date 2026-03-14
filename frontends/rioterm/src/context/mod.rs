@@ -1,8 +1,10 @@
+pub mod blocks;
 pub mod grid;
 pub mod renderable;
 pub mod title;
 
 use crate::ansi::CursorShape;
+use crate::context::blocks::BlockManager;
 use crate::context::grid::{
     ContextDimension, ContextGrid, ContextGridItem, Delta, DividerHit,
 };
@@ -137,6 +139,7 @@ pub struct ContextManager<T: EventListener> {
     window_id: WindowId,
     pub config: ContextManagerConfig,
     pub titles: ContextManagerTitles,
+    pub block_manager: BlockManager,
 }
 
 pub fn create_dead_context<T: rio_backend::event::EventListener>(
@@ -393,6 +396,7 @@ impl<T: EventListener + Clone + std::marker::Send + 'static> ContextManager<T> {
             window_id,
             config: ctx_config,
             titles,
+            block_manager: BlockManager::new(),
         })
     }
 
@@ -440,6 +444,7 @@ impl<T: EventListener + Clone + std::marker::Send + 'static> ContextManager<T> {
             window_id,
             config,
             titles,
+            block_manager: BlockManager::new(),
         })
     }
 
