@@ -20,13 +20,7 @@ pub enum NavigationMode {
 #[allow(clippy::derivable_impls)]
 impl Default for NavigationMode {
     fn default() -> NavigationMode {
-        #[cfg(target_os = "macos")]
-        {
-            NavigationMode::NativeTab
-        }
-
-        #[cfg(not(target_os = "macos"))]
-        NavigationMode::Bookmark
+        NavigationMode::TopTab
     }
 }
 

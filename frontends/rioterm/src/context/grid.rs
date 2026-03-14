@@ -5,9 +5,7 @@ use rio_backend::event::EventListener;
 use rio_backend::sugarloaf::{
     layout::SugarDimensions, Object, Quad, RichText, Sugarloaf,
 };
-use std::collections::hash_map::RandomState;
 use std::collections::HashMap;
-use std::hash::{BuildHasher, Hasher};
 
 const MIN_COLS: usize = 2;
 const MIN_LINES: usize = 1;
@@ -86,27 +84,6 @@ fn create_border(color: [f32; 4], position: [f32; 2], size: [f32; 2]) -> Object 
     })
 }
 
-/// Generate a random dark background color with subtle hue variation.
-/// Colors stay in the 0.04-0.12 range per channel so text remains readable.
-fn random_dark_background() -> [f32; 4] {
-    let s = RandomState::new();
-    let mut hasher = s.build_hasher();
-    hasher.write_u64(
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_nanos() as u64,
-    );
-    let hash = hasher.finish();
-
-    // Subtle dark colors with slight hue tints
-    let r = 0.04 + ((hash & 0xFF) as f32 / 255.0 * 0.08);
-    let g = 0.04 + (((hash >> 8) & 0xFF) as f32 / 255.0 * 0.08);
-    let b = 0.04 + (((hash >> 16) & 0xFF) as f32 / 255.0 * 0.08);
-
-    [r, g, b, 1.0]
-}
-
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Delta<T: Default> {
     pub x: T,
@@ -131,8 +108,6 @@ pub struct ContextGridItem<T: EventListener> {
     down: Option<usize>,
     parent: Option<usize>,
     rich_text_object: Object,
-    /// Per-pane random dark background color
-    pub background_color: [f32; 4],
 }
 
 impl<T: rio_backend::event::EventListener> ContextGridItem<T> {
@@ -149,7 +124,6 @@ impl<T: rio_backend::event::EventListener> ContextGridItem<T> {
             down: None,
             parent: None,
             rich_text_object,
-            background_color: random_dark_background(),
         }
     }
 }
@@ -416,22 +390,6 @@ impl<T: rio_backend::event::EventListener> ContextGrid<T> {
         if len == 1 {
             if let Some(root) = self.root {
                 if let Some(item) = self.inner.get(&root) {
-                    let scale = item.val.dimension.dimension.scale;
-                    // Draw per-pane background quad
-                    target.push(Object::Quad(Quad {
-                        color: item.background_color,
-                        position: [0.0, 0.0],
-                        size: [
-                            self.width / scale,
-                            self.height / scale,
-                        ],
-                        shadow_blur_radius: 0.0,
-                        shadow_offset: [0.0, 0.0],
-                        shadow_color: [0.0, 0.0, 0.0, 0.0],
-                        border_color: [0.0, 0.0, 0.0, 0.0],
-                        border_width: 0.0,
-                        border_radius: [0.0, 0.0, 0.0, 0.0],
-                    }));
                     target.push(item.rich_text_object.clone());
                 }
             }
@@ -453,21 +411,6 @@ impl<T: rio_backend::event::EventListener> ContextGrid<T> {
         if len == 1 {
             if let Some(root) = self.root {
                 if let Some(item) = self.inner.get(&root) {
-                    let scale = item.val.dimension.dimension.scale;
-                    objects.push(Object::Quad(Quad {
-                        color: item.background_color,
-                        position: [0.0, 0.0],
-                        size: [
-                            self.width / scale,
-                            self.height / scale,
-                        ],
-                        shadow_blur_radius: 0.0,
-                        shadow_offset: [0.0, 0.0],
-                        shadow_color: [0.0, 0.0, 0.0, 0.0],
-                        border_color: [0.0, 0.0, 0.0, 0.0],
-                        border_width: 0.0,
-                        border_radius: [0.0, 0.0, 0.0, 0.0],
-                    }));
                     objects.push(item.rich_text_object.clone());
                 }
             }
@@ -596,23 +539,6 @@ impl<T: rio_backend::event::EventListener> ContextGrid<T> {
     fn plot_objects_recursive(&self, objects: &mut Vec<Object>, key: usize) {
         if let Some(item) = self.inner.get(&key) {
             let item_pos = item.position();
-            let scale = item.val.dimension.dimension.scale;
-
-            // Draw per-pane background quad before content
-            objects.push(Object::Quad(Quad {
-                color: item.background_color,
-                position: item_pos,
-                size: [
-                    item.val.dimension.width / scale,
-                    item.val.dimension.height / scale,
-                ],
-                shadow_blur_radius: 0.0,
-                shadow_offset: [0.0, 0.0],
-                shadow_color: [0.0, 0.0, 0.0, 0.0],
-                border_color: [0.0, 0.0, 0.0, 0.0],
-                border_width: 0.0,
-                border_radius: [0.0, 0.0, 0.0, 0.0],
-            }));
 
             // Add pre-computed rich text object
             objects.push(item.rich_text_object.clone());
