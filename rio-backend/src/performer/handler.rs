@@ -951,6 +951,37 @@ impl<U: Handler, T: Timeout> copa::Perform for Performer<'_, U, T> {
             // Reset text cursor color.
             b"112" => self.handler.reset_color(NamedColor::Cursor as usize),
 
+            // OSC 133 — shell integration (semantic prompts / command blocks).
+            // \e]133;A\a  = prompt start
+            // \e]133;B\a  = command input start
+            // \e]133;C\a  = command output start
+            // \e]133;D;{exit_code}\a = command finished
+            b"133" => {
+                if params.len() >= 2 {
+                    match params[1] {
+                        b"A" => self.handler.shell_prompt_start(),
+                        b"B" => self.handler.shell_command_start(),
+                        b"C" => self.handler.shell_output_start(),
+                        // OSC 133;D;{exit_code} — the parser splits on ';'
+                        // so exit code arrives as params[2].
+                        b"D" => {
+                            let exit_code = if params.len() >= 3 {
+                                simd_utf8::from_utf8_fast(params[2])
+                                    .ok()
+                                    .and_then(|s| s.parse::<i32>().ok())
+                                    .unwrap_or(0)
+                            } else {
+                                0
+                            };
+                            self.handler.shell_command_finish(exit_code);
+                        }
+                        _ => unhandled(params),
+                    }
+                } else {
+                    unhandled(params);
+                }
+            }
+
             // OSC 1337 is not necessarily only used by iTerm2 protocol
             // OSC 1337 is equal to xterm OSC 50
             b"1337" => {

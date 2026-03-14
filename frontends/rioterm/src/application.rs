@@ -766,6 +766,16 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                     );
                 }
             }
+            RioEventType::Rio(RioEvent::ToggleSettings) => {
+                if let Some(route) = self.router.routes.get_mut(&window_id) {
+                    if route.path == RoutePath::Settings {
+                        route.path = RoutePath::Terminal;
+                    } else {
+                        route.path = RoutePath::Settings;
+                    }
+                    route.request_redraw();
+                }
+            }
             #[cfg(target_os = "macos")]
             RioEventType::Rio(RioEvent::CloseWindow) => {
                 self.router.routes.remove(&window_id);
@@ -839,6 +849,46 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                                 });
                         }
                     }
+                }
+            }
+            RioEventType::Rio(RioEvent::ShellPromptStart { row }) => {
+                if let Some(route) = self.router.routes.get_mut(&window_id) {
+                    route
+                        .window
+                        .screen
+                        .context_manager
+                        .block_manager
+                        .on_prompt_start(row);
+                }
+            }
+            RioEventType::Rio(RioEvent::ShellCommandStart { row }) => {
+                if let Some(route) = self.router.routes.get_mut(&window_id) {
+                    route
+                        .window
+                        .screen
+                        .context_manager
+                        .block_manager
+                        .on_command_start(row);
+                }
+            }
+            RioEventType::Rio(RioEvent::ShellOutputStart { row }) => {
+                if let Some(route) = self.router.routes.get_mut(&window_id) {
+                    route
+                        .window
+                        .screen
+                        .context_manager
+                        .block_manager
+                        .on_output_start(row, String::new());
+                }
+            }
+            RioEventType::Rio(RioEvent::ShellCommandFinish { row, exit_code }) => {
+                if let Some(route) = self.router.routes.get_mut(&window_id) {
+                    route
+                        .window
+                        .screen
+                        .context_manager
+                        .block_manager
+                        .on_command_finish(row, exit_code);
                 }
             }
             _ => {}
@@ -960,8 +1010,7 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                     if let Some(tab_idx) =
                         route.window.screen.tab_index_at_position(mx, my)
                     {
-                        let current =
-                            route.window.screen.context_manager.current_index();
+                        let current = route.window.screen.context_manager.current_index();
                         let now = std::time::Instant::now();
                         let elapsed =
                             now - route.window.screen.mouse.last_click_timestamp;
@@ -970,11 +1019,7 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                         if tab_idx == current && is_double_click {
                             route.window.screen.prompt_rename_tab();
                         } else if tab_idx != current {
-                            route
-                                .window
-                                .screen
-                                .context_manager
-                                .select_tab(tab_idx);
+                            route.window.screen.context_manager.select_tab(tab_idx);
                             route.window.screen.render();
                         }
                         route.window.screen.mouse.last_click_timestamp = now;
@@ -1354,14 +1399,12 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                 {
                     let mx = route.window.screen.mouse.x as f64;
                     let my = route.window.screen.mouse.y as f64;
-                    if route.window.screen.tab_index_at_position(mx, my).is_some()
-                        || {
-                            // Also check if mouse is in the tab bar Y range (even between tabs)
-                            let scale = route.window.screen.sugarloaf.scale_factor() as f64;
-                            let ly = my / scale;
-                            ly < 22.0 // PADDING_Y_BOTTOM_TABS
-                        }
-                    {
+                    if route.window.screen.tab_index_at_position(mx, my).is_some() || {
+                        // Also check if mouse is in the tab bar Y range (even between tabs)
+                        let scale = route.window.screen.sugarloaf.scale_factor() as f64;
+                        let ly = my / scale;
+                        ly < 22.0 // PADDING_Y_BOTTOM_TABS
+                    } {
                         let scroll_delta = match delta {
                             MouseScrollDelta::LineDelta(cols, _) => cols * 30.0,
                             MouseScrollDelta::PixelDelta(pos) => pos.x as f32,
@@ -1372,12 +1415,11 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                             let s = route.window.screen.sugarloaf.scale_factor();
                             ws.width / s
                         };
-                        route
-                            .window
-                            .screen
-                            .renderer
-                            .navigation
-                            .scroll_tabs(-scroll_delta, num_tabs, visible_width);
+                        route.window.screen.renderer.navigation.scroll_tabs(
+                            -scroll_delta,
+                            num_tabs,
+                            visible_width,
+                        );
                         route.window.screen.render();
                         route.request_redraw();
                         return;
@@ -1447,7 +1489,8 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
             }
 
             WindowEvent::Ime(ime) => {
-                if route.path == RoutePath::Assistant {
+                if route.path == RoutePath::Assistant || route.path == RoutePath::Settings
+                {
                     return;
                 }
 
@@ -1536,7 +1579,8 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
             }
 
             WindowEvent::DroppedFile(path) => {
-                if route.path == RoutePath::Assistant {
+                if route.path == RoutePath::Assistant || route.path == RoutePath::Settings
+                {
                     return;
                 }
 
@@ -1623,10 +1667,13 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                     }
                     RoutePath::ConfirmQuit => {
                         route.window.screen.render_dialog(
-                            "Quit Rio?",
+                            "Quit Volt?",
                             "Continue -> press escape key",
                             "Quit -> press enter key",
                         );
+                    }
+                    RoutePath::Settings => {
+                        route.window.screen.render_settings(&self.config);
                     }
                 }
 

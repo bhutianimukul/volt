@@ -100,6 +100,10 @@ pub struct ContextGrid<T: EventListener> {
     scaled_padding: f32,
     inner: HashMap<usize, ContextGridItem<T>>,
     pub root: Option<usize>,
+    /// When `Some(pane_id)`, that pane is zoomed to fill the entire grid area.
+    pub zoomed_pane: Option<usize>,
+    /// When true, keyboard input is broadcast to all panes in this grid.
+    pub broadcast_mode: bool,
 }
 
 pub struct ContextGridItem<T: EventListener> {
@@ -175,6 +179,8 @@ impl<T: rio_backend::event::EventListener> ContextGrid<T> {
             border_color,
             scaled_padding,
             root: Some(root_key),
+            zoomed_pane: None,
+            broadcast_mode: false,
         };
         grid.calculate_positions_for_affected_nodes(&[root_key]);
         grid
@@ -331,6 +337,33 @@ impl<T: rio_backend::event::EventListener> ContextGrid<T> {
         self.current
     }
 
+    /// Toggle zoom on the current pane. If no pane is zoomed, zoom the current
+    /// pane to fill the grid. If a pane is already zoomed, restore the split layout.
+    #[inline]
+    pub fn toggle_zoom(&mut self) {
+        if self.inner.len() <= 1 {
+            return;
+        }
+        if self.zoomed_pane.is_some() {
+            self.zoomed_pane = None;
+        } else {
+            self.zoomed_pane = Some(self.current);
+        }
+    }
+
+    /// Toggle broadcast mode on/off.
+    #[inline]
+    pub fn toggle_broadcast(&mut self) {
+        self.broadcast_mode = !self.broadcast_mode;
+    }
+
+    /// Send bytes to all panes in this grid (used for broadcast mode).
+    pub fn broadcast_write(&self, bytes: &[u8]) {
+        for item in self.inner.values() {
+            item.val.messenger.send_write(bytes.to_vec());
+        }
+    }
+
     #[inline]
     pub fn current(&self) -> &Context<T> {
         if let Some(item) = self.inner.get(&self.current) {
@@ -386,6 +419,14 @@ impl<T: rio_backend::event::EventListener> ContextGrid<T> {
         // Reserve space for more objects
         target.reserve(len);
 
+        // When a pane is zoomed, only show that single pane
+        if let Some(zoomed_key) = self.zoomed_pane {
+            if let Some(item) = self.inner.get(&zoomed_key) {
+                target.push(item.rich_text_object.clone());
+                return;
+            }
+        }
+
         // In case there's only 1 context then ignore quad borders
         if len == 1 {
             if let Some(root) = self.root {
@@ -406,6 +447,14 @@ impl<T: rio_backend::event::EventListener> ContextGrid<T> {
         }
 
         let mut objects = Vec::with_capacity(len);
+
+        // When a pane is zoomed, only show that single pane
+        if let Some(zoomed_key) = self.zoomed_pane {
+            if let Some(item) = self.inner.get(&zoomed_key) {
+                objects.push(item.rich_text_object.clone());
+                return objects;
+            }
+        }
 
         // In case there's only 1 context then ignore quad borders
         if len == 1 {

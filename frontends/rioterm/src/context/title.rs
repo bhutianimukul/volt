@@ -129,11 +129,9 @@ impl ContextManagerTitles {
     /// Get the display title for a tab (custom name takes priority).
     #[inline]
     pub fn display_title(&self, idx: usize) -> Option<&str> {
-        self.titles.get(&idx).map(|t| {
-            t.custom_name
-                .as_deref()
-                .unwrap_or(&t.content)
-        })
+        self.titles
+            .get(&idx)
+            .map(|t| t.custom_name.as_deref().unwrap_or(&t.content))
     }
 
     #[inline]

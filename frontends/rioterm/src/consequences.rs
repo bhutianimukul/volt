@@ -17,10 +17,10 @@ pub enum Severity {
 
 /// List of safe commands that should never be intercepted
 const SAFE_COMMANDS: &[&str] = &[
-    "ls", "echo", "cat", "head", "tail", "grep", "find", "pwd", "cd", "env",
-    "whoami", "date", "cal", "which", "where", "man", "help", "less", "more",
-    "wc", "sort", "uniq", "diff", "file", "stat", "id", "uname", "hostname",
-    "printenv", "true", "false", "test", "read",
+    "ls", "echo", "cat", "head", "tail", "grep", "find", "pwd", "cd", "env", "whoami",
+    "date", "cal", "which", "where", "man", "help", "less", "more", "wc", "sort", "uniq",
+    "diff", "file", "stat", "id", "uname", "hostname", "printenv", "true", "false",
+    "test", "read",
 ];
 
 /// Analyze a command and return a consequence preview if it's destructive.
@@ -60,12 +60,8 @@ fn check_rm(input: &str, parts: &[&str]) -> Option<ConsequencePreview> {
         return None;
     }
 
-    let has_recursive = parts
-        .iter()
-        .any(|p| p.contains('r') && p.starts_with('-'));
-    let has_force = parts
-        .iter()
-        .any(|p| p.contains('f') && p.starts_with('-'));
+    let has_recursive = parts.iter().any(|p| p.contains('r') && p.starts_with('-'));
+    let has_force = parts.iter().any(|p| p.contains('f') && p.starts_with('-'));
 
     // Get file arguments (skip flags)
     let files: Vec<&str> = parts[1..]
@@ -97,11 +93,8 @@ fn check_rm(input: &str, parts: &[&str]) -> Option<ConsequencePreview> {
                 .arg("f")
                 .output()
             {
-                let count = String::from_utf8_lossy(&output.stdout)
-                    .lines()
-                    .count();
-                if let Ok(du_output) = Command::new("du").arg("-sh").arg(file).output()
-                {
+                let count = String::from_utf8_lossy(&output.stdout).lines().count();
+                if let Ok(du_output) = Command::new("du").arg("-sh").arg(file).output() {
                     let size = String::from_utf8_lossy(&du_output.stdout)
                         .split_whitespace()
                         .next()
@@ -159,10 +152,7 @@ fn check_chmod_recursive(input: &str, parts: &[&str]) -> Option<ConsequencePrevi
     if parts.first()? != &"chmod" {
         return None;
     }
-    if !parts
-        .iter()
-        .any(|p| p.contains('R') && p.starts_with('-'))
-    {
+    if !parts.iter().any(|p| p.contains('R') && p.starts_with('-')) {
         return None;
     }
 
@@ -271,8 +261,7 @@ mod tests {
         let result = analyze_command("git push -f").unwrap();
         assert_eq!(result.severity, Severity::Danger);
 
-        let result =
-            analyze_command("git push --force-with-lease origin main").unwrap();
+        let result = analyze_command("git push --force-with-lease origin main").unwrap();
         assert_eq!(result.severity, Severity::Danger);
     }
 

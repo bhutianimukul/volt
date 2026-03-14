@@ -7,8 +7,15 @@ use rustc_hash::FxHashMap;
 use std::collections::HashMap;
 
 /// Tab rendering constants
-const TAB_WIDTH: f32 = 54.0;
+const TAB_MIN_WIDTH: f32 = 40.0;
+const TAB_CHAR_WIDTH: f32 = 8.0;
+const TAB_PADDING: f32 = 16.0;
 const TAB_GAP: f32 = 2.0;
+
+/// Calculate tab width based on label length
+fn tab_width_for_label(label: &str) -> f32 {
+    (TAB_PADDING + label.len() as f32 * TAB_CHAR_WIDTH).max(TAB_MIN_WIDTH)
+}
 
 pub struct ScreenNavigation {
     pub navigation: Navigation,
@@ -32,26 +39,18 @@ impl ScreenNavigation {
         }
     }
 
-    /// Scroll the tab bar by a delta (positive = scroll right, negative = scroll left).
-    /// Clamps to valid range based on total tab count and visible width.
+    /// Scroll the tab bar by a delta. Uses average tab width estimate.
     pub fn scroll_tabs(&mut self, delta: f32, num_tabs: usize, visible_width: f32) {
-        let tab_width = TAB_WIDTH + TAB_GAP;
-        let total_width = num_tabs as f32 * tab_width;
+        let avg_tab = TAB_MIN_WIDTH + TAB_GAP;
+        let total_width = num_tabs as f32 * avg_tab;
         let max_scroll = (total_width - visible_width).max(0.0);
         self.tab_scroll_offset = (self.tab_scroll_offset + delta).clamp(0.0, max_scroll);
     }
 
-    /// Ensure the given tab index is visible by adjusting scroll offset.
-    pub fn ensure_tab_visible(&mut self, tab_idx: usize, visible_width: f32) {
-        let tab_width = TAB_WIDTH + TAB_GAP;
-        let tab_start = tab_idx as f32 * tab_width;
-        let tab_end = tab_start + TAB_WIDTH;
-
-        if tab_start < self.tab_scroll_offset {
-            self.tab_scroll_offset = tab_start;
-        } else if tab_end > self.tab_scroll_offset + visible_width {
-            self.tab_scroll_offset = tab_end - visible_width;
-        }
+    /// Ensure the given tab index is visible. (Actual precise scrolling is done in render loop.)
+    pub fn ensure_tab_visible(&mut self, _tab_idx: usize, _visible_width: f32) {
+        // Scroll adjustment is now handled in the tab() render method
+        // using actual computed tab positions
     }
 
     #[inline]
@@ -208,31 +207,60 @@ impl ScreenNavigation {
             ..Quad::default()
         }));
 
-        let tab_step = TAB_WIDTH + TAB_GAP;
         let left_margin = 4.0;
 
+        // First pass: compute labels and positions
+        let mut tab_layouts: Vec<(f32, f32, String)> = Vec::with_capacity(len); // (x, width, label)
+        let mut x_cursor = left_margin;
         for i in 0..len {
-            let tab_x =
-                left_margin + i as f32 * tab_step - self.tab_scroll_offset;
+            let label = if let Some(title) = titles.get(&i) {
+                if let Some(ref custom) = title.custom_name {
+                    let mut s = custom.clone();
+                    if s.len() > 20 {
+                        s.truncate(18);
+                        s.push_str("..");
+                    }
+                    s
+                } else {
+                    format!("{}", i + 1)
+                }
+            } else {
+                format!("{}", i + 1)
+            };
+            let w = tab_width_for_label(&label);
+            tab_layouts.push((x_cursor, w, label));
+            x_cursor += w + TAB_GAP;
+        }
+
+        // Auto-scroll to keep current tab visible
+        if let Some((cur_x, cur_w, _)) = tab_layouts.get(current) {
+            let tab_end = cur_x + cur_w;
+            if *cur_x < self.tab_scroll_offset {
+                self.tab_scroll_offset = *cur_x;
+            } else if tab_end > self.tab_scroll_offset + visible_width {
+                self.tab_scroll_offset = tab_end - visible_width;
+            }
+        }
+
+        // Second pass: render
+        for (i, (base_x, w, label)) in tab_layouts.iter().enumerate() {
+            let tab_x = base_x - self.tab_scroll_offset;
 
             // Skip off-screen tabs
-            if tab_x + TAB_WIDTH < 0.0 || tab_x > visible_width {
+            if tab_x + w < 0.0 || tab_x > visible_width {
                 continue;
             }
 
             let is_current = i == current;
 
-            // Each tab gets its own prominent accent color
             let tab_accent = titles
                 .get(&i)
                 .map(|t| t.accent_color)
                 .unwrap_or(colors.tabs_active_highlight);
 
-            // Full-height colored block for EVERY tab — the color IS the identifier
             let tab_color = if is_current {
                 tab_accent
             } else {
-                // Slightly dimmed but still clearly the same color
                 [
                     tab_accent[0] * 0.65,
                     tab_accent[1] * 0.65,
@@ -244,35 +272,21 @@ impl ScreenNavigation {
             objects.push(Object::Quad(Quad {
                 position: [tab_x, position_y],
                 color: tab_color,
-                size: [TAB_WIDTH, PADDING_Y_BOTTOM_TABS],
+                size: [*w, PADDING_Y_BOTTOM_TABS],
                 ..Quad::default()
             }));
 
-            // Active tab indicator: bright white bottom strip
             if is_current {
                 let indicator_y = position_y + PADDING_Y_BOTTOM_TABS - 2.5;
                 objects.push(Object::Quad(Quad {
                     position: [tab_x, indicator_y],
                     color: [1.0, 1.0, 1.0, 0.9],
-                    size: [TAB_WIDTH, 2.5],
+                    size: [*w, 2.5],
                     ..Quad::default()
                 }));
             }
 
-            // Tab label — number or custom name
-            let label = if let Some(title) = titles.get(&i) {
-                if let Some(ref custom) = title.custom_name {
-                    let mut s = custom.clone();
-                    if s.len() > 5 {
-                        s.truncate(5);
-                    }
-                    s
-                } else {
-                    format!("{}", i + 1)
-                }
-            } else {
-                format!("{}", i + 1)
-            };
+            let label = label;
 
             // White text on colored background for all tabs
             let fg = [1.0, 1.0, 1.0, if is_current { 1.0 } else { 0.85 }];

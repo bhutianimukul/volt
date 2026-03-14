@@ -585,7 +585,9 @@ impl Screen<'_> {
                 _ => build_key_sequence(key, mods, mode),
             };
 
-            self.ctx_mut().current_mut().messenger.send_write(bytes);
+            if !self.ctx().broadcast_write_if_active(&bytes) {
+                self.ctx_mut().current_mut().messenger.send_write(bytes);
+            }
 
             return;
         }
@@ -683,7 +685,24 @@ impl Screen<'_> {
             self.scroll_bottom_when_cursor_not_visible();
             self.clear_selection();
 
-            self.ctx_mut().current_mut().messenger.send_write(bytes);
+            // Intercept Enter key to analyze command for destructive patterns.
+            // Only applies in the primary screen (not alt screen, e.g. vim/less).
+            if bytes.contains(&b'\r') && !mode.contains(Mode::ALT_SCREEN) {
+                let command_text = self.extract_current_command_line();
+                if !command_text.is_empty() {
+                    if let Some(preview) =
+                        crate::consequences::analyze_command(&command_text)
+                    {
+                        if !self.confirm_destructive_command(&preview) {
+                            return;
+                        }
+                    }
+                }
+            }
+
+            if !self.ctx().broadcast_write_if_active(&bytes) {
+                self.ctx_mut().current_mut().messenger.send_write(bytes);
+            }
         }
     }
 
@@ -973,6 +992,9 @@ impl Screen<'_> {
                     Act::ConfigEditor => {
                         self.context_manager.switch_to_settings();
                     }
+                    Act::OpenSettings => {
+                        self.context_manager.toggle_settings();
+                    }
                     Act::WindowCreateNew => {
                         self.context_manager.create_new_window();
                     }
@@ -1109,6 +1131,13 @@ impl Screen<'_> {
                     #[cfg(target_os = "macos")]
                     Act::HideOtherApplications => {
                         self.context_manager.hide_other_apps();
+                    }
+                    Act::TogglePaneZoom => {
+                        self.context_manager.toggle_pane_zoom();
+                        self.render();
+                    }
+                    Act::ToggleBroadcast => {
+                        self.context_manager.toggle_broadcast();
                     }
                     Act::SelectNextSplit => {
                         self.cancel_search();
@@ -1261,11 +1290,12 @@ impl Screen<'_> {
         let y = phys_y / scale;
 
         // Must match constants in navigation.rs
-        let tab_bar_height = 22.0_f64; // PADDING_Y_BOTTOM_TABS
-        let tab_width = 54.0_f64; // TAB_WIDTH
-        let tab_gap = 3.0_f64; // TAB_GAP
+        let tab_bar_height = 22.0_f64;
+        let tab_min_width = 40.0_f64;
+        let tab_char_width = 8.0_f64;
+        let tab_padding = 16.0_f64;
+        let tab_gap = 2.0_f64;
         let left_margin = 4.0_f64;
-        let tab_step = tab_width + tab_gap;
 
         let (bar_y_start, bar_y_end) = if nav_mode == NavigationMode::TopTab {
             (0.0, tab_bar_height)
@@ -1278,20 +1308,32 @@ impl Screen<'_> {
             return None;
         }
 
-        // Account for scroll offset
+        // Compute variable-width tab positions (must match navigation.rs render logic)
         let scroll_offset = self.renderer.navigation.tab_scroll_offset as f64;
-        let scrolled_x = x - left_margin + scroll_offset;
+        let click_x = x + scroll_offset - left_margin;
+        let titles = &self.context_manager.titles.titles;
 
-        let tab_idx = (scrolled_x / tab_step) as usize;
-        let tab_start = tab_idx as f64 * tab_step;
-        if scrolled_x >= tab_start
-            && scrolled_x <= tab_start + tab_width
-            && tab_idx < num_tabs
-        {
-            Some(tab_idx)
-        } else {
-            None
+        let mut x_cursor = 0.0_f64;
+        for i in 0..num_tabs {
+            let label_len = if let Some(title) = titles.get(&i) {
+                if let Some(ref custom) = title.custom_name {
+                    custom.len().min(20)
+                } else {
+                    format!("{}", i + 1).len()
+                }
+            } else {
+                format!("{}", i + 1).len()
+            };
+
+            let w = (tab_padding + label_len as f64 * tab_char_width).max(tab_min_width);
+
+            if click_x >= x_cursor && click_x <= x_cursor + w {
+                return Some(i);
+            }
+            x_cursor += w + tab_gap;
         }
+
+        None
     }
 
     pub fn close_split_or_tab(&mut self) {
@@ -1399,9 +1441,7 @@ impl Screen<'_> {
             if response == 1000 {
                 let value: *mut Object = msg_send![input, stringValue];
                 let utf8: *const std::ffi::c_char = msg_send![value, UTF8String];
-                let name = std::ffi::CStr::from_ptr(utf8)
-                    .to_string_lossy()
-                    .to_string();
+                let name = std::ffi::CStr::from_ptr(utf8).to_string_lossy().to_string();
                 if !name.is_empty() {
                     self.context_manager.set_custom_tab_name(name);
                     self.render();
@@ -2697,6 +2737,131 @@ impl Screen<'_> {
             close,
         );
         self.sugarloaf.render();
+    }
+
+    pub fn render_settings(&mut self, config: &rio_backend::config::Config) {
+        self.sugarloaf.clear();
+        crate::router::routes::settings::screen(
+            &mut self.sugarloaf,
+            &self.context_manager.current().dimension,
+            config,
+        );
+        self.sugarloaf.render();
+    }
+
+    /// Extract the text on the current cursor line from the terminal grid.
+    /// Strips shell prompt characters ($, %, #, >) to isolate the actual command.
+    pub fn extract_current_command_line(&self) -> String {
+        let terminal = self.ctx().current().terminal.lock();
+        let cursor_line = terminal.grid.cursor.pos.row;
+        let row = &terminal.grid[cursor_line];
+        let mut line_text = String::new();
+        for square in row.inner.iter() {
+            if square
+                .flags
+                .contains(rio_backend::crosswords::square::Flags::WIDE_CHAR_SPACER)
+            {
+                continue;
+            }
+            line_text.push(square.c);
+        }
+        drop(terminal);
+
+        let trimmed = line_text.trim_end().to_string();
+
+        // Strip common shell prompts: skip everything up to and including
+        // the last '$', '%', '#', or '>' that appears before the actual command.
+        // This handles prompts like "user@host:~$ ", "% ", "> ", etc.
+        if let Some(pos) =
+            trimmed.rfind(|c| c == '$' || c == '%' || c == '#' || c == '>')
+        {
+            let after = &trimmed[pos + 1..];
+            after.trim_start().to_string()
+        } else {
+            trimmed
+        }
+    }
+
+    /// Show a confirmation dialog for a destructive command.
+    /// Returns true if the user confirms, false if cancelled.
+    pub fn confirm_destructive_command(
+        &self,
+        preview: &crate::consequences::ConsequencePreview,
+    ) -> bool {
+        #[cfg(target_os = "macos")]
+        {
+            use objc::runtime::{Class, Object};
+            use objc::{msg_send, sel, sel_impl};
+            use std::ffi::CString;
+
+            unsafe {
+                let alert_class = Class::get("NSAlert").unwrap();
+                let alert: *mut Object = msg_send![alert_class, new];
+                let ns_string_class = Class::get("NSString").unwrap();
+
+                // Set alert style based on severity
+                let style: i64 = match preview.severity {
+                    crate::consequences::Severity::Danger => 2, // NSAlertStyleCritical
+                    _ => 0, // NSAlertStyleWarning
+                };
+                let _: () = msg_send![alert, setAlertStyle: style];
+
+                // Title with severity label
+                let severity_label = match preview.severity {
+                    crate::consequences::Severity::Danger => "Danger",
+                    crate::consequences::Severity::Warning => "Warning",
+                    crate::consequences::Severity::Info => "Info",
+                };
+                let title = format!(
+                    "{}: Destructive Command Detected",
+                    severity_label
+                );
+                let title_cstr = CString::new(title).unwrap();
+                let title_ns: *mut Object = msg_send![ns_string_class,
+                    stringWithUTF8String: title_cstr.as_ptr()];
+                let _: () = msg_send![alert, setMessageText: title_ns];
+
+                // Informative text with description, command, and details
+                let mut info = format!(
+                    "{}\n\nCommand: {}\n",
+                    preview.description, preview.command
+                );
+                if !preview.details.is_empty() {
+                    info.push('\n');
+                    for detail in &preview.details {
+                        info.push_str(&format!("  {}\n", detail));
+                    }
+                }
+                let info_cstr = CString::new(info).unwrap();
+                let info_ns: *mut Object = msg_send![ns_string_class,
+                    stringWithUTF8String: info_cstr.as_ptr()];
+                let _: () = msg_send![alert, setInformativeText: info_ns];
+
+                // Add "Execute Anyway" and "Cancel" buttons
+                let exec_cstr = CString::new("Execute Anyway").unwrap();
+                let exec_ns: *mut Object = msg_send![ns_string_class,
+                    stringWithUTF8String: exec_cstr.as_ptr()];
+                let _: () = msg_send![alert, addButtonWithTitle: exec_ns];
+
+                let cancel_cstr = CString::new("Cancel").unwrap();
+                let cancel_ns: *mut Object = msg_send![ns_string_class,
+                    stringWithUTF8String: cancel_cstr.as_ptr()];
+                let _: () = msg_send![alert, addButtonWithTitle: cancel_ns];
+
+                let response: i64 = msg_send![alert, runModal];
+                return response == 1000; // NSAlertFirstButtonReturn
+            }
+        }
+
+        #[cfg(not(target_os = "macos"))]
+        {
+            tracing::warn!(
+                "Destructive command detected: {} - {}",
+                preview.command,
+                preview.description
+            );
+            true // Allow on non-macOS for now
+        }
     }
 
     pub fn render(&mut self) -> Option<crate::context::renderable::WindowUpdate> {

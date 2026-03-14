@@ -86,10 +86,10 @@ impl std::fmt::Display for RioErrorType {
                 write!(f, "Configuration file was not found")
             }
             // RioErrorType::NavigationHasChanged => {
-            //     write!(f, "Navigation has changed\n\nPlease reopen Rio terminal.")
+            //     write!(f, "Navigation has changed\n\nPlease reopen Volt terminal.")
             // }
             RioErrorType::InitializationError(message) => {
-                write!(f, "Error initializing Rio terminal:\n{message}")
+                write!(f, "Error initializing Volt terminal:\n{message}")
             }
             RioErrorType::IgnoredReport => write!(f, ""),
             RioErrorType::InvalidConfigurationFormat(message) => {

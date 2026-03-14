@@ -335,7 +335,7 @@ pub fn default_config_file_content() -> String {
 #
 # Configure fonts used by the terminal
 #
-# Note: You can set different font families but Rio terminal
+# Note: You can set different font families but Volt terminal
 # will always look for regular font bounds whene
 #
 # You can also set family on root to overwrite all fonts.
@@ -478,7 +478,7 @@ pub fn default_config_file_content() -> String {
 
 # Bindings
 #
-# Create custom Key bindings for Rio terminal
+# Create custom Key bindings for Volt terminal
 # More information in: https://raphamorim.io/rio/docs/key-bindings
 #
 # Example:

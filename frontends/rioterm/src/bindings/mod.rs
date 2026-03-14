@@ -243,6 +243,7 @@ impl From<String> for Action {
             "closesplitortab" => Some(Action::CloseCurrentSplitOrTab),
             "closeunfocusedtabs" => Some(Action::TabCloseUnfocused),
             "openconfigeditor" => Some(Action::ConfigEditor),
+            "opensettings" => Some(Action::OpenSettings),
             "selectprevtab" => Some(Action::SelectPrevTab),
             "selectnexttab" => Some(Action::SelectNextTab),
             "selectlasttab" => Some(Action::SelectLastTab),
@@ -416,6 +417,9 @@ pub enum Action {
 
     /// Create config editor.
     ConfigEditor,
+
+    /// Open the in-app settings viewer.
+    OpenSettings,
 
     /// Create a new Rio tab.
     TabCreateNew,
@@ -1012,7 +1016,7 @@ pub fn platform_key_bindings(
         "m", ModifiersState::SUPER; Action::Minimize;
         "q", ModifiersState::SUPER; Action::Quit;
         "n", ModifiersState::SUPER; Action::WindowCreateNew;
-        ",", ModifiersState::SUPER; Action::ConfigEditor;
+        ",", ModifiersState::SUPER; Action::OpenSettings;
 
         // Search
         "f", ModifiersState::SUPER, ~BindingMode::SEARCH; Action::SearchForward;
@@ -1069,6 +1073,8 @@ pub fn platform_key_bindings(
             Key::Named(ArrowDown), ModifiersState::CONTROL | ModifiersState::SUPER, ~BindingMode::SEARCH, ~BindingMode::VI; Action::MoveDividerDown;
             Key::Named(ArrowLeft), ModifiersState::CONTROL | ModifiersState::SUPER, ~BindingMode::SEARCH, ~BindingMode::VI; Action::MoveDividerLeft;
             Key::Named(ArrowRight), ModifiersState::CONTROL | ModifiersState::SUPER, ~BindingMode::SEARCH, ~BindingMode::VI; Action::MoveDividerRight;
+            Key::Named(Enter), ModifiersState::SUPER | ModifiersState::SHIFT, ~BindingMode::SEARCH, ~BindingMode::VI; Action::TogglePaneZoom;
+            "b", ModifiersState::SUPER | ModifiersState::SHIFT, ~BindingMode::SEARCH, ~BindingMode::VI; Action::ToggleBroadcast;
         ));
     }
 
@@ -1096,7 +1102,7 @@ pub fn platform_key_bindings(
         "-", ModifiersState::CONTROL;  Action::DecreaseFontSize;
         "-", ModifiersState::CONTROL;  Action::DecreaseFontSize;
         "n", ModifiersState::CONTROL | ModifiersState::SHIFT; Action::WindowCreateNew;
-        ",", ModifiersState::CONTROL | ModifiersState::SHIFT; Action::ConfigEditor;
+        ",", ModifiersState::CONTROL | ModifiersState::SHIFT; Action::OpenSettings;
 
         // Search
         "f", ModifiersState::CONTROL | ModifiersState::SHIFT, ~BindingMode::SEARCH; Action::SearchForward;
@@ -1161,7 +1167,7 @@ pub fn platform_key_bindings(
         "-", ModifiersState::CONTROL; Action::DecreaseFontSize;
         Key::Named(Enter), ModifiersState::ALT; Action::ToggleFullscreen;
         "n", ModifiersState::CONTROL | ModifiersState::SHIFT; Action::WindowCreateNew;
-        ",", ModifiersState::CONTROL | ModifiersState::SHIFT; Action::ConfigEditor;
+        ",", ModifiersState::CONTROL | ModifiersState::SHIFT; Action::OpenSettings;
         // This is actually a Windows Powershell shortcut
         // https://github.com/alacritty/alacritty/issues/2930
         // https://github.com/raphamorim/rio/issues/220#issuecomment-1761651339

@@ -86,6 +86,7 @@ pub enum RioEvent {
     CloseWindow,
     CreateNativeTab(Option<String>),
     CreateConfigEditor,
+    ToggleSettings,
     SelectNativeTabByIndex(usize),
     SelectNativeTabLast,
     SelectNativeTabNext,
@@ -160,6 +161,15 @@ pub enum RioEvent {
     /// Color index: 0 for foreground, 1 for background, 2 for cursor color.
     ColorChange(usize, usize, Option<ColorRgb>),
 
+    /// OSC 133;A — shell prompt started at the given absolute row.
+    ShellPromptStart { row: usize },
+    /// OSC 133;B — command input started at the given absolute row.
+    ShellCommandStart { row: usize },
+    /// OSC 133;C — command output started at the given absolute row.
+    ShellOutputStart { row: usize },
+    /// OSC 133;D — command finished at the given absolute row with exit code.
+    ShellCommandFinish { row: usize, exit_code: i32 },
+
     // No operation
     Noop,
 }
@@ -231,6 +241,19 @@ impl Debug for RioEvent {
             RioEvent::ColorChange(route_id, color, rgb) => {
                 write!(f, "ColorChange({route_id}, {color:?}, {rgb:?})")
             }
+            RioEvent::ShellPromptStart { row } => {
+                write!(f, "ShellPromptStart({row})")
+            }
+            RioEvent::ShellCommandStart { row } => {
+                write!(f, "ShellCommandStart({row})")
+            }
+            RioEvent::ShellOutputStart { row } => {
+                write!(f, "ShellOutputStart({row})")
+            }
+            RioEvent::ShellCommandFinish { row, exit_code } => {
+                write!(f, "ShellCommandFinish({row}, exit={exit_code})")
+            }
+            RioEvent::ToggleSettings => write!(f, "ToggleSettings"),
         }
     }
 }

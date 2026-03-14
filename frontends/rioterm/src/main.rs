@@ -18,9 +18,15 @@ mod mouse;
 mod panic;
 mod platform;
 mod renderer;
+mod retroactive_pipe;
 mod router;
 mod scheduler;
 mod screen;
+mod shell_intelligence;
+mod slash_commands;
+mod structured_output;
+mod time_travel;
+mod undo;
 mod watcher;
 
 use clap::Parser;

@@ -266,6 +266,13 @@ impl Route<'_> {
             self.path = RoutePath::Terminal;
         }
 
+        if self.path == RoutePath::Settings {
+            if key_event.logical_key == Key::Named(NamedKey::Escape) {
+                self.path = RoutePath::Terminal;
+            }
+            return true;
+        }
+
         false
     }
 }

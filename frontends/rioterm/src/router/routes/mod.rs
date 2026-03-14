@@ -1,5 +1,6 @@
 pub mod assistant;
 pub mod dialog;
+pub mod settings;
 pub mod welcome;
 
 #[derive(PartialEq)]
@@ -8,4 +9,5 @@ pub enum RoutePath {
     Terminal,
     Welcome,
     ConfirmQuit,
+    Settings,
 }

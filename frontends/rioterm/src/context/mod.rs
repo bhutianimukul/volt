@@ -562,6 +562,31 @@ impl<T: EventListener + Clone + std::marker::Send + 'static> ContextManager<T> {
         self.current_route = self.current().route_id;
     }
 
+    /// Toggle zoom on the current pane in the active tab's grid.
+    #[inline]
+    pub fn toggle_pane_zoom(&mut self) {
+        self.contexts[self.current_index].toggle_zoom();
+    }
+
+    /// Toggle broadcast mode on the active tab's grid.
+    #[inline]
+    pub fn toggle_broadcast(&mut self) {
+        self.contexts[self.current_index].toggle_broadcast();
+    }
+
+    /// If broadcast mode is active, send bytes to all panes.
+    /// Returns true if broadcast was performed.
+    #[inline]
+    pub fn broadcast_write_if_active(&self, bytes: &[u8]) -> bool {
+        let grid = &self.contexts[self.current_index];
+        if grid.broadcast_mode {
+            grid.broadcast_write(bytes);
+            true
+        } else {
+            false
+        }
+    }
+
     #[inline]
     pub fn switch_to_next_split_or_tab(&mut self) {
         if self.contexts[self.current_index].select_next_split_no_loop() {
@@ -678,6 +703,12 @@ impl<T: EventListener + Clone + std::marker::Send + 'static> ContextManager<T> {
     pub fn switch_to_settings(&mut self) {
         self.event_proxy
             .send_event(RioEvent::CreateConfigEditor, self.window_id);
+    }
+
+    #[inline]
+    pub fn toggle_settings(&mut self) {
+        self.event_proxy
+            .send_event(RioEvent::ToggleSettings, self.window_id);
     }
 
     #[inline]
