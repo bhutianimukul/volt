@@ -1350,6 +1350,40 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                     route.window.winit_window.set_cursor_visible(true);
                 }
 
+                // If mouse is over the tab bar, scroll tabs horizontally
+                {
+                    let mx = route.window.screen.mouse.x as f64;
+                    let my = route.window.screen.mouse.y as f64;
+                    if route.window.screen.tab_index_at_position(mx, my).is_some()
+                        || {
+                            // Also check if mouse is in the tab bar Y range (even between tabs)
+                            let scale = route.window.screen.sugarloaf.scale_factor() as f64;
+                            let ly = my / scale;
+                            ly < 22.0 // PADDING_Y_BOTTOM_TABS
+                        }
+                    {
+                        let scroll_delta = match delta {
+                            MouseScrollDelta::LineDelta(cols, _) => cols * 30.0,
+                            MouseScrollDelta::PixelDelta(pos) => pos.x as f32,
+                        };
+                        let num_tabs = route.window.screen.context_manager.len();
+                        let visible_width = {
+                            let ws = route.window.screen.sugarloaf.window_size();
+                            let s = route.window.screen.sugarloaf.scale_factor();
+                            ws.width / s
+                        };
+                        route
+                            .window
+                            .screen
+                            .renderer
+                            .navigation
+                            .scroll_tabs(-scroll_delta, num_tabs, visible_width);
+                        route.window.screen.render();
+                        route.request_redraw();
+                        return;
+                    }
+                }
+
                 match delta {
                     MouseScrollDelta::LineDelta(columns, lines) => {
                         let layout = route.window.screen.sugarloaf.rich_text_layout(&0);

@@ -1241,7 +1241,7 @@ impl Screen<'_> {
     }
 
     /// Check if a click position (in physical pixels) is on a tab in the tab bar.
-    /// Returns the tab index if hit. Converts to logical coordinates internally.
+    /// Returns the tab index if hit. Accounts for scroll offset.
     pub fn tab_index_at_position(&self, phys_x: f64, phys_y: f64) -> Option<usize> {
         use rio_backend::config::navigation::NavigationMode;
 
@@ -1260,10 +1260,11 @@ impl Screen<'_> {
         let x = phys_x / scale;
         let y = phys_y / scale;
 
-        // Tab bar layout constants (must match navigation.rs rendering)
+        // Must match constants in navigation.rs
         let tab_bar_height = 22.0_f64; // PADDING_Y_BOTTOM_TABS
-        let tab_width = 125.0_f64;
-        let tab_spacing = 130.0_f64; // name_modifier(90) + 40
+        let tab_width = 50.0_f64; // TAB_WIDTH
+        let tab_gap = 4.0_f64; // TAB_GAP
+        let tab_step = tab_width + tab_gap;
 
         let (bar_y_start, bar_y_end) = if nav_mode == NavigationMode::TopTab {
             (0.0, tab_bar_height)
@@ -1276,10 +1277,16 @@ impl Screen<'_> {
             return None;
         }
 
-        // Determine which tab was clicked
-        let tab_idx = (x / tab_spacing) as usize;
-        let tab_start = tab_idx as f64 * tab_spacing;
-        if x >= tab_start && x <= tab_start + tab_width && tab_idx < num_tabs {
+        // Account for scroll offset
+        let scroll_offset = self.renderer.navigation.tab_scroll_offset as f64;
+        let scrolled_x = x + scroll_offset;
+
+        let tab_idx = (scrolled_x / tab_step) as usize;
+        let tab_start = tab_idx as f64 * tab_step;
+        if scrolled_x >= tab_start
+            && scrolled_x <= tab_start + tab_width
+            && tab_idx < num_tabs
+        {
             Some(tab_idx)
         } else {
             None

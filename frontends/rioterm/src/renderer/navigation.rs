@@ -6,10 +6,16 @@ use rio_backend::sugarloaf::{FragmentStyle, Object, Quad, RichText, Sugarloaf};
 use rustc_hash::FxHashMap;
 use std::collections::HashMap;
 
+/// Tab rendering constants
+const TAB_WIDTH: f32 = 50.0; // Compact tabs — just numbers
+const TAB_GAP: f32 = 4.0; // Gap between tabs
+
 pub struct ScreenNavigation {
     pub navigation: Navigation,
     pub padding_y: [f32; 2],
     color_automation: HashMap<String, HashMap<String, [f32; 4]>>,
+    /// Horizontal scroll offset for tab bar (in logical pixels)
+    pub tab_scroll_offset: f32,
 }
 
 impl ScreenNavigation {
@@ -22,6 +28,29 @@ impl ScreenNavigation {
             navigation,
             color_automation,
             padding_y,
+            tab_scroll_offset: 0.0,
+        }
+    }
+
+    /// Scroll the tab bar by a delta (positive = scroll right, negative = scroll left).
+    /// Clamps to valid range based on total tab count and visible width.
+    pub fn scroll_tabs(&mut self, delta: f32, num_tabs: usize, visible_width: f32) {
+        let tab_width = TAB_WIDTH + TAB_GAP;
+        let total_width = num_tabs as f32 * tab_width;
+        let max_scroll = (total_width - visible_width).max(0.0);
+        self.tab_scroll_offset = (self.tab_scroll_offset + delta).clamp(0.0, max_scroll);
+    }
+
+    /// Ensure the given tab index is visible by adjusting scroll offset.
+    pub fn ensure_tab_visible(&mut self, tab_idx: usize, visible_width: f32) {
+        let tab_width = TAB_WIDTH + TAB_GAP;
+        let tab_start = tab_idx as f32 * tab_width;
+        let tab_end = tab_start + TAB_WIDTH;
+
+        if tab_start < self.tab_scroll_offset {
+            self.tab_scroll_offset = tab_start;
+        } else if tab_end > self.tab_scroll_offset + visible_width {
+            self.tab_scroll_offset = tab_end - visible_width;
         }
     }
 
@@ -166,30 +195,31 @@ impl ScreenNavigation {
         }
 
         let (width, _, scale) = dimensions;
+        let visible_width = width / scale;
 
-        let mut initial_position_x = 0.;
+        // Ensure current tab is visible
+        self.ensure_tab_visible(current, visible_width);
 
-        let renderable = Quad {
-            position: [initial_position_x, position_y],
+        // Draw tab bar background (full width)
+        objects.push(Object::Quad(Quad {
+            position: [0.0, position_y],
             color: colors.bar,
             size: [width, PADDING_Y_BOTTOM_TABS],
             ..Quad::default()
-        };
+        }));
 
-        objects.push(Object::Quad(renderable));
+        let tab_step = TAB_WIDTH + TAB_GAP;
 
-        let iter = 0..len;
-        let mut tabs = Vec::from_iter(iter);
+        for i in 0..len {
+            // Calculate position with scroll offset
+            let tab_x = i as f32 * tab_step - self.tab_scroll_offset;
 
-        let max_tab_width = 140.;
-        let screen_limit = ((width / scale) / max_tab_width).floor() as usize;
-        if len > screen_limit && current > screen_limit {
-            tabs = Vec::from_iter(current - screen_limit..len);
-        }
+            // Skip tabs that are off-screen
+            if tab_x + TAB_WIDTH < 0.0 || tab_x > visible_width {
+                continue;
+            }
 
-        for i in tabs {
-            let mut background_color = colors.bar;
-            let mut foreground_color = colors.tabs_foreground;
+            let is_current = i == current;
 
             // Get per-tab accent color
             let tab_accent = titles
@@ -197,97 +227,75 @@ impl ScreenNavigation {
                 .map(|t| t.accent_color)
                 .unwrap_or(colors.tabs_active_highlight);
 
-            let is_current = i == current;
-            if is_current {
-                foreground_color = colors.tabs_active_foreground;
-                background_color = colors.tabs_active;
-            }
-
-            let mut name = String::from("tab");
-            if let Some(title) = titles.get(&i) {
-                // Use custom_name if set, otherwise use the template-generated title
-                name = title
-                    .custom_name
-                    .as_deref()
-                    .unwrap_or(&title.content)
-                    .to_owned();
-
-                if !self.color_automation.is_empty() {
-                    if let Some(extra) = &title.extra {
-                        if let Some(color_overwrite) = get_color_overwrite(
-                            &self.color_automation,
-                            &extra.program,
-                            &extra.path,
-                        ) {
-                            foreground_color = colors.tabs;
-                            background_color = *color_overwrite;
-                        }
-                    }
-                }
-            }
-
-            let name_modifier = 90.;
-            if name.len() >= 14 {
-                name = name[0..14].to_string();
-            }
+            // Tab background
+            let background_color = if is_current {
+                colors.tabs_active
+            } else {
+                colors.bar
+            };
+            let foreground_color = if is_current {
+                colors.tabs_active_foreground
+            } else {
+                colors.tabs_foreground
+            };
 
             objects.push(Object::Quad(Quad {
-                position: [initial_position_x, position_y],
+                position: [tab_x, position_y],
                 color: background_color,
-                size: [125., PADDING_Y_BOTTOM_TABS],
+                size: [TAB_WIDTH, PADDING_Y_BOTTOM_TABS],
                 ..Quad::default()
             }));
 
-            // Highlight strip uses per-tab accent color (always visible, thicker for active)
-            {
-                let position = if position_y == 0.0 {
-                    PADDING_Y_BOTTOM_TABS - (PADDING_Y_BOTTOM_TABS / 10.)
-                } else {
-                    position_y
-                };
-
-                let strip_height = if is_current {
-                    PADDING_Y_BOTTOM_TABS / 10.
-                } else {
-                    PADDING_Y_BOTTOM_TABS / 20.
-                };
-
-                // Dim inactive tab accent colors
-                let strip_color = if is_current {
-                    tab_accent
-                } else {
-                    [
-                        tab_accent[0] * 0.5,
-                        tab_accent[1] * 0.5,
-                        tab_accent[2] * 0.5,
-                        0.6,
-                    ]
-                };
-
-                objects.push(Object::Quad(Quad {
-                    position: [initial_position_x, position],
-                    color: strip_color,
-                    size: [125., strip_height],
-                    ..Quad::default()
-                }));
-            }
-
-            let text = if is_current {
-                format!("▲ {name}")
+            // Accent color strip at bottom of tab
+            let strip_y = if position_y == 0.0 {
+                PADDING_Y_BOTTOM_TABS - 3.0
             } else {
-                format!("{}.{name}", i + 1)
+                position_y
+            };
+            let strip_height = if is_current { 3.0 } else { 2.0 };
+            let strip_color = if is_current {
+                tab_accent
+            } else {
+                [
+                    tab_accent[0] * 0.5,
+                    tab_accent[1] * 0.5,
+                    tab_accent[2] * 0.5,
+                    0.6,
+                ]
             };
 
-            let tab = sugarloaf.create_temp_rich_text();
-            sugarloaf.set_rich_text_font_size(&tab, 14.);
+            objects.push(Object::Quad(Quad {
+                position: [tab_x, strip_y],
+                color: strip_color,
+                size: [TAB_WIDTH, strip_height],
+                ..Quad::default()
+            }));
+
+            // Tab label: just number, or custom name if set
+            let label = if let Some(title) = titles.get(&i) {
+                if let Some(ref custom) = title.custom_name {
+                    let mut s = custom.clone();
+                    if s.len() > 5 {
+                        s = s[..5].to_string();
+                    }
+                    s
+                } else {
+                    format!("{}", i + 1)
+                }
+            } else {
+                format!("{}", i + 1)
+            };
+
+            let tab_rt = sugarloaf.create_temp_rich_text();
+            sugarloaf.set_rich_text_font_size(&tab_rt, 13.);
             let content = sugarloaf.content();
 
-            let tab_line = content.sel(tab);
-            tab_line
+            content
+                .sel(tab_rt)
                 .clear()
                 .new_line()
                 .add_text(
-                    &text,
+                    &label,
                     FragmentStyle {
                         color: foreground_color,
                         ..FragmentStyle::default()
@@ -296,12 +304,10 @@ impl ScreenNavigation {
                 .build();
 
             objects.push(Object::RichText(RichText {
-                id: tab,
-                position: [initial_position_x + 4., position_y],
+                id: tab_rt,
+                position: [tab_x + 4.0, position_y],
                 lines: None,
             }));
-
-            initial_position_x += name_modifier + 40.;
         }
     }
 }
