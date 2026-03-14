@@ -952,6 +952,37 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                     _ => (),
                 }
 
+                // Check tab clicks BEFORE macOS deadzone check,
+                // since TopTab mode places tabs in the deadzone area
+                if state == ElementState::Pressed && button == MouseButton::Left {
+                    let mx = route.window.screen.mouse.x as f64;
+                    let my = route.window.screen.mouse.y as f64;
+                    if let Some(tab_idx) =
+                        route.window.screen.tab_index_at_position(mx, my)
+                    {
+                        let current =
+                            route.window.screen.context_manager.current_index();
+                        let now = std::time::Instant::now();
+                        let elapsed =
+                            now - route.window.screen.mouse.last_click_timestamp;
+                        let is_double_click = elapsed < Duration::from_millis(400);
+
+                        if tab_idx == current && is_double_click {
+                            route.window.screen.prompt_rename_tab();
+                        } else if tab_idx != current {
+                            route
+                                .window
+                                .screen
+                                .context_manager
+                                .select_tab(tab_idx);
+                            route.window.screen.render();
+                        }
+                        route.window.screen.mouse.last_click_timestamp = now;
+                        route.request_redraw();
+                        return;
+                    }
+                }
+
                 #[cfg(target_os = "macos")]
                 {
                     if route.window.is_macos_deadzone {
@@ -961,40 +992,6 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
 
                 match state {
                     ElementState::Pressed => {
-                        // Check if click is on a tab in the navigation bar
-                        if button == MouseButton::Left {
-                            let mx = route.window.screen.mouse.x as f64;
-                            let my = route.window.screen.mouse.y as f64;
-                            if let Some(tab_idx) =
-                                route.window.screen.tab_index_at_position(mx, my)
-                            {
-                                let current =
-                                    route.window.screen.context_manager.current_index();
-                                // Detect double-click on the same tab for rename
-                                let now = std::time::Instant::now();
-                                let elapsed =
-                                    now - route.window.screen.mouse.last_click_timestamp;
-                                let is_double_click =
-                                    elapsed < Duration::from_millis(400);
-
-                                if tab_idx == current && is_double_click {
-                                    // Double-click on current tab → rename
-                                    route.window.screen.prompt_rename_tab();
-                                } else if tab_idx != current {
-                                    // Single-click on different tab → switch
-                                    route
-                                        .window
-                                        .screen
-                                        .context_manager
-                                        .select_tab(tab_idx);
-                                    route.window.screen.render();
-                                }
-                                route.window.screen.mouse.last_click_timestamp = now;
-                                route.request_redraw();
-                                return;
-                            }
-                        }
-
                         // Check if click is on a split pane divider
                         if button == MouseButton::Left {
                             let mx = route.window.screen.mouse.x as f32;

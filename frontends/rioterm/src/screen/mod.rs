@@ -1240,9 +1240,9 @@ impl Screen<'_> {
         self.render();
     }
 
-    /// Check if a click position (in logical pixels) is on a tab in the TopTab bar.
-    /// Returns the tab index if hit.
-    pub fn tab_index_at_position(&self, x: f64, y: f64) -> Option<usize> {
+    /// Check if a click position (in physical pixels) is on a tab in the tab bar.
+    /// Returns the tab index if hit. Converts to logical coordinates internally.
+    pub fn tab_index_at_position(&self, phys_x: f64, phys_y: f64) -> Option<usize> {
         use rio_backend::config::navigation::NavigationMode;
 
         let nav_mode = self.renderer.navigation.navigation.mode;
@@ -1255,17 +1255,20 @@ impl Screen<'_> {
             return None;
         }
 
-        // Tab bar height = PADDING_Y_BOTTOM_TABS = 22.0
-        let tab_bar_height = 22.0_f64;
+        // Convert physical pixels to logical pixels
+        let scale = self.sugarloaf.scale_factor() as f64;
+        let x = phys_x / scale;
+        let y = phys_y / scale;
+
+        // Tab bar layout constants (must match navigation.rs rendering)
+        let tab_bar_height = 22.0_f64; // PADDING_Y_BOTTOM_TABS
         let tab_width = 125.0_f64;
         let tab_spacing = 130.0_f64; // name_modifier(90) + 40
 
         let (bar_y_start, bar_y_end) = if nav_mode == NavigationMode::TopTab {
             (0.0, tab_bar_height)
         } else {
-            // BottomTab
-            let win_height = self.context_manager.current().dimension.height as f64
-                / self.context_manager.current().dimension.dimension.scale as f64;
+            let win_height = self.sugarloaf.window_size().height as f64 / scale;
             (win_height - tab_bar_height, win_height)
         };
 
@@ -1275,7 +1278,6 @@ impl Screen<'_> {
 
         // Determine which tab was clicked
         let tab_idx = (x / tab_spacing) as usize;
-        // Verify click is within the tab's rendered width (not in gap)
         let tab_start = tab_idx as f64 * tab_spacing;
         if x >= tab_start && x <= tab_start + tab_width && tab_idx < num_tabs {
             Some(tab_idx)
