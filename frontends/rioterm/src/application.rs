@@ -1187,11 +1187,25 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
 
                 let has_selection = !route.window.screen.selection_is_empty();
 
+                // Always update mouse position first (needed for tab click detection)
+                let layout = route.window.screen.sugarloaf.window_size();
+                let mx = x.clamp(0.0, (layout.width as i32 - 1).into()) as usize;
+                let my = y.clamp(0.0, (layout.height as i32 - 1).into()) as usize;
+                route.window.screen.mouse.x = mx;
+                route.window.screen.mouse.y = my;
+
                 #[cfg(target_os = "macos")]
                 {
-                    // Dead zone for MacOS only
-                    // e.g: Dragging the terminal
-                    if !has_selection
+                    use rio_backend::config::navigation::NavigationMode;
+                    let nav_mode =
+                        route.window.screen.renderer.navigation.navigation.mode;
+                    let is_tab_bar_mode = nav_mode == NavigationMode::TopTab
+                        || nav_mode == NavigationMode::BottomTab;
+
+                    // Dead zone for MacOS only — but NOT when using TopTab/BottomTab
+                    // (tab bar occupies the deadzone area in those modes)
+                    if !is_tab_bar_mode
+                        && !has_selection
                         && !route.window.screen.context_manager.config.is_native
                         && route.window.screen.is_macos_deadzone(y)
                     {
@@ -1211,12 +1225,9 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                 let display_offset = route.window.screen.display_offset();
                 let old_point = route.window.screen.mouse_position(display_offset);
 
-                let layout = route.window.screen.sugarloaf.window_size();
-
-                let x = x.clamp(0.0, (layout.width as i32 - 1).into()) as usize;
-                let y = y.clamp(0.0, (layout.height as i32 - 1).into()) as usize;
-                route.window.screen.mouse.x = x;
-                route.window.screen.mouse.y = y;
+                // Rebind x, y as usize for downstream code
+                let x = mx;
+                let y = my;
 
                 let point = route.window.screen.mouse_position(display_offset);
 
