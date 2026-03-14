@@ -1,20 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
   <defs>
-    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#1e1e2e"/>
-      <stop offset="100%" style="stop-color:#11111b"/>
-    </linearGradient>
     <linearGradient id="bolt" x1="30%" y1="0%" x2="70%" y2="100%">
       <stop offset="0%" style="stop-color:#ffe14d"/>
       <stop offset="50%" style="stop-color:#f5c211"/>
       <stop offset="100%" style="stop-color:#e09500"/>
     </linearGradient>
-    <filter id="shadow">
-      <feDropShadow dx="0" dy="6" stdDeviation="14" flood-color="#000000" flood-opacity="0.55"/>
-    </filter>
     <filter id="glow">
-      <feGaussianBlur stdDeviation="22" result="blur"/>
-      <feFlood flood-color="#f5c211" flood-opacity="0.2" result="color"/>
+      <feGaussianBlur stdDeviation="15" result="blur"/>
+      <feFlood flood-color="#f5c211" flood-opacity="0.15" result="color"/>
       <feComposite in="color" in2="blur" operator="in" result="colorBlur"/>
       <feMerge>
         <feMergeNode in="colorBlur"/>
@@ -23,16 +16,14 @@
     </filter>
   </defs>
 
-  <!-- Background: macOS rounded square -->
-  <rect x="32" y="32" width="960" height="960" rx="215" ry="215" fill="url(#bg)"/>
-  <rect x="32" y="32" width="960" height="960" rx="215" ry="215" fill="none" stroke="#2a2a3e" stroke-width="2"/>
+  <!-- Pure black background -->
+  <rect x="32" y="32" width="960" height="960" rx="215" ry="215" fill="#000000"/>
 
-  <!-- Clean geometric lightning bolt — matches reference silhouette -->
+  <!-- Yellow lightning bolt -->
   <g filter="url(#glow)">
     <polygon
       points="590,105 295,510 475,510 420,920 725,440 535,440 620,105"
       fill="url(#bolt)"
-      filter="url(#shadow)"
     />
   </g>
 </svg>

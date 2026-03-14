@@ -25,7 +25,9 @@ mod screen;
 mod shell_intelligence;
 mod slash_commands;
 mod structured_output;
+mod test_runner;
 mod time_travel;
+mod tmux_cc;
 mod undo;
 mod watcher;
 
