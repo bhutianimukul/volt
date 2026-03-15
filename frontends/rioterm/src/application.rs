@@ -234,14 +234,9 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
             return;
         }
 
-        #[cfg(target_os = "macos")]
-        {
-            // Set the dock icon programmatically for cargo run (no .app bundle)
-            static ICON_SET: std::sync::Once = std::sync::Once::new();
-            ICON_SET.call_once(|| {
-                Self::set_dock_icon();
-            });
-        }
+        // Dock icon: only works in .app bundle, disabled for cargo run
+        // #[cfg(target_os = "macos")]
+        // { Self::set_dock_icon(); }
 
         update_colors_based_on_theme(&mut self.config, event_loop.system_theme());
 

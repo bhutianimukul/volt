@@ -205,7 +205,7 @@ impl ScreenNavigation {
         let brand_rt = sugarloaf.create_temp_rich_text();
         sugarloaf.set_rich_text_font_size(&brand_rt, 14.);
         sugarloaf.content().sel(brand_rt).clear().new_line()
-            .add_text("\u{26A1}", FragmentStyle { color: [0.95, 0.75, 0.2, 1.0], ..FragmentStyle::default() }).build();
+            .add_text("V", FragmentStyle { color: [0.95, 0.75, 0.2, 1.0], ..FragmentStyle::default() }).build();
         objects.push(Object::RichText(RichText { id: brand_rt, position: [6.0, position_y], lines: None }));
 
         // Tab pills only when not hidden
@@ -367,7 +367,7 @@ impl ScreenNavigation {
 
         // Volt branding thunder icon + clickable items
         let sb_brand = FragmentStyle { color: [0.95, 0.75, 0.2, 1.0], ..FragmentStyle::default() };
-        sb.add_text(" \u{26A1}", sb_brand);
+        sb.add_text(" V", sb_brand);
         sb.add_text(" ", sb_sep);
         sb.add_text("AI ", sb_purple);
         sb.add_text("|", sb_sep);
