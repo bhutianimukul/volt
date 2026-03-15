@@ -244,7 +244,7 @@ pub fn screen(
     let footer_y = full_h - 28.0;
     objects.push(Object::Quad(Quad {
         position: [0., footer_y - 4.0],
-        color: [0.09, 0.09, 0.09, 1.0],
+        color: [0.07, 0.07, 0.07, 1.0],
         size: [full_w, 28.0],
         ..Quad::default()
     }));

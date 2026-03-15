@@ -18,7 +18,7 @@ pub fn screen(
     let pane_selected_bg = [0.12, 0.16, 0.25, 1.0];
     let pane_inner = [0.06, 0.06, 0.09, 1.0];
     let pane_inner_border = [0.2, 0.2, 0.28, 0.6];
-    let sidebar_bg = [0.09, 0.09, 0.09, 1.0];
+    let sidebar_bg = [0.07, 0.07, 0.07, 1.0];
 
     let layout = sugarloaf.window_size();
     let scale = context_dimension.dimension.scale;

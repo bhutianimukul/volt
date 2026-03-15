@@ -18,7 +18,7 @@ pub fn screen(
     let highlight = [0.98, 0.73, 0.16, 1.0];
     let green = [0.3, 0.9, 0.3, 1.0];
     let red = [0.9, 0.3, 0.3, 1.0];
-    let sidebar_bg = [0.09, 0.09, 0.09, 1.0];
+    let sidebar_bg = [0.07, 0.07, 0.07, 1.0];
     let divider_color = [0.15, 0.15, 0.15, 1.0];
     let selected_bg = [0.2, 0.15, 0.08, 1.0];
 

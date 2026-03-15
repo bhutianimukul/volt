@@ -50,7 +50,7 @@ pub fn screen(
     let highlight = [0.98, 0.73, 0.16, 1.0];
     let black = [0.0, 0.0, 0.0, 1.0];
     let white = [1.0, 1.0, 1.0, 1.0];
-    let sidebar_bg = [0.09, 0.09, 0.09, 1.0];
+    let sidebar_bg = [0.07, 0.07, 0.07, 1.0];
     let sidebar_selected = [0.14, 0.14, 0.14, 1.0];
     let sidebar_hover = [0.11, 0.11, 0.11, 1.0];
     let divider_color = [0.15, 0.15, 0.15, 1.0];
@@ -169,24 +169,7 @@ pub fn screen(
 
     let icons = ["## ", "** ", "-> ", "// "];
 
-    for (i, _cat) in HELP_CATEGORIES.iter().enumerate() {
-        let cat_y = cat_start_y + (i as f32 * cat_line_height);
-        let is_selected = i == selected_category;
-
-        if is_selected {
-            let bg_color = if in_sidebar {
-                sidebar_selected
-            } else {
-                sidebar_hover
-            };
-            objects.push(Object::Quad(Quad {
-                position: [0., cat_y - 2.0],
-                color: bg_color,
-                size: [sidebar_width, cat_line_height],
-                ..Quad::default()
-            }));
-        }
-    }
+    // (no highlight quad — selected category shown by white text only)
 
     let sidebar_rt = sugarloaf.create_temp_rich_text();
     sugarloaf.set_rich_text_font_size(&sidebar_rt, 13.0);

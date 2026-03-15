@@ -34,7 +34,7 @@ pub fn screen(
     let red = [0.9, 0.3, 0.3, 1.0];
     let card_bg = [0.1, 0.1, 0.14, 1.0];
     let card_border = [0.2, 0.3, 0.2, 0.8];
-    let sidebar_bg = [0.09, 0.09, 0.09, 1.0];
+    let sidebar_bg = [0.07, 0.07, 0.07, 1.0];
 
     let layout = sugarloaf.window_size();
     let scale = context_dimension.dimension.scale;
