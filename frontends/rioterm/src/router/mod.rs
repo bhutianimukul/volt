@@ -926,13 +926,10 @@ impl Route<'_> {
                     self.path = RoutePath::Terminal;
                 }
                 Key::Named(NamedKey::ArrowUp) => {
-                    
+                    if self.layouts_selected >= 2 { self.layouts_selected -= 2; }
                 }
                 Key::Named(NamedKey::ArrowDown) => {
-                    
-                    if self.layouts_selected < 2 {
-                        self.layouts_selected += 2;
-                    }
+                    if self.layouts_selected < 2 { self.layouts_selected += 2; }
                 }
                 Key::Named(NamedKey::ArrowLeft) => {
                     if self.layouts_selected % 2 == 1 { self.layouts_selected -= 1; }
