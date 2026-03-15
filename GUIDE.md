@@ -180,7 +180,7 @@ All six buttons are clickable. They open full-screen overlay panels that you dis
 - Cmd+Shift+H -- open history
 - Click the "History" button in the bottom status bar
 
-**What to expect:** A full-screen overlay listing commands from the current session (not persisted across restarts). Navigate with Up/Down arrows. Press Escape to dismiss. This requires shell integration to be active for block tracking data.
+**What to expect:** A full-screen overlay listing commands from the current and previous sessions (persisted to disk across restarts). Navigate with Up/Down arrows. Press Escape to dismiss. This requires shell integration to be active for block tracking data.
 
 ---
 
@@ -559,6 +559,81 @@ These enable: block navigation (Cmd+Up/Down), exit code badges, command duration
 
 ---
 
+### Multi-line Paste Confirmation
+
+**What it does:** When you paste text containing multiple lines (e.g., a script block), Volt shows a confirmation dialog before sending it to the shell. This prevents accidental execution of pasted commands.
+
+**How to access:** Automatic -- just paste multi-line content with Cmd+V.
+
+**What to expect:** A native dialog appears showing the number of lines about to be pasted. You can choose "Paste" to proceed or "Cancel" to abort.
+
+---
+
+### File Opener
+
+**What it does:** Detects file paths in terminal output and lets you open them in your preferred editor. Supports common editors (VS Code, Vim, Emacs, Sublime Text, etc.) and falls back to the system default.
+
+**How to access:** Cmd+Click on a file path in the terminal output.
+
+**What to expect:** The file opens in your configured editor. If the path includes a line number (e.g., `src/main.rs:42`), the editor jumps to that line.
+
+---
+
+### Shell Profiler
+
+**What it does:** Profiles your shell startup time and reports which init files and plugins are slow. Helps diagnose sluggish shell launches.
+
+**How to access:** The profiler runs automatically when a new shell session starts (if shell integration is active). Results are available in the session data.
+
+**What to expect:** Timing data for shell initialization phases. Useful for identifying slow plugins or config files.
+
+---
+
+### Persistent Session History
+
+**What it does:** Saves your command history to disk so it persists across Volt restarts. Previously, session history was lost when the application exited.
+
+**Storage location:**
+```
+~/.config/volt/history.json
+```
+
+**How to access:** History is automatically loaded when Volt starts and saved when it exits. View it with Cmd+Shift+H or the "History" button in the bottom status bar.
+
+**What to expect:** Your command history (commands, exit codes, durations, working directories) survives application restarts. Up to 10,000 entries are retained.
+
+---
+
+### Snippet / Command Template Library
+
+**What it does:** A library of saved command templates that you can search and reuse. Ships with sensible defaults (Docker, Git, system commands) and supports custom snippets.
+
+**Storage location:**
+```
+~/.config/volt/snippets.toml
+```
+
+**How to access:** Edit `snippets.toml` to add your own snippets. Each snippet has a name, command, optional description, and tags for searchability.
+
+**Example config:**
+```toml
+[snippets.docker-ps]
+name = "Docker containers"
+command = "docker ps --format 'table {{.Names}}\\t{{.Status}}\\t{{.Ports}}'"
+description = "List running Docker containers"
+tags = ["docker"]
+
+[snippets.git-log]
+name = "Git log pretty"
+command = "git log --oneline --graph --decorate -20"
+description = "Pretty git log with graph"
+tags = ["git"]
+```
+
+**What to expect:** Snippets are loaded from the TOML file. If no file exists, a default one is created with example snippets. The snippet store supports search by name, command text, or tags.
+
+---
+
 ## 7. Known Limitations
 
 ### What Works
@@ -615,7 +690,7 @@ These modules have their core logic implemented with unit tests, but lack the ev
 ### Other Limitations
 
 - Quake mode only responds to the toggle hotkey when Volt is focused. No system-wide global hotkey registration.
-- Session history is in-memory only and lost when Volt exits.
+- Session history is now persisted to `~/.config/volt/history.json` across restarts.
 - Bookmarks can be viewed but there is no UI to add new bookmarks (the `BookmarkStore::add` API exists but is not exposed through a command or button).
 - The AI assistant button does nothing if the `claude` CLI is not installed.
 - Connection manager has no UI to create/edit connections -- you must edit `connections.toml` manually.

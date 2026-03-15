@@ -133,9 +133,7 @@ impl ScreenNavigation {
         hide_if_single: bool,
         dimensions: (f32, f32, f32),
     ) {
-        if hide_if_single && len <= 1 {
-            return;
-        }
+        let _tabs_hidden = false;
 
         let (width, _, scale) = dimensions;
 
@@ -360,8 +358,11 @@ impl ScreenNavigation {
         let sb = content.sel(sb_rt);
         sb.clear().new_line();
 
-        // Left side: clickable items with subtle styling
-        sb.add_text("  AI ", sb_purple);
+        // Volt branding thunder icon + clickable items
+        let sb_brand = FragmentStyle { color: [0.95, 0.75, 0.2, 1.0], ..FragmentStyle::default() };
+        sb.add_text(" \u{26A1}", sb_brand);
+        sb.add_text(" ", sb_sep);
+        sb.add_text("AI ", sb_purple);
         sb.add_text("|", sb_sep);
         sb.add_text(" History ", sb_text);
         sb.add_text("|", sb_sep);

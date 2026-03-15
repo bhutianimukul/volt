@@ -39,6 +39,7 @@ mod shell_integration;
 mod shell_intelligence;
 mod shell_profiler;
 mod slash_commands;
+mod snippets;
 mod structured_output;
 mod test_runner;
 mod time_travel;

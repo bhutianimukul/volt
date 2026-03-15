@@ -2072,6 +2072,11 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
     // This is irreversible - if this event is emitted, it is guaranteed to be the last event that gets emitted.
     // You generally want to treat this as an “do on quit” event.
     fn exiting(&mut self, _event_loop: &ActiveEventLoop) {
+        // Save session history to disk before exiting
+        for route in self.router.routes.values() {
+            route.window.screen.context_manager.session_recorder.save_to_disk();
+        }
+
         // Save window state before exiting
         let mut state = crate::window_state::WindowState::new();
         for route in self.router.routes.values() {

@@ -1,9 +1,10 @@
+use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
 use std::path::PathBuf;
 use std::time::SystemTime;
 
 /// A recorded command execution
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SessionEntry {
     pub id: usize,
     pub command: String,
@@ -130,6 +131,25 @@ impl SessionRecorder {
 
     pub fn is_empty(&self) -> bool {
         self.entries.is_empty()
+    }
+
+    pub fn save_to_disk(&self) {
+        let path = rio_backend::config::config_dir_path().join("history.json");
+        if let Ok(json) = serde_json::to_string(&self.entries.iter().collect::<Vec<_>>()) {
+            let _ = std::fs::write(&path, json);
+        }
+    }
+
+    pub fn load_from_disk(&mut self) {
+        let path = rio_backend::config::config_dir_path().join("history.json");
+        if let Ok(content) = std::fs::read_to_string(&path) {
+            if let Ok(entries) = serde_json::from_str::<Vec<SessionEntry>>(&content) {
+                for entry in entries {
+                    self.entries.push_back(entry);
+                }
+                self.next_id = self.entries.iter().map(|e| e.id).max().unwrap_or(0) + 1;
+            }
+        }
     }
 }
 

@@ -411,7 +411,11 @@ impl<T: EventListener + Clone + std::marker::Send + 'static> ContextManager<T> {
             dock_badge: crate::dock_badge::DockBadgeManager::new(),
             trigger_engine,
             audit_logger: crate::audit_log::AuditLogger::new(false),
-            session_recorder: crate::time_travel::SessionRecorder::new(),
+            session_recorder: {
+                let mut recorder = crate::time_travel::SessionRecorder::new();
+                recorder.load_from_disk();
+                recorder
+            },
             shell_profiler: crate::shell_profiler::ShellProfiler::new(),
         })
     }
