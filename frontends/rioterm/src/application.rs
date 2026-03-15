@@ -171,23 +171,42 @@ impl Application<'_> {
     fn set_dock_icon() {
         use objc::runtime::{Class, Object};
         use objc::{msg_send, sel, sel_impl};
+        use std::ffi::CString;
 
-        let icon_data: &[u8] =
-            include_bytes!("../../../misc/volt-icon.png");
+        // Write icon to a temp file and load from path (most reliable method)
+        let icon_data: &[u8] = include_bytes!("../../../misc/volt-icon.png");
+        let icon_path = std::env::temp_dir().join("volt-dock-icon.png");
+        if std::fs::write(&icon_path, icon_data).is_err() {
+            tracing::warn!("Failed to write dock icon to temp file");
+            return;
+        }
 
         unsafe {
-            let ns_data_class = Class::get("NSData").unwrap();
-            let ns_data: *mut Object = msg_send![ns_data_class,
-                dataWithBytes:icon_data.as_ptr()
-                length:icon_data.len()];
+            let ns_string_class = match Class::get("NSString") {
+                Some(c) => c,
+                None => return,
+            };
+            let ns_image_class = match Class::get("NSImage") {
+                Some(c) => c,
+                None => return,
+            };
 
-            let ns_image_class = Class::get("NSImage").unwrap();
+            let path_str = CString::new(icon_path.to_string_lossy().as_bytes()).unwrap();
+            let ns_path: *mut Object = msg_send![ns_string_class,
+                stringWithUTF8String: path_str.as_ptr()];
+
             let ns_image: *mut Object = msg_send![ns_image_class, alloc];
-            let ns_image: *mut Object = msg_send![ns_image, initWithData: ns_data];
+            let ns_image: *mut Object = msg_send![ns_image, initByReferencingFile: ns_path];
+
+            if ns_image.is_null() {
+                tracing::warn!("Failed to create NSImage from icon file");
+                return;
+            }
 
             let ns_app_class = Class::get("NSApplication").unwrap();
             let ns_app: *mut Object = msg_send![ns_app_class, sharedApplication];
             let _: () = msg_send![ns_app, setApplicationIconImage: ns_image];
+            tracing::info!("Dock icon set from {}", icon_path.display());
         }
     }
 
