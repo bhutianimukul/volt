@@ -1142,7 +1142,7 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                         }
                     }
 
-                    // Check bottom status bar buttons [tmux]
+                    // Check bottom status bar buttons
                     if let Some(btn) = crate::renderer::navigation::status_button_at_position(
                         lx as f32, ly as f32, win_h, visible_w,
                     ) {
@@ -1150,6 +1150,22 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                         match btn {
                             NavButton::TmuxConnect => {
                                 route.window.screen.context_manager.toggle_tmux_picker();
+                            }
+                            NavButton::AiAssistant => {
+                                if crate::ai_assistant::is_claude_available() {
+                                    route.window.screen.split_right();
+                                    let bytes = b"claude\r".to_vec();
+                                    route.window.screen.ctx_mut().current_mut().messenger.send_write(bytes);
+                                }
+                            }
+                            NavButton::History => {
+                                route.window.screen.context_manager.toggle_history();
+                            }
+                            NavButton::EnvViewer => {
+                                route.window.screen.context_manager.toggle_env_viewer();
+                            }
+                            NavButton::Bookmarks => {
+                                route.window.screen.context_manager.toggle_bookmarks();
                             }
                             _ => {}
                         }

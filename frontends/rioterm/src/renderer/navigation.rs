@@ -315,53 +315,95 @@ impl ScreenNavigation {
             }));
         }
 
-        // --- Right-side top bar buttons ---
-        let btn_gap = 4.0_f32;
-        let btn_h = PADDING_Y_BOTTOM_TABS;
+        // --- Top bar: right-side buttons with clear text labels ---
+        let btn_gap = 3.0_f32;
         let btn_y = position_y;
-        let btn_fg = [0.7, 0.7, 0.7, 1.0];
+        let btn_h = PADDING_Y_BOTTOM_TABS;
+        let btn_bg = [0.2, 0.2, 0.25, 1.0];
+        let btn_fg = [0.85, 0.85, 0.85, 1.0];
 
-        // Settings button (rightmost) — subtle, no background
-        let settings_x = visible_width - 20.0 - btn_gap;
-        let rt = sugarloaf.create_temp_rich_text();
-        sugarloaf.set_rich_text_font_size(&rt, 15.);
-        sugarloaf.content().sel(rt).clear().new_line()
-            .add_text("\u{2699}\u{FE0E}", FragmentStyle { color: btn_fg, ..FragmentStyle::default() }).build();
-        objects.push(Object::RichText(RichText { id: rt, position: [settings_x + 2.0, btn_y], lines: None }));
+        // Helper: render a text button at x with given width and label
+        struct Btn { x: f32, w: f32 }
 
-        // Help button — subtle, no background
-        let help_x = settings_x - 20.0 - btn_gap;
-        let rt = sugarloaf.create_temp_rich_text();
-        sugarloaf.set_rich_text_font_size(&rt, 14.);
-        sugarloaf.content().sel(rt).clear().new_line()
-            .add_text("\u{24D8}", FragmentStyle { color: btn_fg, ..FragmentStyle::default() }).build();
-        objects.push(Object::RichText(RichText { id: rt, position: [help_x + 3.0, btn_y], lines: None }));
+        // Layout right to left: [Settings] [Help]
+        let settings_w = 58.0_f32;
+        let help_w = 38.0_f32;
+        let settings_x = visible_width - settings_w - btn_gap;
+        let help_x = settings_x - help_w - btn_gap;
 
-        // --- Bottom status bar ---
-        let status_bar_h = 18.0_f32;
-        let status_y = (height / scale) - status_bar_h;
-
-        // Thin status bar background
+        // [Settings] button
         objects.push(Object::Quad(Quad {
-            position: [0.0, status_y],
-            color: [0.08, 0.08, 0.1, 1.0],
-            size: [width, status_bar_h],
-            ..Quad::default()
+            position: [settings_x, btn_y], color: btn_bg,
+            size: [settings_w, btn_h], border_radius: [3.0; 4], ..Quad::default()
+        }));
+        let rt = sugarloaf.create_temp_rich_text();
+        sugarloaf.set_rich_text_font_size(&rt, 11.);
+        sugarloaf.content().sel(rt).clear().new_line()
+            .add_text("Settings", FragmentStyle { color: btn_fg, ..FragmentStyle::default() }).build();
+        objects.push(Object::RichText(RichText { id: rt, position: [settings_x + 4.0, btn_y + 1.0], lines: None }));
+
+        // [Help] button
+        objects.push(Object::Quad(Quad {
+            position: [help_x, btn_y], color: btn_bg,
+            size: [help_w, btn_h], border_radius: [3.0; 4], ..Quad::default()
+        }));
+        let rt = sugarloaf.create_temp_rich_text();
+        sugarloaf.set_rich_text_font_size(&rt, 11.);
+        sugarloaf.content().sel(rt).clear().new_line()
+            .add_text("Help", FragmentStyle { color: btn_fg, ..FragmentStyle::default() }).build();
+        objects.push(Object::RichText(RichText { id: rt, position: [help_x + 6.0, btn_y + 1.0], lines: None }));
+
+        // --- Bottom status bar with ALL feature buttons ---
+        let sb_h = 20.0_f32;
+        let sb_y = (height / scale) - sb_h;
+        let sb_bg = [0.08, 0.08, 0.1, 1.0];
+        let sb_fg = [0.8, 0.8, 0.8, 0.9];
+
+        // Status bar background
+        objects.push(Object::Quad(Quad {
+            position: [0.0, sb_y], color: sb_bg,
+            size: [width, sb_h], ..Quad::default()
         }));
 
-        // [tmux] button — far right of status bar
-        let tmux_btn_w = 46.0_f32;
-        let tmux_color = [0.15, 0.45, 0.3, 1.0];
-        let tmux_x = visible_width - tmux_btn_w - btn_gap;
+        // Left side buttons: [AI] [History] [Env] [Bookmarks]
+        let mut sb_x = 4.0_f32;
+        let sb_btn_h = sb_h - 4.0;
+        let sb_btn_y = sb_y + 2.0;
+
+        // Helper macro-like approach for status bar buttons
+        let buttons: Vec<(&str, [f32; 4], f32)> = vec![
+            ("AI",        [0.45, 0.2, 0.75, 1.0], 26.0),  // purple
+            ("History",   [0.5, 0.3, 0.7, 1.0],   52.0),  // purple-ish
+            ("Env",       [0.2, 0.6, 0.7, 1.0],   32.0),  // cyan
+            ("Bookmarks", [0.7, 0.4, 0.2, 1.0],   68.0),  // orange
+        ];
+
+        for (label, color, w) in &buttons {
+            objects.push(Object::Quad(Quad {
+                position: [sb_x, sb_btn_y], color: *color,
+                size: [*w, sb_btn_h], border_radius: [3.0; 4], ..Quad::default()
+            }));
+            let rt = sugarloaf.create_temp_rich_text();
+            sugarloaf.set_rich_text_font_size(&rt, 10.);
+            sugarloaf.content().sel(rt).clear().new_line()
+                .add_text(label, FragmentStyle { color: [1.0, 1.0, 1.0, 0.9], ..FragmentStyle::default() }).build();
+            objects.push(Object::RichText(RichText { id: rt, position: [sb_x + 4.0, sb_btn_y], lines: None }));
+            sb_x += w + btn_gap;
+        }
+
+        // Right side: [tmux]
+        let tmux_w = 46.0_f32;
+        let tmux_color = [0.15, 0.5, 0.3, 1.0];
+        let tmux_x = visible_width - tmux_w - btn_gap;
         objects.push(Object::Quad(Quad {
-            position: [tmux_x, status_y + 1.0], color: tmux_color,
-            size: [tmux_btn_w, status_bar_h - 2.0], border_radius: [3.0; 4], ..Quad::default()
+            position: [tmux_x, sb_btn_y], color: tmux_color,
+            size: [tmux_w, sb_btn_h], border_radius: [3.0; 4], ..Quad::default()
         }));
         let rt = sugarloaf.create_temp_rich_text();
         sugarloaf.set_rich_text_font_size(&rt, 10.);
         sugarloaf.content().sel(rt).clear().new_line()
-            .add_text("tmux", FragmentStyle { color: [1.0, 1.0, 1.0, 0.85], ..FragmentStyle::default() }).build();
-        objects.push(Object::RichText(RichText { id: rt, position: [tmux_x + 8.0, status_y + 1.0], lines: None }));
+            .add_text("tmux", FragmentStyle { color: [1.0, 1.0, 1.0, 0.9], ..FragmentStyle::default() }).build();
+        objects.push(Object::RichText(RichText { id: rt, position: [tmux_x + 8.0, sb_btn_y], lines: None }));
     }
 }
 
@@ -375,40 +417,71 @@ pub enum NavButton {
     Settings,
     AiAssistant,
     TmuxConnect,
+    History,
+    EnvViewer,
+    Bookmarks,
 }
 
 /// Check if a click (in logical pixels) hit a top bar button.
 pub fn nav_button_at_position(x: f32, visible_width: f32) -> Option<NavButton> {
-    let btn_w = 20.0_f32;
-    let settings_x = visible_width - btn_w - NAV_BTN_GAP;
-    let help_x = settings_x - btn_w - NAV_BTN_GAP;
+    let btn_gap = 3.0_f32;
+    let settings_w = 58.0_f32;
+    let help_w = 38.0_f32;
+    let settings_x = visible_width - settings_w - btn_gap;
+    let help_x = settings_x - help_w - btn_gap;
 
-    if x >= settings_x && x <= settings_x + btn_w {
+    if x >= settings_x && x <= settings_x + settings_w {
         return Some(NavButton::Settings);
     }
-    if x >= help_x && x <= help_x + btn_w {
+    if x >= help_x && x <= help_x + help_w {
         return Some(NavButton::Help);
     }
     None
 }
 
 /// Status bar height
-pub const STATUS_BAR_HEIGHT: f32 = 18.0;
+pub const STATUS_BAR_HEIGHT: f32 = 20.0;
 
 /// Check if a click (in logical pixels) hit a bottom status bar button.
+/// Left: [AI] [History] [Env] [Bookmarks]   Right: [tmux]
 pub fn status_button_at_position(x: f32, y: f32, win_height: f32, visible_width: f32) -> Option<NavButton> {
     let status_y = win_height - STATUS_BAR_HEIGHT;
     if y < status_y || y > win_height {
         return None;
     }
 
-    // tmux button is at far right
-    let tmux_btn_w = 46.0_f32;
-    let tmux_x = visible_width - tmux_btn_w - NAV_BTN_GAP;
+    let btn_gap = 3.0_f32;
 
-    if x >= tmux_x && x <= tmux_x + tmux_btn_w {
+    // Left side buttons (must match rendering positions)
+    let ai_x = 4.0_f32;
+    let ai_w = 26.0_f32;
+    let history_x = ai_x + ai_w + btn_gap;
+    let history_w = 52.0_f32;
+    let env_x = history_x + history_w + btn_gap;
+    let env_w = 32.0_f32;
+    let bookmarks_x = env_x + env_w + btn_gap;
+    let bookmarks_w = 68.0_f32;
+
+    if x >= ai_x && x <= ai_x + ai_w {
+        return Some(NavButton::AiAssistant);
+    }
+    if x >= history_x && x <= history_x + history_w {
+        return Some(NavButton::History);
+    }
+    if x >= env_x && x <= env_x + env_w {
+        return Some(NavButton::EnvViewer);
+    }
+    if x >= bookmarks_x && x <= bookmarks_x + bookmarks_w {
+        return Some(NavButton::Bookmarks);
+    }
+
+    // Right side
+    let tmux_w = 46.0_f32;
+    let tmux_x = visible_width - tmux_w - btn_gap;
+    if x >= tmux_x && x <= tmux_x + tmux_w {
         return Some(NavButton::TmuxConnect);
     }
+
     None
 }
 
