@@ -1858,13 +1858,13 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                         );
                     }
                     RoutePath::EnvViewer => {
-                        route.window.screen.render_env_viewer();
+                        route.window.screen.render_env_viewer(route.env_scroll);
                     }
                     RoutePath::Bookmarks => {
-                        route.window.screen.render_bookmarks();
+                        route.window.screen.render_bookmarks(route.bookmarks_scroll);
                     }
                     RoutePath::History => {
-                        route.window.screen.render_history();
+                        route.window.screen.render_history(route.history_scroll);
                     }
                 }
 

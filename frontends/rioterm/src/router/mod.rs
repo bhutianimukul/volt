@@ -38,6 +38,12 @@ pub struct Route<'a> {
     pub tmux_sessions: Vec<(String, String, bool)>,
     /// Currently selected index in the tmux picker
     pub tmux_selected: usize,
+    /// Scroll offset for the environment viewer
+    pub env_scroll: usize,
+    /// Scroll offset for the history viewer
+    pub history_scroll: usize,
+    /// Scroll offset for the bookmarks viewer
+    pub bookmarks_scroll: usize,
 }
 
 impl Route<'_> {
@@ -55,6 +61,9 @@ impl Route<'_> {
             settings_editor: crate::settings_editor::SettingsEditor::new(),
             tmux_sessions: Vec::new(),
             tmux_selected: 0,
+            env_scroll: 0,
+            history_scroll: 0,
+            bookmarks_scroll: 0,
         }
     }
 }
@@ -360,22 +369,79 @@ impl Route<'_> {
         }
 
         if self.path == RoutePath::History {
-            if key_event.logical_key == Key::Named(NamedKey::Escape) {
-                self.path = RoutePath::Terminal;
+            if key_event.state != rio_window::event::ElementState::Pressed {
+                return true;
+            }
+            match &key_event.logical_key {
+                Key::Named(NamedKey::Escape) => {
+                    self.history_scroll = 0;
+                    self.path = RoutePath::Terminal;
+                }
+                Key::Named(NamedKey::ArrowDown) => {
+                    self.history_scroll = self.history_scroll.saturating_add(1);
+                }
+                Key::Named(NamedKey::ArrowUp) => {
+                    self.history_scroll = self.history_scroll.saturating_sub(1);
+                }
+                Key::Named(NamedKey::PageDown) => {
+                    self.history_scroll = self.history_scroll.saturating_add(20);
+                }
+                Key::Named(NamedKey::PageUp) => {
+                    self.history_scroll = self.history_scroll.saturating_sub(20);
+                }
+                _ => {}
             }
             return true;
         }
 
         if self.path == RoutePath::EnvViewer {
-            if key_event.logical_key == Key::Named(NamedKey::Escape) {
-                self.path = RoutePath::Terminal;
+            if key_event.state != rio_window::event::ElementState::Pressed {
+                return true;
+            }
+            match &key_event.logical_key {
+                Key::Named(NamedKey::Escape) => {
+                    self.env_scroll = 0;
+                    self.path = RoutePath::Terminal;
+                }
+                Key::Named(NamedKey::ArrowDown) => {
+                    self.env_scroll = self.env_scroll.saturating_add(1);
+                }
+                Key::Named(NamedKey::ArrowUp) => {
+                    self.env_scroll = self.env_scroll.saturating_sub(1);
+                }
+                Key::Named(NamedKey::PageDown) => {
+                    self.env_scroll = self.env_scroll.saturating_add(20);
+                }
+                Key::Named(NamedKey::PageUp) => {
+                    self.env_scroll = self.env_scroll.saturating_sub(20);
+                }
+                _ => {}
             }
             return true;
         }
 
         if self.path == RoutePath::Bookmarks {
-            if key_event.logical_key == Key::Named(NamedKey::Escape) {
-                self.path = RoutePath::Terminal;
+            if key_event.state != rio_window::event::ElementState::Pressed {
+                return true;
+            }
+            match &key_event.logical_key {
+                Key::Named(NamedKey::Escape) => {
+                    self.bookmarks_scroll = 0;
+                    self.path = RoutePath::Terminal;
+                }
+                Key::Named(NamedKey::ArrowDown) => {
+                    self.bookmarks_scroll = self.bookmarks_scroll.saturating_add(1);
+                }
+                Key::Named(NamedKey::ArrowUp) => {
+                    self.bookmarks_scroll = self.bookmarks_scroll.saturating_sub(1);
+                }
+                Key::Named(NamedKey::PageDown) => {
+                    self.bookmarks_scroll = self.bookmarks_scroll.saturating_add(20);
+                }
+                Key::Named(NamedKey::PageUp) => {
+                    self.bookmarks_scroll = self.bookmarks_scroll.saturating_sub(20);
+                }
+                _ => {}
             }
             return true;
         }
@@ -648,6 +714,9 @@ impl Router<'_> {
             settings_editor: crate::settings_editor::SettingsEditor::new(),
             tmux_sessions: Vec::new(),
             tmux_selected: 0,
+            env_scroll: 0,
+            history_scroll: 0,
+            bookmarks_scroll: 0,
         };
 
         if let Some(err) = &self.propagated_report {
@@ -688,6 +757,9 @@ impl Router<'_> {
                 settings_editor: crate::settings_editor::SettingsEditor::new(),
                 tmux_sessions: Vec::new(),
                 tmux_selected: 0,
+                env_scroll: 0,
+                history_scroll: 0,
+                bookmarks_scroll: 0,
             },
         );
     }

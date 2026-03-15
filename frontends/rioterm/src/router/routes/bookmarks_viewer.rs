@@ -2,7 +2,11 @@ use crate::context::grid::ContextDimension;
 use rio_backend::sugarloaf::{FragmentStyle, Object, Quad, RichText, Sugarloaf};
 
 #[inline]
-pub fn screen(sugarloaf: &mut Sugarloaf, context_dimension: &ContextDimension) {
+pub fn screen(
+    sugarloaf: &mut Sugarloaf,
+    context_dimension: &ContextDimension,
+    scroll_offset: usize,
+) {
     let bg = [0.06, 0.06, 0.08, 1.0];
     let accent = [0.9, 0.5, 0.3, 1.0]; // orange
     let dim = [0.45, 0.45, 0.5, 1.0];
@@ -146,7 +150,12 @@ pub fn screen(sugarloaf: &mut Sugarloaf, context_dimension: &ContextDimension) {
     } else {
         body.add_text("SAVED COMMANDS", header_style).new_line();
 
+        let mut line_idx: usize = 0;
         for bm in &bookmarks {
+            line_idx += 1;
+            if line_idx <= scroll_offset {
+                continue;
+            }
             // Command
             body.add_text("  ", dim_style);
             let label = bm
@@ -197,7 +206,11 @@ pub fn screen(sugarloaf: &mut Sugarloaf, context_dimension: &ContextDimension) {
     // Footer
     body.new_line().new_line();
     body.add_text(" Escape ", key_bg_style)
-        .add_text(" close", footer_dim_style());
+        .add_text(" close  ", footer_dim_style())
+        .add_text(" Up/Down ", key_bg_style)
+        .add_text(" scroll  ", footer_dim_style())
+        .add_text(" PgUp/PgDn ", key_bg_style)
+        .add_text(" fast scroll", footer_dim_style());
 
     body.build();
 

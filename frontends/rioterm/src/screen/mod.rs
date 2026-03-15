@@ -693,6 +693,15 @@ impl Screen<'_> {
             if bytes.contains(&b'\r') && !mode.contains(Mode::ALT_SCREEN) {
                 let command_text = self.extract_current_command_line();
                 tracing::debug!("Command intercepted: '{}'", command_text);
+
+                // Record in session history (always, not just with shell integration)
+                if !command_text.is_empty() {
+                    let cwd = std::env::current_dir().unwrap_or_default();
+                    self.context_manager
+                        .session_recorder
+                        .record(command_text.clone(), cwd);
+                }
+
                 if !command_text.is_empty() {
                     if let Some(preview) =
                         crate::consequences::analyze_command(&command_text)
@@ -2882,30 +2891,33 @@ impl Screen<'_> {
         self.sugarloaf.render();
     }
 
-    pub fn render_env_viewer(&mut self) {
+    pub fn render_env_viewer(&mut self, scroll_offset: usize) {
         self.sugarloaf.clear();
         crate::router::routes::env_viewer::screen(
             &mut self.sugarloaf,
             &self.context_manager.current().dimension,
+            scroll_offset,
         );
         self.sugarloaf.render();
     }
 
-    pub fn render_bookmarks(&mut self) {
+    pub fn render_bookmarks(&mut self, scroll_offset: usize) {
         self.sugarloaf.clear();
         crate::router::routes::bookmarks_viewer::screen(
             &mut self.sugarloaf,
             &self.context_manager.current().dimension,
+            scroll_offset,
         );
         self.sugarloaf.render();
     }
 
-    pub fn render_history(&mut self) {
+    pub fn render_history(&mut self, scroll_offset: usize) {
         self.sugarloaf.clear();
         crate::router::routes::history::screen(
             &mut self.sugarloaf,
             &self.context_manager.current().dimension,
             &self.context_manager.session_recorder,
+            scroll_offset,
         );
         self.sugarloaf.render();
     }

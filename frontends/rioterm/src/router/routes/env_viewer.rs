@@ -2,7 +2,11 @@ use crate::context::grid::ContextDimension;
 use rio_backend::sugarloaf::{FragmentStyle, Object, Quad, RichText, Sugarloaf};
 
 #[inline]
-pub fn screen(sugarloaf: &mut Sugarloaf, context_dimension: &ContextDimension) {
+pub fn screen(
+    sugarloaf: &mut Sugarloaf,
+    context_dimension: &ContextDimension,
+    scroll_offset: usize,
+) {
     let bg = [0.06, 0.06, 0.08, 1.0];
     let accent = [0.3, 0.8, 0.9, 1.0]; // cyan
     let dim = [0.45, 0.45, 0.5, 1.0];
@@ -112,35 +116,51 @@ pub fn screen(sugarloaf: &mut Sugarloaf, context_dimension: &ContextDimension) {
     body.clear();
 
     let grouped = crate::env_inspector::grouped_env_vars();
+    let mut line_idx: usize = 0;
     for (category, vars) in &grouped {
-        body.add_text(category.to_uppercase().as_str(), header_style)
-            .new_line();
-        for var in vars {
-            let display_value = if var.is_secret {
-                crate::env_inspector::mask_value(&var.value)
-            } else if var.value.len() > 60 {
-                format!("{}...", &var.value[..57])
-            } else {
-                var.value.clone()
-            };
+        if line_idx >= scroll_offset {
+            body.add_text(category.to_uppercase().as_str(), header_style)
+                .new_line();
+        }
+        line_idx += 1;
 
-            body.add_text("  ", dim_style);
-            body.add_text(&var.key, key_style);
-            body.add_text("=", dim_style);
-            if var.is_secret {
-                body.add_text(&display_value, secret_style);
-            } else {
-                body.add_text(&display_value, val_style);
+        for var in vars {
+            if line_idx >= scroll_offset {
+                let display_value = if var.is_secret {
+                    crate::env_inspector::mask_value(&var.value)
+                } else if var.value.len() > 60 {
+                    format!("{}...", &var.value[..57])
+                } else {
+                    var.value.clone()
+                };
+
+                body.add_text("  ", dim_style);
+                body.add_text(&var.key, key_style);
+                body.add_text("=", dim_style);
+                if var.is_secret {
+                    body.add_text(&display_value, secret_style);
+                } else {
+                    body.add_text(&display_value, val_style);
+                }
+                body.new_line();
             }
+            line_idx += 1;
+        }
+
+        if line_idx >= scroll_offset {
             body.new_line();
         }
-        body.new_line();
+        line_idx += 1;
     }
 
     // Footer
     body.new_line();
     body.add_text(" Escape ", key_bg_style)
-        .add_text(" close", footer_dim_style());
+        .add_text(" close  ", footer_dim_style())
+        .add_text(" Up/Down ", key_bg_style)
+        .add_text(" scroll  ", footer_dim_style())
+        .add_text(" PgUp/PgDn ", key_bg_style)
+        .add_text(" fast scroll", footer_dim_style());
 
     body.build();
 

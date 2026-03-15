@@ -7,6 +7,7 @@ pub fn screen(
     sugarloaf: &mut Sugarloaf,
     context_dimension: &ContextDimension,
     recorder: &SessionRecorder,
+    scroll_offset: usize,
 ) {
     let bg = [0.06, 0.06, 0.08, 1.0];
     let accent = [0.7, 0.4, 0.9, 1.0]; // purple
@@ -155,7 +156,12 @@ pub fn screen(
         )
         .new_line();
 
+        let mut line_idx: usize = 0;
         for entry in entries.iter().rev() {
+            line_idx += 1;
+            if line_idx <= scroll_offset {
+                continue;
+            }
             // Status indicator
             let (status, style) = match entry.exit_code {
                 Some(0) => (" ok ", ok_style),
@@ -213,7 +219,11 @@ pub fn screen(
     // Footer
     body.new_line().new_line();
     body.add_text(" Escape ", key_bg_style)
-        .add_text(" close", footer_dim_style());
+        .add_text(" close  ", footer_dim_style())
+        .add_text(" Up/Down ", key_bg_style)
+        .add_text(" scroll  ", footer_dim_style())
+        .add_text(" PgUp/PgDn ", key_bg_style)
+        .add_text(" fast scroll", footer_dim_style());
 
     body.build();
 
