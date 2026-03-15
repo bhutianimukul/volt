@@ -458,33 +458,34 @@ pub fn nav_button_at_position(x: f32, visible_width: f32) -> Option<NavButton> {
 pub const STATUS_BAR_HEIGHT: f32 = 22.0;
 
 /// Check if a click (in logical pixels) hit a bottom status bar item.
-/// Text layout: "  AI | History | Env | Bookmarks | Connect | Cmds | Layout"
-/// Approx 7px per character at font size 11.
+/// Text: "  AI | History | Env | Bookmarks | Connect | Cmds | Layout"
+/// Uses char width ~6.5px at font size 11 (monospace estimate).
 pub fn status_button_at_position(x: f32, y: f32, win_height: f32, visible_width: f32) -> Option<NavButton> {
     let status_y = win_height - STATUS_BAR_HEIGHT;
     if y < status_y || y > win_height {
         return None;
     }
 
-    // Character-based hit zones (~7px per char)
-    // "  AI " = 0..35px
-    // "| History " = 35..105
-    // "| Env " = 105..147
-    // "| Bookmarks " = 147..231
-    // "| Connect " = 231..301
-    // "| Cmds " = 301..350
-    // "| Layout" = 350..406
+    // Char positions (0-indexed) with ~6.5px per char:
+    //   "  AI " chars 0-4       → x 0..32
+    //   "| History " chars 5-14 → x 32..97
+    //   "| Env " chars 15-20   → x 97..136
+    //   "| Bookmarks " 21-32   → x 136..214
+    //   "| Connect " 33-42     → x 214..279
+    //   "| Cmds " 43-49        → x 279..325
+    //   "| Layout " 50-58      → x 325..383
+    let cw = 6.5_f32;
 
-    if x < 35.0 { return Some(NavButton::AiAssistant); }
-    if x < 105.0 { return Some(NavButton::History); }
-    if x < 147.0 { return Some(NavButton::EnvViewer); }
-    if x < 231.0 { return Some(NavButton::Bookmarks); }
-    if x < 301.0 { return Some(NavButton::Connections); }
-    if x < 350.0 { return Some(NavButton::SlashCommands); }
-    if x < 406.0 { return Some(NavButton::Layouts);
-    }
+    // Use generous zones — click anywhere in the range maps to that item
+    if x < 5.0 * cw { return Some(NavButton::AiAssistant); }     // 0..32
+    if x < 15.0 * cw { return Some(NavButton::History); }         // 32..97
+    if x < 21.0 * cw { return Some(NavButton::EnvViewer); }       // 97..136
+    if x < 33.0 * cw { return Some(NavButton::Bookmarks); }       // 136..214
+    if x < 43.0 * cw { return Some(NavButton::Connections); }     // 214..279
+    if x < 50.0 * cw { return Some(NavButton::SlashCommands); }   // 279..325
+    if x < 59.0 * cw { return Some(NavButton::Layouts); }         // 325..383
 
-    // Right side
+    // tmux pill on right
     let tmux_w = 46.0_f32;
     let tmux_x = visible_width - tmux_w - 6.0;
     if x >= tmux_x && x <= tmux_x + tmux_w {

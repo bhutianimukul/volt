@@ -1193,7 +1193,9 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                         let is_tab_mode = nav_mode == rio_backend::config::navigation::NavigationMode::TopTab
                             || nav_mode == rio_backend::config::navigation::NavigationMode::BottomTab;
                         let tab_bar_visible = is_tab_mode && !(hide_single && num_tabs <= 1);
-                        if tab_bar_visible {
+
+                        // Status bar clicks — ALWAYS check, even with hidden tab bar
+                        if is_tab_mode {
                             if let Some(btn) = crate::renderer::navigation::status_button_at_position(
                                 lx as f32, ly as f32, win_h, visible_w,
                             ) {

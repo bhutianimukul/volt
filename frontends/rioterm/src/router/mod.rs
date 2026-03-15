@@ -421,8 +421,10 @@ impl Route<'_> {
                 }
                 Key::Named(NamedKey::Enter) => {
                     // Copy selected command to PTY (paste, don't execute)
-                    let entries: Vec<_> = self.window.screen.context_manager.session_recorder.all().iter().rev().collect();
-                    if let Some(entry) = entries.get(self.history_selected) {
+                    // Must match display order: recent(50) reversed = oldest first within last 50
+                    let recent = self.window.screen.context_manager.session_recorder.recent(50);
+                    let display_order: Vec<_> = recent.into_iter().rev().collect();
+                    if let Some(entry) = display_order.get(self.history_selected) {
                         if !entry.command.is_empty() {
                             let cmd = entry.command.clone();
                             self.window
