@@ -264,13 +264,6 @@ pub fn screen(
         lines: None,
     }));
 
-    objects.push(Object::Quad(Quad {
-        position: [panel_x, header_y + 18.0],
-        color: accent,
-        size: [full_w - panel_x - 20.0, 1.0],
-        ..Quad::default()
-    }));
-
     let items_start_y = header_y + 30.0;
 
     let panel_rt = sugarloaf.create_temp_rich_text();
