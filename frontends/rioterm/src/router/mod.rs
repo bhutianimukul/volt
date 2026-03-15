@@ -954,7 +954,7 @@ impl Route<'_> {
                     if let Some((_id, name, _attached)) =
                         self.tmux_sessions.get(self.tmux_selected)
                     {
-                        let cmd = format!("tmux detach-client -t {}\r", name);
+                        let cmd = format!("tmux detach-client -s {}\r", name);
                         self.window.screen.ctx_mut().current_mut().messenger.send_write(cmd.into_bytes());
                     }
                 }
@@ -963,7 +963,7 @@ impl Route<'_> {
                     if let Some((_id, name, _attached)) =
                         self.tmux_sessions.get(self.tmux_selected)
                     {
-                        let cmd = format!("tmux kill-session -t {}\r", name);
+                        let cmd = format!("tmux detach-client -s {}\r", name);
                         self.window.screen.ctx_mut().current_mut().messenger.send_write(cmd.into_bytes());
                         // Refresh session list
                         self.tmux_sessions = crate::tmux_cc::TmuxController::list_sessions();

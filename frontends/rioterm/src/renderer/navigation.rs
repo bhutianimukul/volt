@@ -370,7 +370,7 @@ impl ScreenNavigation {
 
         // Volt branding thunder icon + clickable items
         let sb_brand = FragmentStyle { color: [0.95, 0.75, 0.2, 1.0], ..FragmentStyle::default() };
-        sb.add_text(" V", sb_brand);
+        sb.add_text(" Volt", sb_brand);
         sb.add_text(" ", sb_sep);
         sb.add_text("AI ", sb_purple);
         sb.add_text("|", sb_sep);
