@@ -982,16 +982,18 @@ impl Route<'_> {
                     self.path = RoutePath::Terminal;
                 }
                 Key::Named(NamedKey::ArrowUp) => {
-                    if self.tmux_selected > 0 {
-                        self.tmux_selected -= 1;
-                    }
+                    if self.tmux_selected >= 2 { self.tmux_selected -= 2; }
                 }
                 Key::Named(NamedKey::ArrowDown) => {
-                    if !self.tmux_sessions.is_empty()
-                        && self.tmux_selected < self.tmux_sessions.len() - 1
-                    {
-                        self.tmux_selected += 1;
-                    }
+                    let max = self.tmux_sessions.len();
+                    if self.tmux_selected + 2 < max { self.tmux_selected += 2; }
+                }
+                Key::Named(NamedKey::ArrowLeft) => {
+                    if self.tmux_selected % 2 == 1 { self.tmux_selected -= 1; }
+                }
+                Key::Named(NamedKey::ArrowRight) => {
+                    let max = self.tmux_sessions.len();
+                    if self.tmux_selected % 2 == 0 && self.tmux_selected + 1 < max { self.tmux_selected += 1; }
                 }
                 Key::Named(NamedKey::Enter) => {
                     if let Some((_id, name, _attached)) =
