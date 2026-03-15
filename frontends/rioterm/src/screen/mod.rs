@@ -431,6 +431,35 @@ impl Screen<'_> {
 
         if let Some(image) = &config.window.background_image {
             self.sugarloaf.set_background_image(image);
+            // Use semi-transparent background for image overlay
+            let overlay = 1.0 - image.opacity.clamp(0.0, 1.0) as f64;
+            self.renderer.dynamic_background.1 = wgpu::Color {
+                r: 0.0,
+                g: 0.0,
+                b: 0.0,
+                a: overlay,
+            };
+            self.renderer.dynamic_background.2 = true;
+        } else {
+            // Clear background image if config no longer has one
+            self.sugarloaf.clear_background_image();
+            // Restore opaque background color
+            let bg = self.renderer.dynamic_background.0;
+            self.renderer.dynamic_background.1 = wgpu::Color {
+                r: bg[0] as f64,
+                g: bg[1] as f64,
+                b: bg[2] as f64,
+                a: bg[3] as f64,
+            };
+            self.renderer.dynamic_background.2 = false;
+        }
+
+        // Re-apply background color after image state change
+        if cfg!(target_os = "macos") {
+            self.sugarloaf.set_background_color(None);
+        } else {
+            self.sugarloaf
+                .set_background_color(Some(self.renderer.dynamic_background.1));
         }
 
         self.resize_all_contexts();
@@ -3173,7 +3202,6 @@ impl Screen<'_> {
     pub fn extract_current_command_line(&self) -> String {
         let terminal = self.ctx().current().terminal.lock();
         let cursor_line = terminal.grid.cursor.pos.row;
-        let cursor_col = terminal.grid.cursor.pos.col.0;
         let row = &terminal.grid[cursor_line];
         let mut line_text = String::new();
         for square in row.inner.iter() {

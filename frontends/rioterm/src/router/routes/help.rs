@@ -51,7 +51,7 @@ pub fn screen(
     let black = [0.0, 0.0, 0.0, 1.0];
     let white = [1.0, 1.0, 1.0, 1.0];
     let sidebar_bg = [0.08, 0.08, 0.11, 1.0];
-    let sidebar_selected = [0.15, 0.15, 0.22, 1.0];
+    let sidebar_selected = [0.14, 0.14, 0.16, 1.0];
     let sidebar_hover = [0.10, 0.10, 0.14, 1.0];
     let divider_color = [0.15, 0.15, 0.2, 1.0];
     let key_color = [0.4, 0.8, 1.0, 1.0];
