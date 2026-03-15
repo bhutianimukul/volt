@@ -780,6 +780,8 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                         route.path = RoutePath::Terminal;
                     } else {
                         route.settings_editor.reload_from_config(&self.config);
+                        route.settings_category = 0;
+                        route.settings_in_sidebar = true;
                         route.path = RoutePath::Settings;
                     }
                     route.request_redraw();
@@ -790,6 +792,9 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                     if route.path == RoutePath::Help {
                         route.path = RoutePath::Terminal;
                     } else {
+                        route.help_category = 0;
+                        route.help_selected = 0;
+                        route.help_in_sidebar = true;
                         route.path = RoutePath::Help;
                     }
                     route.request_redraw();
