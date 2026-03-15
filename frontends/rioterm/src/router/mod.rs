@@ -929,7 +929,7 @@ impl Route<'_> {
                     self.layouts_selected = self.layouts_selected.saturating_sub(1);
                 }
                 Key::Named(NamedKey::ArrowDown) => {
-                    let max_idx = crate::router::routes::layouts_viewer::presets().len().saturating_sub(1);
+                    let max_idx = 3;
                     if self.layouts_selected < max_idx {
                         self.layouts_selected += 1;
                     }
