@@ -173,7 +173,7 @@ impl Application<'_> {
         use objc::{msg_send, sel, sel_impl};
 
         let icon_data: &[u8] =
-            include_bytes!("../../../misc/osx/Volt.app/Contents/Resources/icon.icns");
+            include_bytes!("../../../misc/volt-icon.png");
 
         unsafe {
             let ns_data_class = Class::get("NSData").unwrap();
