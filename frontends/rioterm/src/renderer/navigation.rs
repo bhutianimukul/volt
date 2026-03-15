@@ -357,58 +357,20 @@ impl ScreenNavigation {
             let sb_rt = sugarloaf.create_temp_rich_text();
             sugarloaf.set_rich_text_font_size(&sb_rt, 11.);
 
-            let sb_text = FragmentStyle {
-                color: [0.75, 0.8, 0.85, 1.0],
-                ..FragmentStyle::default()
-            };
-            let sb_accent = FragmentStyle {
-                color: [0.4, 0.7, 1.0, 1.0],
-                ..FragmentStyle::default()
-            };
             let sb_sep = FragmentStyle {
                 color: [0.3, 0.35, 0.4, 0.6],
                 ..FragmentStyle::default()
             };
-            let sb_green = FragmentStyle {
-                color: [0.3, 0.85, 0.5, 1.0],
-                ..FragmentStyle::default()
-            };
-            let sb_gold = FragmentStyle {
-                color: [0.95, 0.75, 0.2, 1.0],
-                ..FragmentStyle::default()
-            };
-            let sb_purple = FragmentStyle {
-                color: [0.7, 0.5, 0.95, 1.0],
+            let c = |r: f32, g: f32, b: f32| FragmentStyle {
+                color: [r, g, b, 1.0],
                 ..FragmentStyle::default()
             };
 
+            // Left side — Volt brand only
             let content = sugarloaf.content();
             let sb = content.sel(sb_rt);
             sb.clear().new_line();
-
-            // Status bar with all features
-            let sb_brand = FragmentStyle {
-                color: [0.85, 0.65, 0.15, 0.9],
-                ..FragmentStyle::default()
-            };
-            sb.add_text(" Volt", sb_brand);
-            sb.add_text(" ", sb_sep);
-            sb.add_text("AI ", sb_purple);
-            sb.add_text("|", sb_sep);
-            sb.add_text(" History ", sb_text);
-            sb.add_text("|", sb_sep);
-            sb.add_text(" Env ", sb_text);
-            sb.add_text("|", sb_sep);
-            sb.add_text(" Bookmarks ", sb_text);
-            sb.add_text("|", sb_sep);
-            sb.add_text(" Connect ", sb_accent);
-            sb.add_text("|", sb_sep);
-            sb.add_text(" Layout ", sb_text);
-            sb.add_text("|", sb_sep);
-            sb.add_text(" Export ", sb_gold);
-            sb.add_text("|", sb_sep);
-            sb.add_text(" Share ", sb_green);
-
+            sb.add_text(" Volt", c(0.85, 0.65, 0.15));
             sb.build();
 
             objects.push(Object::RichText(RichText {
@@ -417,7 +379,44 @@ impl ScreenNavigation {
                 lines: None,
             }));
 
-            // tmux — right side, styled text (no pill)
+            // Right side — all feature items + tmux, right-aligned
+            // Text: "AI | History | Env | Bookmarks | Connect | Layout | Export | Share  tmux"
+            // Total ~73 chars * 6.5px = ~475px
+            let right_text_w = 500.0_f32;
+            let right_rt = sugarloaf.create_temp_rich_text();
+            sugarloaf.set_rich_text_font_size(&right_rt, 11.);
+            {
+                let rc = sugarloaf.content().sel(right_rt);
+                rc.clear().new_line();
+                rc.add_text("AI ", c(0.7, 0.5, 0.95));
+                rc.add_text("|", sb_sep);
+                rc.add_text(" History ", c(0.7, 0.4, 0.9));
+                rc.add_text("|", sb_sep);
+                rc.add_text(" Env ", c(0.3, 0.8, 0.9));
+                rc.add_text("|", sb_sep);
+                rc.add_text(" Bookmarks ", c(0.9, 0.5, 0.3));
+                rc.add_text("|", sb_sep);
+                rc.add_text(" Connect ", c(0.4, 0.7, 1.0));
+                rc.add_text("|", sb_sep);
+                rc.add_text(" Layout ", c(0.3, 0.7, 0.9));
+                rc.add_text("|", sb_sep);
+                rc.add_text(" Export ", c(0.95, 0.75, 0.2));
+                rc.add_text("|", sb_sep);
+                rc.add_text(" Share ", c(0.3, 0.85, 0.5));
+                rc.add_text(" ", sb_sep);
+                rc.add_text("tmux", c(0.4, 0.85, 0.55));
+                rc.build();
+            }
+
+            let right_x = (visible_width - right_text_w).max(60.0);
+            objects.push(Object::RichText(RichText {
+                id: right_rt,
+                position: [right_x, sb_y + 1.0],
+                lines: None,
+            }));
+
+            // Remove the old separate tmux text — it's now part of the right group
+            // (keeping this comment for clarity that tmux rendering moved above)
             let tmux_rt = sugarloaf.create_temp_rich_text();
             sugarloaf.set_rich_text_font_size(&tmux_rt, 11.);
             sugarloaf
@@ -426,7 +425,7 @@ impl ScreenNavigation {
                 .clear()
                 .new_line()
                 .add_text(
-                    "tmux",
+                    "",
                     FragmentStyle {
                         color: [0.4, 0.85, 0.55, 1.0],
                         ..FragmentStyle::default()
@@ -495,69 +494,65 @@ pub fn status_button_at_position(
         return None;
     }
 
-    // Approximate char width at font size 11 (monospace)
     let cw: f32 = 6.5;
 
-    // Rendered: " Volt AI | History | Env | Bookmarks | Connect | Layout | Export | Share"
-    // Char positions (0-indexed):
-    //   0-5   " Volt"  (brand, not clickable)
-    //   5-6   " "
-    //   6-9   "AI "           -> AiAssistant
-    //   9-10  "|"
-    //  10-19  " History "     -> History
-    //  19-20  "|"
-    //  20-25  " Env "         -> EnvViewer
-    //  25-26  "|"
-    //  26-37  " Bookmarks "   -> Bookmarks
-    //  37-38  "|"
-    //  38-47  " Connect "     -> Connections
-    //  47-48  "|"
-    //  48-56  " Layout "      -> Layouts
-    //  56-57  "|"
-    //  57-65  " Export "      -> SessionExport
-    //  65-66  "|"
-    //  66-73  " Share "       -> SessionSharing
-    let brand_end = 5.0 * cw;
-    let ai_end = 10.0 * cw;
-    let hist_end = 20.0 * cw;
-    let env_end = 26.0 * cw;
-    let bm_end = 38.0 * cw;
-    let conn_end = 48.0 * cw;
-    let layout_end = 57.0 * cw;
-    let export_end = 66.0 * cw;
-    let share_end = 73.0 * cw;
-
-    if x < brand_end {
+    // Left side: " Volt" (0-5 chars) — not clickable
+    if x < 5.0 * cw {
         return None;
     }
-    if x < ai_end {
-        return Some(NavButton::AiAssistant);
-    }
-    if x < hist_end {
-        return Some(NavButton::History);
-    }
-    if x < env_end {
-        return Some(NavButton::EnvViewer);
-    }
-    if x < bm_end {
-        return Some(NavButton::Bookmarks);
-    }
-    if x < conn_end {
-        return Some(NavButton::Connections);
-    }
-    if x < layout_end {
-        return Some(NavButton::Layouts);
-    }
-    if x < export_end {
-        return Some(NavButton::SessionExport);
-    }
-    if x < share_end {
-        return Some(NavButton::SessionSharing);
+
+    // Right side: items are right-aligned at visible_width - 500
+    // Text: "AI | History | Env | Bookmarks | Connect | Layout | Export | Share  tmux"
+    let right_x = (visible_width - 500.0_f32).max(60.0);
+    let rx = x - right_x; // position relative to right block start
+
+    if rx < 0.0 {
+        return None; // gap between Volt and right block
     }
 
-    // tmux text on right (~40px from right edge)
-    let tmux_x = visible_width - 40.0;
-    if x >= tmux_x {
+    // Char positions within the right block:
+    //  0-3   "AI "           -> AiAssistant
+    //  3-4   "|"
+    //  4-13  " History "     -> History
+    //  13-14 "|"
+    //  14-19 " Env "         -> EnvViewer
+    //  19-20 "|"
+    //  20-31 " Bookmarks "   -> Bookmarks
+    //  31-32 "|"
+    //  32-41 " Connect "     -> Connections
+    //  41-42 "|"
+    //  42-50 " Layout "      -> Layouts
+    //  50-51 "|"
+    //  51-59 " Export "      -> SessionExport
+    //  59-60 "|"
+    //  60-67 " Share "       -> SessionSharing
+    //  67-68 " "
+    //  68-72 "tmux"          -> TmuxConnect
+    if rx < 4.0 * cw {
+        return Some(NavButton::AiAssistant);
+    }
+    if rx < 14.0 * cw {
+        return Some(NavButton::History);
+    }
+    if rx < 20.0 * cw {
+        return Some(NavButton::EnvViewer);
+    }
+    if rx < 32.0 * cw {
+        return Some(NavButton::Bookmarks);
+    }
+    if rx < 42.0 * cw {
+        return Some(NavButton::Connections);
+    }
+    if rx < 51.0 * cw {
+        return Some(NavButton::Layouts);
+    }
+    if rx < 60.0 * cw {
+        return Some(NavButton::SessionExport);
+    }
+    if rx < 68.0 * cw {
+        return Some(NavButton::SessionSharing);
+    }
+    if rx < 73.0 * cw {
         return Some(NavButton::TmuxConnect);
     }
 
