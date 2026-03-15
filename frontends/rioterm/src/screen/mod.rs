@@ -3173,6 +3173,7 @@ impl Screen<'_> {
     pub fn extract_current_command_line(&self) -> String {
         let terminal = self.ctx().current().terminal.lock();
         let cursor_line = terminal.grid.cursor.pos.row;
+        let cursor_col = terminal.grid.cursor.pos.col.0;
         let row = &terminal.grid[cursor_line];
         let mut line_text = String::new();
         for square in row.inner.iter() {
@@ -3188,26 +3189,42 @@ impl Screen<'_> {
 
         let trimmed = line_text.trim_end().to_string();
 
-        // Strip common shell prompts by finding the *first* prompt character
-        // (`$`, `%`, `#`, `>`) followed by a space.  This avoids stripping
-        // redirect operators or other in-command uses of these characters.
-        // Handles prompts like "user@host:~$ ", "% ", "# ", "> ", etc.
-        if let Some(pos) = trimmed.find(|c| c == '$' || c == '%' || c == '#' || c == '>')
-        {
-            let after = &trimmed[pos + 1..];
-            // Only treat this as a prompt if it is followed by whitespace
-            // (or is at the end of the string).  Otherwise leave the line as-is.
+        // Strip common shell prompts by finding the *last* prompt character
+        // followed by a space. Supports: $ % # > ❯ ❮ ➜ ➤ ▶ λ
+        // Uses rfind to handle multi-segment prompts like "~ ❯ ~ ❯ "
+        let prompt_chars: &[char] = &[
+            '$', '%', '#', '>', '\u{276F}', '\u{276E}', '\u{279C}', '\u{27A4}',
+            '\u{25B6}', '\u{03BB}',
+        ];
+        let after_prompt = if let Some(pos) = trimmed.rfind(prompt_chars) {
+            let char_at = trimmed[pos..].chars().next().unwrap();
+            let after_pos = pos + char_at.len_utf8();
+            let after = &trimmed[after_pos..];
             if after.is_empty() || after.starts_with(' ') || after.starts_with('\t') {
-                let cmd = after.trim_start().to_string();
+                let cmd = after.trim_start();
                 if !cmd.is_empty() {
-                    return cmd;
+                    cmd.to_string()
+                } else {
+                    trimmed.clone()
                 }
+            } else {
+                trimmed.clone()
             }
-            // Fallback: return the whole trimmed line when stripping yields nothing useful
-            trimmed
         } else {
-            trimmed
+            trimmed.clone()
+        };
+
+        // Strip right-prompt content: if there are 3+ consecutive spaces, take only
+        // the left part (the actual command). Right-prompts (timestamps, git status)
+        // are separated from the command by large whitespace gaps.
+        if let Some(gap_pos) = after_prompt.find("   ") {
+            let cmd = after_prompt[..gap_pos].trim_end().to_string();
+            if !cmd.is_empty() {
+                return cmd;
+            }
         }
+
+        after_prompt
     }
 
     /// Show a confirmation dialog for a destructive command.
