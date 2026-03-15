@@ -189,15 +189,6 @@ pub fn screen(
                 ..Quad::default()
             }));
 
-            // Accent bar on selected category
-            if settings_in_sidebar {
-                objects.push(Object::Quad(Quad {
-                    position: [0., cat_y - 2.0],
-                    color: accent,
-                    size: [3., cat_line_height],
-                    ..Quad::default()
-                }));
-            }
         }
     }
 

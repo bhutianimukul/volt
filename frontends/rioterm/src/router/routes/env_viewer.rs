@@ -32,13 +32,6 @@ pub fn screen(
         ..Quad::default()
     }));
 
-    // Accent bar on the left
-    objects.push(Object::Quad(Quad {
-        position: [0., 30.0],
-        color: accent,
-        size: [4., layout.height / context_dimension.dimension.scale],
-        ..Quad::default()
-    }));
 
     // Title
     let title_rt = sugarloaf.create_temp_rich_text();
