@@ -1,83 +1,282 @@
 use crate::context::grid::ContextDimension;
 use rio_backend::sugarloaf::{FragmentStyle, Object, Quad, RichText, Sugarloaf};
 
+/// Help categories
+pub const HELP_CATEGORIES: &[&str] = &["Shortcuts", "Features", "Actions"];
+
+/// Number of items in each category (for navigation bounds)
+pub fn category_item_count(category: usize) -> usize {
+    match category {
+        0 => 5,  // Shortcut groups: Tabs, Splits, Navigation, Features, Safety
+        1 => 9,  // Features list
+        2 => 9,  // Actions list
+        _ => 0,
+    }
+}
+
+/// Map action index to the RoutePath that should be opened
+pub fn action_route(index: usize) -> Option<&'static str> {
+    match index {
+        0 => Some("ai"),
+        1 => Some("history"),
+        2 => Some("env"),
+        3 => Some("bookmarks"),
+        4 => Some("connections"),
+        5 => Some("tmux"),
+        6 => Some("slash"),
+        7 => Some("layouts"),
+        8 => Some("export"),
+        _ => None,
+    }
+}
+
 #[inline]
-pub fn screen(sugarloaf: &mut Sugarloaf, context_dimension: &ContextDimension) {
+pub fn screen(
+    sugarloaf: &mut Sugarloaf,
+    context_dimension: &ContextDimension,
+    selected_category: usize,
+    selected_item: usize,
+    in_sidebar: bool,
+) {
     let bg = [0.06, 0.06, 0.08, 1.0];
-    let accent = [0.98, 0.73, 0.16, 1.0]; // yellow/gold (Volt brand)
+    let accent = [0.2, 0.5, 1.0, 1.0];
     let dim = [0.45, 0.45, 0.5, 1.0];
+    let highlight = [0.98, 0.73, 0.16, 1.0];
     let black = [0.0, 0.0, 0.0, 1.0];
     let white = [1.0, 1.0, 1.0, 1.0];
-    let highlight = [0.98, 0.73, 0.16, 1.0]; // yellow for key badges
-    let key_color = [0.4, 0.8, 1.0, 1.0]; // light blue for shortcut keys
+    let sidebar_bg = [0.08, 0.08, 0.11, 1.0];
+    let sidebar_selected = [0.15, 0.25, 0.45, 1.0];
+    let sidebar_hover = [0.10, 0.10, 0.14, 1.0];
+    let divider_color = [0.15, 0.15, 0.2, 1.0];
+    let key_color = [0.4, 0.8, 1.0, 1.0];
+    let green = [0.3, 0.85, 0.4, 1.0];
 
     let layout = sugarloaf.window_size();
-    let mut objects = Vec::with_capacity(16);
+    let scale = context_dimension.dimension.scale;
+    let full_w = layout.width / scale;
+    let full_h = layout.height / scale;
+    let mut objects = Vec::with_capacity(64);
 
     // Background
     objects.push(Object::Quad(Quad {
         position: [0., 0.0],
         color: bg,
-        size: [
-            layout.width / context_dimension.dimension.scale,
-            layout.height / context_dimension.dimension.scale,
-        ],
+        size: [full_w, full_h],
         ..Quad::default()
     }));
 
-    // Accent bar on the left
+    // Sidebar background
+    let sidebar_width = 140.0;
     objects.push(Object::Quad(Quad {
-        position: [0., 30.0],
-        color: accent,
-        size: [4., layout.height / context_dimension.dimension.scale],
+        position: [0., 0.0],
+        color: sidebar_bg,
+        size: [sidebar_width, full_h],
         ..Quad::default()
     }));
 
-    // Title
+    // Vertical divider
+    objects.push(Object::Quad(Quad {
+        position: [sidebar_width, 0.0],
+        color: divider_color,
+        size: [1.0, full_h],
+        ..Quad::default()
+    }));
+
+    // --- Title ---
     let title_rt = sugarloaf.create_temp_rich_text();
     sugarloaf.set_rich_text_font_size(&title_rt, 22.0);
-    let content = sugarloaf.content();
-    content
-        .sel(title_rt)
-        .clear()
-        .add_text(
-            "Volt Keyboard Shortcuts",
-            FragmentStyle {
-                color: white,
-                ..FragmentStyle::default()
-            },
-        )
-        .build();
+    {
+        let content = sugarloaf.content();
+        content
+            .sel(title_rt)
+            .clear()
+            .add_text(
+                "Volt Help",
+                FragmentStyle {
+                    color: white,
+                    ..FragmentStyle::default()
+                },
+            )
+            .build();
+    }
     objects.push(Object::RichText(RichText {
         id: title_rt,
-        position: [40., context_dimension.margin.top_y + 25.],
+        position: [155., context_dimension.margin.top_y + 25.],
         lines: None,
     }));
 
-    // Subtitle
+    // --- Subtitle ---
     let subtitle_rt = sugarloaf.create_temp_rich_text();
     sugarloaf.set_rich_text_font_size(&subtitle_rt, 13.0);
-    let content = sugarloaf.content();
-    content
-        .sel(subtitle_rt)
-        .clear()
-        .add_text(
-            "All available keyboard shortcuts and actions",
-            FragmentStyle {
-                color: dim,
-                ..FragmentStyle::default()
-            },
-        )
-        .build();
+    {
+        let content = sugarloaf.content();
+        content
+            .sel(subtitle_rt)
+            .clear()
+            .add_text(
+                match selected_category {
+                    0 => "Keyboard shortcuts and actions",
+                    1 => "Feature overview and shortcuts",
+                    2 => "Quick launch — press Enter to open",
+                    _ => "",
+                },
+                FragmentStyle {
+                    color: dim,
+                    ..FragmentStyle::default()
+                },
+            )
+            .build();
+    }
     objects.push(Object::RichText(RichText {
         id: subtitle_rt,
-        position: [40., context_dimension.margin.top_y + 55.],
+        position: [155., context_dimension.margin.top_y + 55.],
         lines: None,
     }));
 
-    // Body with all shortcuts
-    let body_rt = sugarloaf.create_temp_rich_text();
-    sugarloaf.set_rich_text_font_size(&body_rt, 13.0);
+    // --- Sidebar title ---
+    let sidebar_title_rt = sugarloaf.create_temp_rich_text();
+    sugarloaf.set_rich_text_font_size(&sidebar_title_rt, 11.0);
+    {
+        let content = sugarloaf.content();
+        content
+            .sel(sidebar_title_rt)
+            .clear()
+            .add_text(
+                "HELP",
+                FragmentStyle {
+                    color: dim,
+                    ..FragmentStyle::default()
+                },
+            )
+            .build();
+    }
+    objects.push(Object::RichText(RichText {
+        id: sidebar_title_rt,
+        position: [16., context_dimension.margin.top_y + 25.],
+        lines: None,
+    }));
+
+    // --- Sidebar categories ---
+    let cat_start_y = context_dimension.margin.top_y + 48.0;
+    let cat_line_height = 22.0;
+
+    let icons = ["## ", "** ", "-> "];
+
+    for (i, _cat) in HELP_CATEGORIES.iter().enumerate() {
+        let cat_y = cat_start_y + (i as f32 * cat_line_height);
+        let is_selected = i == selected_category;
+
+        if is_selected {
+            let bg_color = if in_sidebar {
+                sidebar_selected
+            } else {
+                sidebar_hover
+            };
+            objects.push(Object::Quad(Quad {
+                position: [0., cat_y - 2.0],
+                color: bg_color,
+                size: [sidebar_width, cat_line_height],
+                ..Quad::default()
+            }));
+
+            if in_sidebar {
+                objects.push(Object::Quad(Quad {
+                    position: [0., cat_y - 2.0],
+                    color: accent,
+                    size: [3., cat_line_height],
+                    ..Quad::default()
+                }));
+            }
+        }
+    }
+
+    let sidebar_rt = sugarloaf.create_temp_rich_text();
+    sugarloaf.set_rich_text_font_size(&sidebar_rt, 13.0);
+    {
+        let content = sugarloaf.content();
+        let body = content.sel(sidebar_rt).clear();
+
+        for (i, cat) in HELP_CATEGORIES.iter().enumerate() {
+            let is_selected = i == selected_category;
+
+            let style = if is_selected && in_sidebar {
+                FragmentStyle {
+                    color: white,
+                    ..FragmentStyle::default()
+                }
+            } else if is_selected {
+                FragmentStyle {
+                    color: accent,
+                    ..FragmentStyle::default()
+                }
+            } else {
+                FragmentStyle {
+                    color: dim,
+                    ..FragmentStyle::default()
+                }
+            };
+
+            body.add_text(
+                icons[i],
+                FragmentStyle {
+                    color: if is_selected && in_sidebar {
+                        accent
+                    } else {
+                        dim
+                    },
+                    ..FragmentStyle::default()
+                },
+            );
+            body.add_text(cat, style);
+            body.new_line();
+        }
+
+        body.build();
+    }
+    objects.push(Object::RichText(RichText {
+        id: sidebar_rt,
+        position: [12., cat_start_y + 3.0],
+        lines: None,
+    }));
+
+    // --- Panel content (right side) ---
+    let panel_x = 155.0;
+    let header_y = context_dimension.margin.top_y + 80.0;
+
+    // Category header with accent underline
+    let header_rt = sugarloaf.create_temp_rich_text();
+    sugarloaf.set_rich_text_font_size(&header_rt, 14.0);
+    {
+        let content = sugarloaf.content();
+        content
+            .sel(header_rt)
+            .clear()
+            .add_text(
+                HELP_CATEGORIES[selected_category],
+                FragmentStyle {
+                    color: accent,
+                    ..FragmentStyle::default()
+                },
+            )
+            .build();
+    }
+    objects.push(Object::RichText(RichText {
+        id: header_rt,
+        position: [panel_x, header_y],
+        lines: None,
+    }));
+
+    objects.push(Object::Quad(Quad {
+        position: [panel_x, header_y + 18.0],
+        color: accent,
+        size: [full_w - panel_x - 20.0, 1.0],
+        ..Quad::default()
+    }));
+
+    let items_start_y = header_y + 30.0;
+
+    let panel_rt = sugarloaf.create_temp_rich_text();
+    sugarloaf.set_rich_text_font_size(&panel_rt, 12.0);
 
     let key_style = FragmentStyle {
         color: key_color,
@@ -87,78 +286,312 @@ pub fn screen(sugarloaf: &mut Sugarloaf, context_dimension: &ContextDimension) {
         color: white,
         ..FragmentStyle::default()
     };
-    let header_style = FragmentStyle {
-        color: accent,
+    let section_style = FragmentStyle {
+        color: highlight,
         ..FragmentStyle::default()
     };
     let dim_style = FragmentStyle {
         color: dim,
         ..FragmentStyle::default()
     };
+
+    {
+        let content = sugarloaf.content();
+        let body = content.sel(panel_rt).clear();
+
+        match selected_category {
+            0 => render_shortcuts(body, selected_item, in_sidebar, key_style, desc_style, section_style, dim_style, white, accent),
+            1 => render_features(body, selected_item, in_sidebar, key_style, desc_style, dim_style, white, accent, green),
+            2 => render_actions(body, selected_item, in_sidebar, desc_style, dim_style, white, accent, green),
+            _ => {}
+        }
+
+        body.build();
+    }
+
+    objects.push(Object::RichText(RichText {
+        id: panel_rt,
+        position: [panel_x, items_start_y],
+        lines: None,
+    }));
+
+    // --- Footer ---
+    let footer_rt = sugarloaf.create_temp_rich_text();
+    sugarloaf.set_rich_text_font_size(&footer_rt, 11.0);
+
     let key_bg_style = FragmentStyle {
         background_color: Some(highlight),
         color: black,
         ..FragmentStyle::default()
     };
 
-    let content = sugarloaf.content();
-    let body = content.sel(body_rt);
-    body.clear();
+    {
+        let content = sugarloaf.content();
+        let footer = content.sel(footer_rt).clear();
 
-    // --- TABS ---
-    body.add_text("TABS", header_style).new_line();
-    body.add_text("  Cmd+T", key_style).add_text(" ............. ", dim_style).add_text("New tab", desc_style).new_line();
-    body.add_text("  Cmd+W", key_style).add_text(" ............. ", dim_style).add_text("Close tab/split", desc_style).new_line();
-    body.add_text("  Cmd+1-9", key_style).add_text(" ........... ", dim_style).add_text("Jump to tab N", desc_style).new_line();
-    body.add_text("  Cmd+Shift+]", key_style).add_text(" ....... ", dim_style).add_text("Next tab", desc_style).new_line();
-    body.add_text("  Cmd+Shift+[", key_style).add_text(" ....... ", dim_style).add_text("Previous tab", desc_style).new_line();
-    body.add_text("  Cmd+Shift+R", key_style).add_text(" ....... ", dim_style).add_text("Rename tab", desc_style).new_line();
-    body.add_text("  Double-click", key_style).add_text(" ...... ", dim_style).add_text("Rename tab (mouse)", desc_style).new_line();
-    body.add_text("  Click tab", key_style).add_text(" ......... ", dim_style).add_text("Switch to tab", desc_style).new_line();
+        footer
+            .add_text(" Tab ", key_bg_style)
+            .add_text(" switch panel  ", dim_style)
+            .add_text(" Up/Down ", key_bg_style)
+            .add_text(" navigate  ", dim_style);
 
-    // --- SPLITS ---
-    body.new_line().add_text("SPLITS", header_style).new_line();
-    body.add_text("  Cmd+D", key_style).add_text(" ............. ", dim_style).add_text("Split right", desc_style).new_line();
-    body.add_text("  Cmd+Shift+Enter", key_style).add_text(" .. ", dim_style).add_text("Zoom pane", desc_style).new_line();
-    body.add_text("  Cmd+Shift+B", key_style).add_text(" ....... ", dim_style).add_text("Broadcast to all panes", desc_style).new_line();
-    body.add_text("  Ctrl+Cmd+Arrow", key_style).add_text(" .... ", dim_style).add_text("Resize pane", desc_style).new_line();
-    body.add_text("  Drag divider", key_style).add_text(" ...... ", dim_style).add_text("Resize pane (mouse)", desc_style).new_line();
+        if selected_category == 2 && !in_sidebar {
+            footer
+                .add_text(" Enter ", key_bg_style)
+                .add_text(" open  ", dim_style);
+        }
 
-    // --- NAVIGATION ---
-    body.new_line().add_text("NAVIGATION", header_style).new_line();
-    body.add_text("  Cmd+Up", key_style).add_text(" ............ ", dim_style).add_text("Previous command block", desc_style).new_line();
-    body.add_text("  Cmd+Down", key_style).add_text(" .......... ", dim_style).add_text("Next command block", desc_style).new_line();
-    body.add_text("  Cmd+K", key_style).add_text(" ............. ", dim_style).add_text("Clear scrollback", desc_style).new_line();
-    body.add_text("  Cmd+L", key_style).add_text(" ............. ", dim_style).add_text("Clear screen", desc_style).new_line();
+        footer
+            .add_text(" Esc ", key_bg_style)
+            .add_text(" close", dim_style);
 
-    // --- FEATURES ---
-    body.new_line().add_text("FEATURES", header_style).new_line();
-    body.add_text("  Cmd+,", key_style).add_text(" ............. ", dim_style).add_text("Settings viewer", desc_style).new_line();
-    body.add_text("  Cmd+?", key_style).add_text(" ............. ", dim_style).add_text("This help screen", desc_style).new_line();
-    body.add_text("  Cmd+Shift+H", key_style).add_text(" ....... ", dim_style).add_text("Session history", desc_style).new_line();
-    body.add_text("  Cmd+Shift+E", key_style).add_text(" ....... ", dim_style).add_text("Environment viewer", desc_style).new_line();
-    body.add_text("  Cmd+Shift+K", key_style).add_text(" ....... ", dim_style).add_text("Bookmarks", desc_style).new_line();
-    body.add_text("  Cmd+=/-/0", key_style).add_text(" ......... ", dim_style).add_text("Zoom in/out/reset", desc_style).new_line();
-    body.add_text("  Cmd+Enter", key_style).add_text(" ......... ", dim_style).add_text("Toggle fullscreen", desc_style).new_line();
-    body.add_text("  Cmd+N", key_style).add_text(" ............. ", dim_style).add_text("New window", desc_style).new_line();
+        footer.build();
+    }
 
-    // --- SAFETY ---
-    body.new_line().add_text("SAFETY", header_style).new_line();
-    body.add_text("  Auto-detect", key_style).add_text(" ....... ", dim_style).add_text("Warns on rm -rf, git push -f, etc.", desc_style).new_line();
-    body.add_text("  !command", key_style).add_text(" .......... ", dim_style).add_text("Bypass safety check", desc_style).new_line();
-
-    // Footer
-    body.new_line().new_line();
-    body.add_text(" Escape ", key_bg_style)
-        .add_text(" close", dim_style);
-
-    body.build();
+    let footer_y = full_h - 28.0;
+    objects.push(Object::Quad(Quad {
+        position: [0., footer_y - 4.0],
+        color: sidebar_bg,
+        size: [full_w, 28.0],
+        ..Quad::default()
+    }));
 
     objects.push(Object::RichText(RichText {
-        id: body_rt,
-        position: [40., context_dimension.margin.top_y + 85.],
+        id: footer_rt,
+        position: [155., footer_y + 4.0],
         lines: None,
     }));
 
     sugarloaf.set_objects(objects);
+}
+
+// Use a trait object to avoid generic type issues with the content builder
+fn render_shortcuts(
+    body: &mut rio_backend::sugarloaf::Content,
+    selected_item: usize,
+    in_sidebar: bool,
+    key_style: FragmentStyle,
+    desc_style: FragmentStyle,
+    section_style: FragmentStyle,
+    dim_style: FragmentStyle,
+    white: [f32; 4],
+    accent: [f32; 4],
+) {
+    let groups: &[(&str, &[(&str, &str, &str)])] = &[
+        (
+            "TABS",
+            &[
+                ("Cmd+T", ".............", "New tab"),
+                ("Cmd+W", ".............", "Close tab/split"),
+                ("Cmd+1-9", "...........", "Jump to tab N"),
+                ("Cmd+Shift+]", ".......", "Next tab"),
+                ("Cmd+Shift+[", ".......", "Previous tab"),
+                ("Cmd+Shift+R", ".......", "Rename tab"),
+                ("Double-click", "......", "Rename tab (mouse)"),
+                ("Click tab", ".........", "Switch to tab"),
+            ],
+        ),
+        (
+            "SPLITS",
+            &[
+                ("Cmd+D", ".............", "Split right"),
+                ("Cmd+Shift+Enter", "..", "Zoom pane"),
+                ("Cmd+Shift+B", ".......", "Broadcast to all panes"),
+                ("Ctrl+Cmd+Arrow", "....", "Resize pane"),
+                ("Drag divider", "......", "Resize pane (mouse)"),
+            ],
+        ),
+        (
+            "NAVIGATION",
+            &[
+                ("Cmd+Up", "............", "Previous command block"),
+                ("Cmd+Down", "..........", "Next command block"),
+                ("Cmd+K", ".............", "Clear scrollback"),
+                ("Cmd+L", ".............", "Clear screen"),
+            ],
+        ),
+        (
+            "FEATURES",
+            &[
+                ("Cmd+,", ".............", "Settings viewer"),
+                ("Cmd+?", ".............", "This help screen"),
+                ("Cmd+Shift+H", ".......", "Session history"),
+                ("Cmd+Shift+E", ".......", "Environment viewer"),
+                ("Cmd+Shift+K", ".......", "Bookmarks"),
+                ("Cmd+Shift+I", ".......", "AI Assistant"),
+                ("Cmd+Shift+P", ".......", "Slash commands"),
+                ("Cmd+Shift+L", ".......", "Layout presets"),
+                ("Cmd+=/- /0", "........", "Zoom in/out/reset"),
+                ("Cmd+Enter", ".........", "Toggle fullscreen"),
+                ("Cmd+N", ".............", "New window"),
+            ],
+        ),
+        (
+            "SAFETY",
+            &[
+                ("Auto-detect", ".......", "Warns on rm -rf, git push -f, etc."),
+                ("!command", "..........", "Bypass safety check"),
+            ],
+        ),
+    ];
+
+    for (gi, (group_name, shortcuts)) in groups.iter().enumerate() {
+        let is_group_selected = !in_sidebar && gi == selected_item;
+
+        if gi > 0 {
+            body.new_line();
+        }
+
+        let s = if is_group_selected {
+            FragmentStyle {
+                color: white,
+                ..FragmentStyle::default()
+            }
+        } else {
+            section_style
+        };
+
+        if is_group_selected {
+            body.add_text("> ", FragmentStyle {
+                color: accent,
+                ..FragmentStyle::default()
+            });
+        } else {
+            body.add_text("  ", dim_style);
+        }
+
+        body.add_text(group_name, s).new_line();
+
+        for (key, dots, desc) in shortcuts.iter() {
+            body.add_text("    ", dim_style);
+            body.add_text(key, key_style)
+                .add_text(&format!(" {} ", dots), dim_style)
+                .add_text(desc, desc_style)
+                .new_line();
+        }
+    }
+}
+
+fn render_features(
+    body: &mut rio_backend::sugarloaf::Content,
+    selected_item: usize,
+    in_sidebar: bool,
+    key_style: FragmentStyle,
+    _desc_style: FragmentStyle,
+    dim_style: FragmentStyle,
+    white: [f32; 4],
+    accent: [f32; 4],
+    _green: [f32; 4],
+) {
+    let features: &[(&str, &str, &str)] = &[
+        ("AI Assistant", "Cmd+Shift+I", "Opens Claude Code in a split pane"),
+        ("Session History", "Cmd+Shift+H", "View and search recorded commands. Enter to paste."),
+        ("Environment", "Cmd+Shift+E", "Inspect environment variables grouped by category"),
+        ("Bookmarks", "Cmd+Shift+K", "Save and recall important commands"),
+        ("Connections", "", "Manage SSH, MySQL, Redis, Kubernetes connections"),
+        ("Tmux", "", "Attach, detach, create tmux sessions"),
+        ("Slash Commands", "Cmd+Shift+P", "20 built-in terminal commands"),
+        ("Layout Presets", "Cmd+Shift+L", "Predefined pane arrangements"),
+        ("Session Export", "", "Export terminal session to file"),
+    ];
+
+    for (i, (name, shortcut, description)) in features.iter().enumerate() {
+        let is_selected = !in_sidebar && i == selected_item;
+
+        if is_selected {
+            body.add_text("> ", FragmentStyle {
+                color: accent,
+                ..FragmentStyle::default()
+            });
+        } else {
+            body.add_text("  ", dim_style);
+        }
+
+        let name_style = if is_selected {
+            FragmentStyle {
+                color: white,
+                ..FragmentStyle::default()
+            }
+        } else {
+            FragmentStyle {
+                color: white,
+                ..FragmentStyle::default()
+            }
+        };
+
+        body.add_text(name, name_style);
+
+        if !shortcut.is_empty() {
+            body.add_text(&format!("  ({})", shortcut), key_style);
+        }
+
+        body.new_line();
+
+        body.add_text(&format!("    {}", description), dim_style);
+        body.new_line();
+
+        if is_selected {
+            body.new_line();
+        }
+    }
+}
+
+fn render_actions(
+    body: &mut rio_backend::sugarloaf::Content,
+    selected_item: usize,
+    in_sidebar: bool,
+    _desc_style: FragmentStyle,
+    dim_style: FragmentStyle,
+    white: [f32; 4],
+    accent: [f32; 4],
+    green: [f32; 4],
+) {
+    let actions: &[(&str, &str)] = &[
+        ("AI Assistant", "Open Claude Code in a split pane"),
+        ("Session History", "Browse and search command history"),
+        ("Environment", "Inspect environment variables"),
+        ("Bookmarks", "Manage saved commands"),
+        ("Connections", "Open connections manager"),
+        ("Tmux", "Open tmux session picker"),
+        ("Slash Commands", "Open slash command palette"),
+        ("Layout Presets", "Apply a layout preset"),
+        ("Session Export", "Export current session"),
+    ];
+
+    for (i, (name, description)) in actions.iter().enumerate() {
+        let is_selected = !in_sidebar && i == selected_item;
+
+        if is_selected {
+            body.add_text("> ", FragmentStyle {
+                color: green,
+                ..FragmentStyle::default()
+            });
+        } else {
+            body.add_text("  ", dim_style);
+        }
+
+        let name_style = if is_selected {
+            FragmentStyle {
+                color: white,
+                ..FragmentStyle::default()
+            }
+        } else {
+            FragmentStyle {
+                color: accent,
+                ..FragmentStyle::default()
+            }
+        };
+
+        body.add_text(name, name_style);
+        body.add_text(&format!("  {}", description), dim_style);
+        body.new_line();
+
+        if is_selected {
+            body.add_text("    Press Enter to open", FragmentStyle {
+                color: green,
+                ..FragmentStyle::default()
+            });
+            body.new_line();
+        }
+    }
 }

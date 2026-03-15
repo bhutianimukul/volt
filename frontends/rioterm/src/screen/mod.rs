@@ -2941,11 +2941,19 @@ impl Screen<'_> {
         self.sugarloaf.render();
     }
 
-    pub fn render_help(&mut self) {
+    pub fn render_help(
+        &mut self,
+        help_category: usize,
+        help_selected: usize,
+        help_in_sidebar: bool,
+    ) {
         self.sugarloaf.clear();
         crate::router::routes::help::screen(
             &mut self.sugarloaf,
             &self.context_manager.current().dimension,
+            help_category,
+            help_selected,
+            help_in_sidebar,
         );
         self.sugarloaf.render();
     }

@@ -1927,7 +1927,11 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                             .render_settings(&route.settings_editor, route.settings_category, route.settings_in_sidebar);
                     }
                     RoutePath::Help => {
-                        route.window.screen.render_help();
+                        route.window.screen.render_help(
+                            route.help_category,
+                            route.help_selected,
+                            route.help_in_sidebar,
+                        );
                     }
                     RoutePath::TmuxPicker => {
                         route.window.screen.render_tmux_picker(

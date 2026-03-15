@@ -62,6 +62,12 @@ pub struct Route<'a> {
     pub settings_category: usize,
     /// Whether focus is on the settings sidebar (true) or settings panel (false)
     pub settings_in_sidebar: bool,
+    /// Currently selected category in the help sidebar
+    pub help_category: usize,
+    /// Currently selected item in the help panel
+    pub help_selected: usize,
+    /// Whether focus is on the help sidebar (true) or help panel (false)
+    pub help_in_sidebar: bool,
 }
 
 impl Route<'_> {
@@ -91,6 +97,9 @@ impl Route<'_> {
             layouts_selected: 0,
             settings_category: 0,
             settings_in_sidebar: true,
+            help_category: 0,
+            help_selected: 0,
+            help_in_sidebar: true,
         }
     }
 }
@@ -465,8 +474,64 @@ impl Route<'_> {
         }
 
         if self.path == RoutePath::Help {
-            if key_event.logical_key == Key::Named(NamedKey::Escape) {
-                self.path = RoutePath::Terminal;
+            if key_event.state != rio_window::event::ElementState::Pressed {
+                return true;
+            }
+            match &key_event.logical_key {
+                Key::Named(NamedKey::Escape) => {
+                    self.path = RoutePath::Terminal;
+                }
+                Key::Named(NamedKey::Tab) => {
+                    self.help_in_sidebar = !self.help_in_sidebar;
+                    if self.help_in_sidebar {
+                        // Reset panel selection when moving to sidebar
+                    } else {
+                        self.help_selected = 0;
+                    }
+                }
+                Key::Named(NamedKey::ArrowUp) => {
+                    if self.help_in_sidebar {
+                        if self.help_category > 0 {
+                            self.help_category -= 1;
+                            self.help_selected = 0;
+                        }
+                    } else if self.help_selected > 0 {
+                        self.help_selected -= 1;
+                    }
+                }
+                Key::Named(NamedKey::ArrowDown) => {
+                    if self.help_in_sidebar {
+                        if self.help_category + 1 < crate::router::routes::help::HELP_CATEGORIES.len() {
+                            self.help_category += 1;
+                            self.help_selected = 0;
+                        }
+                    } else {
+                        let max = crate::router::routes::help::category_item_count(self.help_category);
+                        if max > 0 && self.help_selected + 1 < max {
+                            self.help_selected += 1;
+                        }
+                    }
+                }
+                Key::Named(NamedKey::Enter) => {
+                    if self.help_in_sidebar {
+                        self.help_in_sidebar = false;
+                        self.help_selected = 0;
+                    } else if self.help_category == 2 {
+                        // Actions category — open the feature
+                        match crate::router::routes::help::action_route(self.help_selected) {
+                            Some("ai") => self.path = RoutePath::Assistant,
+                            Some("history") => self.path = RoutePath::History,
+                            Some("env") => self.path = RoutePath::EnvViewer,
+                            Some("bookmarks") => self.path = RoutePath::Bookmarks,
+                            Some("connections") => self.path = RoutePath::Connections,
+                            Some("tmux") => self.path = RoutePath::TmuxPicker,
+                            Some("slash") => self.path = RoutePath::SlashCommands,
+                            Some("layouts") => self.path = RoutePath::Layouts,
+                            _ => {}
+                        }
+                    }
+                }
+                _ => {}
             }
             return true;
         }
@@ -1184,6 +1249,9 @@ impl Router<'_> {
             layouts_selected: 0,
             settings_category: 0,
             settings_in_sidebar: true,
+            help_category: 0,
+            help_selected: 0,
+            help_in_sidebar: true,
         };
 
         if let Some(err) = &self.propagated_report {
@@ -1236,6 +1304,9 @@ impl Router<'_> {
                 layouts_selected: 0,
                 settings_category: 0,
                 settings_in_sidebar: true,
+                help_category: 0,
+                help_selected: 0,
+                help_in_sidebar: true,
             },
         );
     }
