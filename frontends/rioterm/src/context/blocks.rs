@@ -163,4 +163,36 @@ mod tests {
         assert_eq!(mgr.blocks()[1].id, 1);
         assert_eq!(mgr.blocks()[1].exit_code, Some(1));
     }
+
+    #[test]
+    fn test_block_navigation() {
+        let mut mgr = BlockManager::new();
+
+        mgr.on_prompt_start(0);
+        mgr.on_command_start(1);
+        mgr.on_output_start(2, "echo hello".to_string());
+        mgr.on_command_finish(3, 0);
+
+        mgr.on_prompt_start(4);
+        mgr.on_command_start(5);
+        mgr.on_output_start(10, "cat file.txt".to_string());
+        mgr.on_command_finish(20, 0);
+
+        mgr.on_prompt_start(21);
+        mgr.on_command_start(22);
+        mgr.on_output_start(25, "ls -la".to_string());
+        mgr.on_command_finish(30, 0);
+
+        // previous_block_row
+        assert_eq!(mgr.previous_block_row(25), Some(10));
+        assert_eq!(mgr.previous_block_row(10), Some(2));
+        assert_eq!(mgr.previous_block_row(2), None);
+        assert_eq!(mgr.previous_block_row(0), None);
+
+        // next_block_row
+        assert_eq!(mgr.next_block_row(2), Some(10));
+        assert_eq!(mgr.next_block_row(10), Some(25));
+        assert_eq!(mgr.next_block_row(25), None);
+        assert_eq!(mgr.next_block_row(30), None);
+    }
 }

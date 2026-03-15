@@ -1114,6 +1114,59 @@ impl Screen<'_> {
                         drop(terminal);
                         self.render();
                     }
+                    Act::JumpToPrevBlock => {
+                        let terminal =
+                            self.context_manager.current().terminal.lock();
+                        let display_offset = terminal.display_offset();
+                        let history_size = terminal.grid.history_size();
+                        // The absolute row at the top of the current viewport.
+                        let current_top_row = history_size.saturating_sub(display_offset);
+                        drop(terminal);
+
+                        if let Some(target_row) =
+                            self.context_manager.block_manager.previous_block_row(current_top_row)
+                        {
+                            let mut terminal =
+                                self.context_manager.current_mut().terminal.lock();
+                            let history_size = terminal.grid.history_size();
+                            let new_offset = history_size.saturating_sub(target_row);
+                            let current_offset = terminal.display_offset();
+                            let delta = new_offset as i32 - current_offset as i32;
+                            terminal.scroll_display(Scroll::Delta(delta));
+                            drop(terminal);
+                            self.render();
+                        }
+                    }
+                    Act::JumpToNextBlock => {
+                        let terminal =
+                            self.context_manager.current().terminal.lock();
+                        let display_offset = terminal.display_offset();
+                        let history_size = terminal.grid.history_size();
+                        // The absolute row at the top of the current viewport.
+                        let current_top_row = history_size.saturating_sub(display_offset);
+                        drop(terminal);
+
+                        if let Some(target_row) =
+                            self.context_manager.block_manager.next_block_row(current_top_row)
+                        {
+                            let mut terminal =
+                                self.context_manager.current_mut().terminal.lock();
+                            let history_size = terminal.grid.history_size();
+                            let new_offset = history_size.saturating_sub(target_row);
+                            let current_offset = terminal.display_offset();
+                            let delta = new_offset as i32 - current_offset as i32;
+                            terminal.scroll_display(Scroll::Delta(delta));
+                            drop(terminal);
+                            self.render();
+                        } else {
+                            // No next block; scroll to bottom.
+                            let mut terminal =
+                                self.context_manager.current_mut().terminal.lock();
+                            terminal.scroll_display(Scroll::Bottom);
+                            drop(terminal);
+                            self.render();
+                        }
+                    }
                     Act::ClearHistory => {
                         let mut terminal =
                             self.context_manager.current_mut().terminal.lock();
