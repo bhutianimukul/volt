@@ -91,6 +91,23 @@ impl BlockManager {
     pub fn is_empty(&self) -> bool {
         self.blocks.is_empty()
     }
+
+    /// Get the start row of the block before the given absolute row (for Cmd+Up).
+    pub fn previous_block_row(&self, current_row: usize) -> Option<usize> {
+        self.blocks
+            .iter()
+            .rev()
+            .find(|b| b.start_row < current_row)
+            .map(|b| b.start_row)
+    }
+
+    /// Get the start row of the block after the given absolute row (for Cmd+Down).
+    pub fn next_block_row(&self, current_row: usize) -> Option<usize> {
+        self.blocks
+            .iter()
+            .find(|b| b.start_row > current_row)
+            .map(|b| b.start_row)
+    }
 }
 
 #[cfg(test)]

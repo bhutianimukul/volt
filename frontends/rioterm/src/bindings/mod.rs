@@ -268,6 +268,8 @@ impl From<String> for Action {
             "togglefullscreen" => Some(Action::ToggleFullscreen),
             "togglepanezoom" => Some(Action::TogglePaneZoom),
             "togglebroadcast" => Some(Action::ToggleBroadcast),
+            "jumptoprevblock" => Some(Action::JumpToPrevBlock),
+            "jumptonextblock" => Some(Action::JumpToNextBlock),
             "none" => Some(Action::None),
             _ => None,
         };
@@ -513,6 +515,15 @@ pub enum Action {
     /// Toggle broadcast mode (type into all panes simultaneously).
     ToggleBroadcast,
 
+    /// Toggle quake/dropdown terminal mode.
+    ToggleQuakeMode,
+
+    /// Jump to the previous command block (Cmd+Up).
+    JumpToPrevBlock,
+
+    /// Jump to the next command block (Cmd+Down).
+    JumpToNextBlock,
+
     /// Allow receiving char input.
     ReceiveChar,
 
@@ -683,8 +694,8 @@ pub fn default_key_bindings(config: &rio_backend::config::Config) -> Vec<KeyBind
         Key::Named(ArrowDown), +BindingMode::VI; ViMotion::Down;
         Key::Named(ArrowLeft), +BindingMode::VI; ViMotion::Left;
         Key::Named(ArrowRight), +BindingMode::VI; ViMotion::Right;
-        Key::Named(ArrowUp), ModifiersState::SUPER, ~BindingMode::VI; Action::None;
-        Key::Named(ArrowDown), ModifiersState::SUPER, ~BindingMode::VI; Action::None;
+        Key::Named(ArrowUp), ModifiersState::SUPER, ~BindingMode::VI; Action::JumpToPrevBlock;
+        Key::Named(ArrowDown), ModifiersState::SUPER, ~BindingMode::VI; Action::JumpToNextBlock;
         Key::Named(ArrowLeft), ModifiersState::SUPER, ~BindingMode::VI; Action::None;
         Key::Named(ArrowRight), ModifiersState::SUPER, ~BindingMode::VI; Action::None;
         "0",                          +BindingMode::VI, ~BindingMode::SEARCH;
@@ -1017,6 +1028,9 @@ pub fn platform_key_bindings(
         "q", ModifiersState::SUPER; Action::Quit;
         "n", ModifiersState::SUPER; Action::WindowCreateNew;
         ",", ModifiersState::SUPER; Action::OpenSettings;
+
+        // Quake mode
+        "`", ModifiersState::CONTROL; Action::ToggleQuakeMode;
 
         // Search
         "f", ModifiersState::SUPER, ~BindingMode::SEARCH; Action::SearchForward;

@@ -1,3 +1,4 @@
+pub mod block_renderer;
 mod char_cache;
 mod font_cache;
 pub mod navigation;

@@ -22,6 +22,7 @@ mod notifications;
 #[cfg(windows)]
 mod panic;
 mod platform;
+mod quake_mode;
 mod renderer;
 mod retroactive_pipe;
 mod router;
