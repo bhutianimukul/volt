@@ -378,7 +378,7 @@ impl Route<'_> {
                     Key::Named(NamedKey::Escape) => {
                         self.path = RoutePath::Terminal;
                     }
-                    Key::Named(NamedKey::ArrowUp) => { if self.layouts_selected >= 2 { self.layouts_selected -= 2; }
+                    Key::Named(NamedKey::ArrowUp) => {
                         if self.settings_category > 0 {
                             self.settings_category -= 1;
                             // Reset panel selection when category changes
@@ -420,7 +420,7 @@ impl Route<'_> {
                     Key::Named(NamedKey::Escape) => {
                         self.path = RoutePath::Terminal;
                     }
-                    Key::Named(NamedKey::ArrowUp) => { if self.layouts_selected >= 2 { self.layouts_selected -= 2; }
+                    Key::Named(NamedKey::ArrowUp) => {
                         if editor.selected_index > 0 {
                             editor.selected_index -= 1;
                         }
@@ -489,7 +489,7 @@ impl Route<'_> {
                         self.help_selected = 0;
                     }
                 }
-                Key::Named(NamedKey::ArrowUp) => { if self.layouts_selected >= 2 { self.layouts_selected -= 2; }
+                Key::Named(NamedKey::ArrowUp) => {
                     if self.help_in_sidebar {
                         if self.help_category > 0 {
                             self.help_category -= 1;
@@ -549,7 +549,7 @@ impl Route<'_> {
                 Key::Named(NamedKey::ArrowDown) => {
                     self.history_selected = self.history_selected.saturating_add(1);
                 }
-                Key::Named(NamedKey::ArrowUp) => { if self.layouts_selected >= 2 { self.layouts_selected -= 2; }
+                Key::Named(NamedKey::ArrowUp) => {
                     self.history_selected = self.history_selected.saturating_sub(1);
                 }
                 Key::Named(NamedKey::PageDown) => {
@@ -643,7 +643,7 @@ impl Route<'_> {
                 Key::Named(NamedKey::ArrowDown) => {
                     self.env_selected = self.env_selected.saturating_add(1);
                 }
-                Key::Named(NamedKey::ArrowUp) => { if self.layouts_selected >= 2 { self.layouts_selected -= 2; }
+                Key::Named(NamedKey::ArrowUp) => {
                     self.env_selected = self.env_selected.saturating_sub(1);
                 }
                 Key::Named(NamedKey::PageDown) => {
@@ -685,7 +685,7 @@ impl Route<'_> {
                 Key::Named(NamedKey::ArrowDown) => {
                     self.bookmarks_scroll = self.bookmarks_scroll.saturating_add(1);
                 }
-                Key::Named(NamedKey::ArrowUp) => { if self.layouts_selected >= 2 { self.layouts_selected -= 2; }
+                Key::Named(NamedKey::ArrowUp) => {
                     self.bookmarks_scroll = self.bookmarks_scroll.saturating_sub(1);
                 }
                 Key::Named(NamedKey::PageDown) => {
@@ -708,7 +708,7 @@ impl Route<'_> {
                     self.connections_selected = 0;
                     self.path = RoutePath::Terminal;
                 }
-                Key::Named(NamedKey::ArrowUp) => { if self.layouts_selected >= 2 { self.layouts_selected -= 2; }
+                Key::Named(NamedKey::ArrowUp) => {
                     if self.connections_selected > 0 {
                         self.connections_selected -= 1;
                     }
@@ -902,7 +902,7 @@ impl Route<'_> {
                 Key::Named(NamedKey::ArrowDown) => {
                     self.slash_commands_scroll = self.slash_commands_scroll.saturating_add(1);
                 }
-                Key::Named(NamedKey::ArrowUp) => { if self.layouts_selected >= 2 { self.layouts_selected -= 2; }
+                Key::Named(NamedKey::ArrowUp) => {
                     self.slash_commands_scroll = self.slash_commands_scroll.saturating_sub(1);
                 }
                 Key::Named(NamedKey::PageDown) => {
@@ -925,7 +925,7 @@ impl Route<'_> {
                     self.layouts_selected = 0;
                     self.path = RoutePath::Terminal;
                 }
-                Key::Named(NamedKey::ArrowUp) => { if self.layouts_selected >= 2 { self.layouts_selected -= 2; }
+                Key::Named(NamedKey::ArrowUp) => {
                     
                 }
                 Key::Named(NamedKey::ArrowDown) => {
@@ -984,7 +984,7 @@ impl Route<'_> {
                 Key::Named(NamedKey::Escape) => {
                     self.path = RoutePath::Terminal;
                 }
-                Key::Named(NamedKey::ArrowUp) => { if self.layouts_selected >= 2 { self.layouts_selected -= 2; }
+                Key::Named(NamedKey::ArrowUp) => {
                     if self.tmux_selected > 0 {
                         self.tmux_selected -= 1;
                     }
