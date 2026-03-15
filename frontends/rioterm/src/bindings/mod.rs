@@ -271,6 +271,8 @@ impl From<String> for Action {
             "togglebroadcast" => Some(Action::ToggleBroadcast),
             "jumptoprevblock" => Some(Action::JumpToPrevBlock),
             "jumptonextblock" => Some(Action::JumpToNextBlock),
+            "tmuxconnect" => Some(Action::TmuxConnect),
+            "openaiassistant" => Some(Action::OpenAiAssistant),
             "none" => Some(Action::None),
             _ => None,
         };
@@ -522,11 +524,17 @@ pub enum Action {
     /// Show the keyboard shortcut help overlay.
     ShowHelp,
 
+    /// Open the AI assistant (Claude Code) in a split pane.
+    OpenAiAssistant,
+
     /// Jump to the previous command block (Cmd+Up).
     JumpToPrevBlock,
 
     /// Jump to the next command block (Cmd+Down).
     JumpToNextBlock,
+
+    /// Connect to tmux via CC mode (Ctrl+Shift+Cmd+T).
+    TmuxConnect,
 
     /// Allow receiving char input.
     ReceiveChar,
@@ -1035,6 +1043,9 @@ pub fn platform_key_bindings(
         "/", ModifiersState::SUPER | ModifiersState::SHIFT; Action::ShowHelp;
         Key::Named(F1); Action::ShowHelp;
 
+        // AI assistant
+        "a", ModifiersState::SUPER | ModifiersState::SHIFT; Action::OpenAiAssistant;
+
         // Quake mode
         "`", ModifiersState::CONTROL; Action::ToggleQuakeMode;
 
@@ -1097,6 +1108,12 @@ pub fn platform_key_bindings(
             "b", ModifiersState::SUPER | ModifiersState::SHIFT, ~BindingMode::SEARCH, ~BindingMode::VI; Action::ToggleBroadcast;
         ));
     }
+
+    // Tmux CC mode
+    key_bindings.extend(bindings!(
+        KeyBinding;
+        "t", ModifiersState::SUPER | ModifiersState::SHIFT | ModifiersState::CONTROL; Action::TmuxConnect;
+    ));
 
     key_bindings
 }

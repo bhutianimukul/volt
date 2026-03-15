@@ -263,30 +263,82 @@ fn build_settings_list() -> Vec<SettingItem> {
     build_settings_from_config(&rio_backend::config::Config::default())
 }
 
+/// Convert a ColorArray ([f32; 4] in 0.0..1.0 range) to a hex string like "#RRGGBB".
+fn color_arr_to_hex(c: &[f32; 4]) -> String {
+    let r = (c[0] * 255.0).round() as u8;
+    let g = (c[1] * 255.0).round() as u8;
+    let b = (c[2] * 255.0).round() as u8;
+    format!("#{:02X}{:02X}{:02X}", r, g, b)
+}
+
 pub fn build_settings_from_config(config: &rio_backend::config::Config) -> Vec<SettingItem> {
     vec![
-        // Font
+        // ── Font ──────────────────────────────────────────────
         SettingItem {
             key: "fonts.size".into(),
             label: "Font Size".into(),
             category: "Font".into(),
-            value: SettingValue::Float(config.fonts.size as f32),
+            value: SettingValue::Float(config.fonts.size),
             description: "Terminal font size in points".into(),
+        },
+        SettingItem {
+            key: "fonts.family".into(),
+            label: "Font Family".into(),
+            category: "Font".into(),
+            value: SettingValue::String(
+                config.fonts.family.clone().unwrap_or_default(),
+            ),
+            description: "Font family name (e.g. 'JetBrains Mono', 'Fira Code')".into(),
+        },
+        SettingItem {
+            key: "fonts.hinting".into(),
+            label: "Font Hinting".into(),
+            category: "Font".into(),
+            value: SettingValue::Bool(config.fonts.hinting),
+            description: "Enable font hinting for sharper rendering".into(),
         },
         SettingItem {
             key: "line-height".into(),
             label: "Line Height".into(),
             category: "Font".into(),
             value: SettingValue::Float(config.line_height),
-            description: "Line height multiplier".into(),
+            description: "Line height multiplier (1.0 = default)".into(),
         },
-        // Window
+        // ── Window ────────────────────────────────────────────
         SettingItem {
             key: "window.opacity".into(),
             label: "Window Opacity".into(),
             category: "Window".into(),
-            value: SettingValue::Float(config.window.opacity as f32),
+            value: SettingValue::Float(config.window.opacity),
             description: "Window transparency (0.0 = transparent, 1.0 = opaque)".into(),
+        },
+        SettingItem {
+            key: "window.blur".into(),
+            label: "Background Blur".into(),
+            category: "Window".into(),
+            value: SettingValue::Bool(config.window.blur),
+            description: "Enable background blur behind the terminal window".into(),
+        },
+        SettingItem {
+            key: "window.decorations".into(),
+            label: "Window Decorations".into(),
+            category: "Window".into(),
+            value: SettingValue::String(format!("{:?}", config.window.decorations)),
+            description: "Window chrome style: Enabled, Disabled, Transparent, Buttonless".into(),
+        },
+        SettingItem {
+            key: "window.width".into(),
+            label: "Window Width".into(),
+            category: "Window".into(),
+            value: SettingValue::Integer(config.window.width as i64),
+            description: "Default window width in pixels".into(),
+        },
+        SettingItem {
+            key: "window.height".into(),
+            label: "Window Height".into(),
+            category: "Window".into(),
+            value: SettingValue::Integer(config.window.height as i64),
+            description: "Default window height in pixels".into(),
         },
         SettingItem {
             key: "padding-x".into(),
@@ -295,13 +347,13 @@ pub fn build_settings_from_config(config: &rio_backend::config::Config) -> Vec<S
             value: SettingValue::Float(config.padding_x),
             description: "Horizontal padding in pixels".into(),
         },
-        // Navigation
+        // ── Navigation ───────────────────────────────────────
         SettingItem {
             key: "navigation.mode".into(),
             label: "Tab Mode".into(),
             category: "Navigation".into(),
             value: SettingValue::String(config.navigation.mode.to_string()),
-            description: "Tab bar style: TopTab, BottomTab, Bookmark, Plain".into(),
+            description: "Tab bar style: TopTab, BottomTab, Bookmark, Plain, NativeTab".into(),
         },
         SettingItem {
             key: "navigation.hide-if-single".into(),
@@ -310,13 +362,87 @@ pub fn build_settings_from_config(config: &rio_backend::config::Config) -> Vec<S
             value: SettingValue::Bool(config.navigation.hide_if_single),
             description: "Hide the tab bar when there is only one tab".into(),
         },
-        // General
+        SettingItem {
+            key: "navigation.use-split".into(),
+            label: "Enable Split Panes".into(),
+            category: "Navigation".into(),
+            value: SettingValue::Bool(config.navigation.use_split),
+            description: "Allow splitting the terminal into panes".into(),
+        },
+        SettingItem {
+            key: "navigation.clickable".into(),
+            label: "Clickable Navigation".into(),
+            category: "Navigation".into(),
+            value: SettingValue::Bool(config.navigation.clickable),
+            description: "Make navigation elements clickable with the mouse".into(),
+        },
+        SettingItem {
+            key: "navigation.use-terminal-title".into(),
+            label: "Use Terminal Title".into(),
+            category: "Navigation".into(),
+            value: SettingValue::Bool(config.navigation.use_terminal_title),
+            description: "Show the terminal-reported title in tabs".into(),
+        },
+        SettingItem {
+            key: "navigation.open-config-with-split".into(),
+            label: "Open Config in Split".into(),
+            category: "Navigation".into(),
+            value: SettingValue::Bool(config.navigation.open_config_with_split),
+            description: "Open config file in a split pane rather than a new tab".into(),
+        },
+        // ── Colors ───────────────────────────────────────────
+        SettingItem {
+            key: "colors.background".into(),
+            label: "Background Color".into(),
+            category: "Colors".into(),
+            value: SettingValue::String(color_arr_to_hex(&config.colors.background.0)),
+            description: "Terminal background color (hex, e.g. #1E1E2E)".into(),
+        },
+        SettingItem {
+            key: "colors.foreground".into(),
+            label: "Foreground Color".into(),
+            category: "Colors".into(),
+            value: SettingValue::String(color_arr_to_hex(&config.colors.foreground)),
+            description: "Terminal text/foreground color (hex, e.g. #CDD6F4)".into(),
+        },
+        SettingItem {
+            key: "colors.cursor".into(),
+            label: "Cursor Color".into(),
+            category: "Colors".into(),
+            value: SettingValue::String(color_arr_to_hex(&config.colors.cursor)),
+            description: "Cursor color (hex, e.g. #F5E0DC)".into(),
+        },
+        // ── Shell ────────────────────────────────────────────
+        SettingItem {
+            key: "shell.program".into(),
+            label: "Shell Program".into(),
+            category: "Shell".into(),
+            value: SettingValue::String(config.shell.program.clone()),
+            description: "Shell executable path (e.g. /bin/zsh, /usr/bin/fish)".into(),
+        },
+        SettingItem {
+            key: "working-dir".into(),
+            label: "Working Directory".into(),
+            category: "Shell".into(),
+            value: SettingValue::String(
+                config.working_dir.clone().unwrap_or_default(),
+            ),
+            description: "Default working directory for new tabs".into(),
+        },
+        // ── General ──────────────────────────────────────────
         SettingItem {
             key: "confirm-before-quit".into(),
             label: "Confirm Before Quit".into(),
             category: "General".into(),
             value: SettingValue::Bool(config.confirm_before_quit),
             description: "Show confirmation dialog when quitting".into(),
+        },
+        SettingItem {
+            key: "use-fork".into(),
+            label: "Use Fork".into(),
+            category: "General".into(),
+            value: SettingValue::Bool(config.use_fork),
+            description: "Use fork() to spawn shell processes".into(),
         },
         SettingItem {
             key: "hide-mouse-cursor-when-typing".into(),
@@ -330,9 +456,89 @@ pub fn build_settings_from_config(config: &rio_backend::config::Config) -> Vec<S
             label: "Option as Alt".into(),
             category: "General".into(),
             value: SettingValue::String(config.option_as_alt.clone()),
-            description: "Use Option key as Alt (left, right, both)".into(),
+            description: "Use Option key as Alt: left, right, both".into(),
         },
-        // Developer
+        SettingItem {
+            key: "ignore-selection-foreground-color".into(),
+            label: "Ignore Selection FG Color".into(),
+            category: "General".into(),
+            value: SettingValue::Bool(config.ignore_selection_fg_color),
+            description: "Ignore foreground color in selections".into(),
+        },
+        SettingItem {
+            key: "draw-bold-text-with-light-colors".into(),
+            label: "Bold Text Light Colors".into(),
+            category: "General".into(),
+            value: SettingValue::Bool(config.draw_bold_text_with_light_colors),
+            description: "Render bold text with lighter colors".into(),
+        },
+        // ── Cursor ───────────────────────────────────────────
+        SettingItem {
+            key: "cursor.shape".into(),
+            label: "Cursor Shape".into(),
+            category: "Cursor".into(),
+            value: SettingValue::String(format!("{:?}", config.cursor.shape)),
+            description: "Cursor shape: Block, Underline, Beam, Hidden".into(),
+        },
+        SettingItem {
+            key: "cursor.blinking".into(),
+            label: "Cursor Blinking".into(),
+            category: "Cursor".into(),
+            value: SettingValue::Bool(config.cursor.blinking),
+            description: "Enable cursor blinking animation".into(),
+        },
+        SettingItem {
+            key: "cursor.blinking-interval".into(),
+            label: "Cursor Blink Interval".into(),
+            category: "Cursor".into(),
+            value: SettingValue::Integer(config.cursor.blinking_interval as i64),
+            description: "Cursor blink interval in milliseconds".into(),
+        },
+        // ── Scroll ───────────────────────────────────────────
+        SettingItem {
+            key: "scroll.multiplier".into(),
+            label: "Scroll Multiplier".into(),
+            category: "Scroll".into(),
+            value: SettingValue::Float(config.scroll.multiplier as f32),
+            description: "Scroll speed multiplier".into(),
+        },
+        SettingItem {
+            key: "scroll.divider".into(),
+            label: "Scroll Divider".into(),
+            category: "Scroll".into(),
+            value: SettingValue::Float(config.scroll.divider as f32),
+            description: "Scroll speed divider".into(),
+        },
+        // ── Renderer ─────────────────────────────────────────
+        SettingItem {
+            key: "renderer.performance".into(),
+            label: "Renderer Performance".into(),
+            category: "Renderer".into(),
+            value: SettingValue::String(config.renderer.performance.to_string()),
+            description: "Renderer performance mode: High, Low".into(),
+        },
+        SettingItem {
+            key: "renderer.backend".into(),
+            label: "Renderer Backend".into(),
+            category: "Renderer".into(),
+            value: SettingValue::String(config.renderer.backend.to_string()),
+            description: "GPU backend: Automatic, Vulkan, GL, DX12, Metal".into(),
+        },
+        SettingItem {
+            key: "renderer.disable-unfocused-render".into(),
+            label: "Disable Unfocused Render".into(),
+            category: "Renderer".into(),
+            value: SettingValue::Bool(config.renderer.disable_unfocused_render),
+            description: "Stop rendering when the window loses focus".into(),
+        },
+        SettingItem {
+            key: "renderer.disable-occluded-render".into(),
+            label: "Disable Occluded Render".into(),
+            category: "Renderer".into(),
+            value: SettingValue::Bool(config.renderer.disable_occluded_render),
+            description: "Stop rendering when the window is fully occluded".into(),
+        },
+        // ── Developer ────────────────────────────────────────
         SettingItem {
             key: "developer.log-level".into(),
             label: "Log Level".into(),

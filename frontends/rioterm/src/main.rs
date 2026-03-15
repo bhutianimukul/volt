@@ -4,6 +4,7 @@
 // See https://msdn.microsoft.com/en-us/library/4cc7ya5b.aspx for more details.
 #![windows_subsystem = "windows"]
 
+mod ai_assistant;
 mod application;
 mod audit_log;
 mod bindings;

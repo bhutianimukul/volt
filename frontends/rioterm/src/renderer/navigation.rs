@@ -315,33 +315,15 @@ impl ScreenNavigation {
             }));
         }
 
-        // --- Right-side action buttons: [?] [Settings] [+] ---
+        // --- Right-side action buttons: [?] [☰ Settings] ---
         let btn_size = 22.0_f32;
         let btn_gap = 4.0_f32;
         let btn_y = position_y;
         let btn_color = [0.25, 0.25, 0.3, 1.0];
         let btn_fg = [0.8, 0.8, 0.8, 1.0];
 
-        // [+] New tab button (rightmost)
-        let plus_x = visible_width - btn_size - btn_gap;
-        objects.push(Object::Quad(Quad {
-            position: [plus_x, btn_y],
-            color: btn_color,
-            size: [btn_size, PADDING_Y_BOTTOM_TABS],
-            border_radius: [3.0, 3.0, 3.0, 3.0],
-            ..Quad::default()
-        }));
-        let plus_rt = sugarloaf.create_temp_rich_text();
-        sugarloaf.set_rich_text_font_size(&plus_rt, 14.);
-        sugarloaf.content().sel(plus_rt).clear().new_line()
-            .add_text("+", FragmentStyle { color: btn_fg, ..FragmentStyle::default() })
-            .build();
-        objects.push(Object::RichText(RichText {
-            id: plus_rt, position: [plus_x + 6.0, btn_y], lines: None,
-        }));
-
-        // [gear] Settings button
-        let gear_x = plus_x - btn_size - btn_gap;
+        // [☰] Settings button (rightmost)
+        let gear_x = visible_width - btn_size - btn_gap;
         objects.push(Object::Quad(Quad {
             position: [gear_x, btn_y],
             color: btn_color,
@@ -352,7 +334,7 @@ impl ScreenNavigation {
         let gear_rt = sugarloaf.create_temp_rich_text();
         sugarloaf.set_rich_text_font_size(&gear_rt, 13.);
         sugarloaf.content().sel(gear_rt).clear().new_line()
-            .add_text("\u{2699}", FragmentStyle { color: btn_fg, ..FragmentStyle::default() })
+            .add_text("\u{2630}", FragmentStyle { color: btn_fg, ..FragmentStyle::default() })
             .build();
         objects.push(Object::RichText(RichText {
             id: gear_rt, position: [gear_x + 4.0, btn_y], lines: None,
@@ -391,16 +373,9 @@ pub enum NavButton {
 
 /// Check if a click (in logical pixels) hit a nav button
 pub fn nav_button_at_position(x: f32, visible_width: f32) -> Option<NavButton> {
-    let btn_y_start = 0.0_f32;
-    let btn_y_end = PADDING_Y_BOTTOM_TABS;
-
-    let plus_x = visible_width - NAV_BTN_SIZE - NAV_BTN_GAP;
-    let gear_x = plus_x - NAV_BTN_SIZE - NAV_BTN_GAP;
+    let gear_x = visible_width - NAV_BTN_SIZE - NAV_BTN_GAP;
     let help_x = gear_x - NAV_BTN_SIZE - NAV_BTN_GAP;
 
-    if x >= plus_x && x <= plus_x + NAV_BTN_SIZE {
-        return Some(NavButton::NewTab);
-    }
     if x >= gear_x && x <= gear_x + NAV_BTN_SIZE {
         return Some(NavButton::Settings);
     }

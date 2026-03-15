@@ -998,6 +998,19 @@ impl Screen<'_> {
                     Act::ShowHelp => {
                         self.context_manager.toggle_help();
                     }
+                    Act::OpenAiAssistant => {
+                        if crate::ai_assistant::is_claude_available() {
+                            self.split_right();
+                            // The split creates a new pane which is now current
+                            // Send "claude" command to start AI session
+                            let bytes = b"claude\r".to_vec();
+                            self.ctx_mut().current_mut().messenger.send_write(bytes);
+                            // Rename the tab
+                            self.context_manager.set_custom_tab_name("AI".to_string());
+                        } else {
+                            tracing::warn!("Claude CLI not found. Install with: npm install -g @anthropic-ai/claude-code");
+                        }
+                    }
                     Act::WindowCreateNew => {
                         self.context_manager.create_new_window();
                     }
@@ -1250,6 +1263,16 @@ impl Screen<'_> {
                         self.clear_selection();
                         self.context_manager.switch_to_prev();
                         self.render();
+                    }
+                    Act::TmuxConnect => {
+                        use crate::tmux_cc::TmuxController;
+                        let sessions = TmuxController::list_sessions();
+                        let cmd = if let Some((_, name, _)) = sessions.first() {
+                            format!("tmux -CC attach -t {}\r", name)
+                        } else {
+                            "tmux -CC new-session\r".to_string()
+                        };
+                        self.ctx_mut().current_mut().messenger.send_write(cmd.into_bytes());
                     }
                     Act::ReceiveChar | Act::None => (),
                     _ => (),
