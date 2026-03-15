@@ -1175,18 +1175,17 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                     let hide_single = route.window.screen.renderer.navigation.navigation.hide_if_single;
                     let num_tabs = route.window.screen.context_manager.len();
                     let tabs_hidden = hide_single && num_tabs <= 1;
-                    let in_tab_bar = if tabs_hidden {
-                        false
-                    } else if nav_mode == rio_backend::config::navigation::NavigationMode::TopTab {
+                    // Top bar is ALWAYS rendered — check Help/Settings clicks regardless of tabs
+                    let in_top_bar = if nav_mode == rio_backend::config::navigation::NavigationMode::TopTab {
                         ly < 22.0
                     } else if nav_mode == rio_backend::config::navigation::NavigationMode::BottomTab {
-                        let tab_bar_top = (win_h - 22.0 - 20.0) as f64;
-                        let tab_bar_bottom = (win_h - 20.0) as f64;
+                        let tab_bar_top = (win_h - 22.0 - 22.0) as f64;
+                        let tab_bar_bottom = (win_h - 22.0) as f64;
                         ly >= tab_bar_top && ly <= tab_bar_bottom
                     } else {
                         false
                     };
-                    if in_tab_bar {
+                    if in_top_bar {
                         if let Some(btn) = crate::renderer::navigation::nav_button_at_position(
                             lx as f32, visible_w,
                         ) {
