@@ -74,22 +74,14 @@ impl TriggerEngine {
                     self.triggers.push(CompiledTrigger { rule, regex });
                 }
                 Err(e) => {
-                    tracing::warn!(
-                        "Invalid trigger pattern '{}': {}",
-                        rule.pattern,
-                        e
-                    );
+                    tracing::warn!("Invalid trigger pattern '{}': {}", rule.pattern, e);
                 }
             }
         }
     }
 
     /// Check a line of output against all triggers
-    pub fn check_line(
-        &mut self,
-        line: &str,
-        line_number: usize,
-    ) -> Vec<TriggerMatch> {
+    pub fn check_line(&mut self, line: &str, line_number: usize) -> Vec<TriggerMatch> {
         let mut fired = Vec::new();
 
         for trigger in &self.triggers {

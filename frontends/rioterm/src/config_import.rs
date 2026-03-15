@@ -111,10 +111,12 @@ impl ImportedConfig {
         if let Some(ref shell) = self.shell {
             let mut shell_section = format!("[shell]\nprogram = \"{}\"", shell);
             if !self.shell_args.is_empty() {
-                let args: Vec<String> =
-                    self.shell_args.iter().map(|a| format!("\"{}\"", a)).collect();
-                shell_section
-                    .push_str(&format!("\nargs = [{}]", args.join(", ")));
+                let args: Vec<String> = self
+                    .shell_args
+                    .iter()
+                    .map(|a| format!("\"{}\"", a))
+                    .collect();
+                shell_section.push_str(&format!("\nargs = [{}]", args.join(", ")));
             }
             sections.push(shell_section);
         }
@@ -168,9 +170,7 @@ pub fn import_alacritty(path: &Path) -> Result<ImportedConfig, String> {
                 "opacity" | "window.opacity" => {
                     config.window_opacity = value.parse().ok()
                 }
-                "program" | "shell.program" => {
-                    config.shell = Some(value.to_string())
-                }
+                "program" | "shell.program" => config.shell = Some(value.to_string()),
                 _ => {
                     config.extra.insert(key.to_string(), value.to_string());
                 }
@@ -198,18 +198,10 @@ pub fn import_ghostty(path: &Path) -> Result<ImportedConfig, String> {
             match key {
                 "font-family" => config.font_family = Some(value.to_string()),
                 "font-size" => config.font_size = value.parse().ok(),
-                "background" => {
-                    config.background_color = Some(value.to_string())
-                }
-                "foreground" => {
-                    config.foreground_color = Some(value.to_string())
-                }
-                "cursor-color" => {
-                    config.cursor_color = Some(value.to_string())
-                }
-                "background-opacity" => {
-                    config.window_opacity = value.parse().ok()
-                }
+                "background" => config.background_color = Some(value.to_string()),
+                "foreground" => config.foreground_color = Some(value.to_string()),
+                "cursor-color" => config.cursor_color = Some(value.to_string()),
+                "background-opacity" => config.window_opacity = value.parse().ok(),
                 "command" => config.shell = Some(value.to_string()),
                 "window-padding-x" => config.padding_x = value.parse().ok(),
                 "window-padding-y" => config.padding_y = value.parse().ok(),
@@ -234,8 +226,7 @@ pub fn import_kitty(path: &Path) -> Result<ImportedConfig, String> {
             continue;
         }
         // Kitty uses "key value" format (space separated)
-        let parts: Vec<&str> =
-            trimmed.splitn(2, char::is_whitespace).collect();
+        let parts: Vec<&str> = trimmed.splitn(2, char::is_whitespace).collect();
         if parts.len() != 2 {
             continue;
         }
@@ -245,20 +236,12 @@ pub fn import_kitty(path: &Path) -> Result<ImportedConfig, String> {
         match key {
             "font_family" => config.font_family = Some(value.to_string()),
             "font_size" => config.font_size = value.parse().ok(),
-            "background" => {
-                config.background_color = Some(value.to_string())
-            }
-            "foreground" => {
-                config.foreground_color = Some(value.to_string())
-            }
+            "background" => config.background_color = Some(value.to_string()),
+            "foreground" => config.foreground_color = Some(value.to_string()),
             "cursor" => config.cursor_color = Some(value.to_string()),
-            "background_opacity" => {
-                config.window_opacity = value.parse().ok()
-            }
+            "background_opacity" => config.window_opacity = value.parse().ok(),
             "shell" => config.shell = Some(value.to_string()),
-            "window_padding_width" => {
-                config.padding_x = value.parse().ok()
-            }
+            "window_padding_width" => config.padding_x = value.parse().ok(),
             _ => {
                 config.extra.insert(key.to_string(), value.to_string());
             }
@@ -311,10 +294,7 @@ opacity = 0.95
         .unwrap();
 
         let config = import_alacritty(&tmp).unwrap();
-        assert_eq!(
-            config.font_family,
-            Some("JetBrains Mono".to_string())
-        );
+        assert_eq!(config.font_family, Some("JetBrains Mono".to_string()));
         assert_eq!(config.font_size, Some(14.0));
         assert_eq!(config.window_opacity, Some(0.95));
 

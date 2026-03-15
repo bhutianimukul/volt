@@ -164,11 +164,7 @@ impl SessionRecording {
                 let entries: Vec<String> = map
                     .iter()
                     .map(|(k, v)| {
-                        format!(
-                            "      \"{}\": \"{}\"",
-                            json_escape(k),
-                            json_escape(v)
-                        )
+                        format!("      \"{}\": \"{}\"", json_escape(k), json_escape(v))
                     })
                     .collect();
                 format!("{{\n{}\n    }}", entries.join(",\n"))
@@ -202,10 +198,7 @@ impl SessionRecording {
 
     /// Save to file with appropriate format based on extension
     pub fn save_to_file(&self, path: &Path) -> Result<(), String> {
-        let ext = path
-            .extension()
-            .and_then(|e| e.to_str())
-            .unwrap_or("cast");
+        let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("cast");
 
         let content = match ext {
             "cast" => self.to_asciinema(),

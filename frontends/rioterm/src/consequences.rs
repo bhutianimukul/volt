@@ -225,13 +225,19 @@ fn check_terraform_destroy(input: &str, parts: &[&str]) -> Option<ConsequencePre
     Some(ConsequencePreview {
         command: input.to_string(),
         severity: Severity::Danger,
-        description: "Terraform destroy will tear down infrastructure resources".to_string(),
-        details: vec!["All managed resources in the current state will be destroyed".to_string()],
+        description: "Terraform destroy will tear down infrastructure resources"
+            .to_string(),
+        details: vec![
+            "All managed resources in the current state will be destroyed".to_string(),
+        ],
     })
 }
 
 // --- Pattern 8: terraform apply without a plan file ---
-fn check_terraform_apply_no_plan(input: &str, parts: &[&str]) -> Option<ConsequencePreview> {
+fn check_terraform_apply_no_plan(
+    input: &str,
+    parts: &[&str],
+) -> Option<ConsequencePreview> {
     if parts.first()? != &"terraform" {
         return None;
     }
@@ -267,7 +273,9 @@ fn check_git_reset_hard(input: &str, parts: &[&str]) -> Option<ConsequencePrevie
         command: input.to_string(),
         severity: Severity::Danger,
         description: "Hard reset will discard all uncommitted changes".to_string(),
-        details: vec!["Staged and unstaged modifications will be lost permanently".to_string()],
+        details: vec![
+            "Staged and unstaged modifications will be lost permanently".to_string()
+        ],
     })
 }
 
@@ -306,7 +314,8 @@ fn check_dd(input: &str, parts: &[&str]) -> Option<ConsequencePreview> {
         .find(|p| p.starts_with("of="))
         .map(|p| p.trim_start_matches("of=").to_string());
 
-    let mut details = vec!["dd performs raw block-level writes with no confirmation".to_string()];
+    let mut details =
+        vec!["dd performs raw block-level writes with no confirmation".to_string()];
     if let Some(target) = of_target {
         details.push(format!("Output target: {}", target));
     }
@@ -326,7 +335,8 @@ fn check_mkfs_format(input: &str, parts: &[&str]) -> Option<ConsequencePreview> 
         Some(ConsequencePreview {
             command: input.to_string(),
             severity: Severity::Danger,
-            description: "Formatting a disk will erase all data on the target".to_string(),
+            description: "Formatting a disk will erase all data on the target"
+                .to_string(),
             details: vec!["All existing data on the device will be destroyed".to_string()],
         })
     } else {
@@ -342,17 +352,26 @@ fn check_kill_force(input: &str, parts: &[&str]) -> Option<ConsequencePreview> {
         return Some(ConsequencePreview {
             command: input.to_string(),
             severity: Severity::Warning,
-            description: "killall will terminate all processes matching the name".to_string(),
+            description: "killall will terminate all processes matching the name"
+                .to_string(),
             details: vec!["Unsaved work in targeted processes will be lost".to_string()],
         });
     }
 
-    if base == "kill" && parts.iter().any(|p| *p == "-9" || *p == "-KILL" || *p == "-SIGKILL") {
+    if base == "kill"
+        && parts
+            .iter()
+            .any(|p| *p == "-9" || *p == "-KILL" || *p == "-SIGKILL")
+    {
         return Some(ConsequencePreview {
             command: input.to_string(),
             severity: Severity::Warning,
-            description: "SIGKILL forces immediate termination — process cannot clean up".to_string(),
-            details: vec!["The process will not get a chance to save state or release resources".to_string()],
+            description: "SIGKILL forces immediate termination — process cannot clean up"
+                .to_string(),
+            details: vec![
+                "The process will not get a chance to save state or release resources"
+                    .to_string(),
+            ],
         });
     }
 
@@ -378,7 +397,9 @@ fn check_service_stop(input: &str, parts: &[&str]) -> Option<ConsequencePreview>
             command: input.to_string(),
             severity: Severity::Warning,
             description: "Unloading a launch daemon/agent".to_string(),
-            details: vec!["The service will stop and not restart until re-loaded".to_string()],
+            details: vec![
+                "The service will stop and not restart until re-loaded".to_string()
+            ],
         });
     }
 
@@ -402,8 +423,13 @@ fn check_pip_global(input: &str, parts: &[&str]) -> Option<ConsequencePreview> {
     Some(ConsequencePreview {
         command: input.to_string(),
         severity: Severity::Info,
-        description: "pip install outside a virtual environment — may modify global packages".to_string(),
-        details: vec!["Consider using a venv: `python -m venv .venv && source .venv/bin/activate`".to_string()],
+        description:
+            "pip install outside a virtual environment — may modify global packages"
+                .to_string(),
+        details: vec![
+            "Consider using a venv: `python -m venv .venv && source .venv/bin/activate`"
+                .to_string(),
+        ],
     })
 }
 
@@ -439,8 +465,12 @@ fn check_sudo_rm(input: &str, parts: &[&str]) -> Option<ConsequencePreview> {
         return None;
     }
 
-    let has_recursive = after_sudo.iter().any(|p| p.starts_with('-') && p.contains('r'));
-    let has_force = after_sudo.iter().any(|p| p.starts_with('-') && p.contains('f'));
+    let has_recursive = after_sudo
+        .iter()
+        .any(|p| p.starts_with('-') && p.contains('r'));
+    let has_force = after_sudo
+        .iter()
+        .any(|p| p.starts_with('-') && p.contains('f'));
 
     let severity = if has_recursive && has_force {
         Severity::Danger
@@ -452,7 +482,9 @@ fn check_sudo_rm(input: &str, parts: &[&str]) -> Option<ConsequencePreview> {
         command: input.to_string(),
         severity,
         description: "Elevated rm — deleting files as root".to_string(),
-        details: vec!["Running rm with sudo bypasses normal permission safeguards".to_string()],
+        details: vec![
+            "Running rm with sudo bypasses normal permission safeguards".to_string()
+        ],
     })
 }
 
@@ -486,7 +518,10 @@ fn check_redirect_overwrite(input: &str) -> Option<ConsequencePreview> {
                 command: input.to_string(),
                 severity: Severity::Info,
                 description: "Output redirect will overwrite file contents".to_string(),
-                details: vec![format!("Target '{}' will be truncated before writing", after_redirect)],
+                details: vec![format!(
+                    "Target '{}' will be truncated before writing",
+                    after_redirect
+                )],
             });
         }
     }
@@ -502,7 +537,9 @@ fn check_truncate_overwrite(input: &str, parts: &[&str]) -> Option<ConsequencePr
             command: input.to_string(),
             severity: Severity::Warning,
             description: "Truncate will erase file contents".to_string(),
-            details: vec!["The file will be emptied or resized, losing existing data".to_string()],
+            details: vec![
+                "The file will be emptied or resized, losing existing data".to_string()
+            ],
         });
     }
 
@@ -522,7 +559,9 @@ fn check_chown_recursive(input: &str, parts: &[&str]) -> Option<ConsequencePrevi
         command: input.to_string(),
         severity: Severity::Warning,
         description: "Recursively changing file ownership".to_string(),
-        details: vec!["Incorrect ownership can break applications and services".to_string()],
+        details: vec![
+            "Incorrect ownership can break applications and services".to_string()
+        ],
     })
 }
 
@@ -725,7 +764,8 @@ mod tests {
         let result = analyze_command("launchctl unload com.example.daemon").unwrap();
         assert_eq!(result.severity, Severity::Warning);
 
-        let result = analyze_command("launchctl bootout system/com.example.daemon").unwrap();
+        let result =
+            analyze_command("launchctl bootout system/com.example.daemon").unwrap();
         assert_eq!(result.severity, Severity::Warning);
     }
 

@@ -133,13 +133,19 @@ impl UndoManager {
                 // Restore the file
                 if let Some(parent) = file.parent() {
                     if let Err(e) = fs::create_dir_all(parent) {
-                        tracing::error!("Failed to create restore parent dir {}: {}", parent.display(), e);
+                        tracing::error!(
+                            "Failed to create restore parent dir {}: {}",
+                            parent.display(),
+                            e
+                        );
                         continue;
                     }
                 }
                 match fs::copy(&snapshot_path, file) {
                     Ok(_) => restored.push(file.display().to_string()),
-                    Err(e) => tracing::error!("Failed to restore {}: {}", file.display(), e),
+                    Err(e) => {
+                        tracing::error!("Failed to restore {}: {}", file.display(), e)
+                    }
                 }
             }
         }

@@ -135,7 +135,8 @@ impl SessionRecorder {
 
     pub fn save_to_disk(&self) {
         let path = rio_backend::config::config_dir_path().join("history.json");
-        if let Ok(json) = serde_json::to_string(&self.entries.iter().collect::<Vec<_>>()) {
+        if let Ok(json) = serde_json::to_string(&self.entries.iter().collect::<Vec<_>>())
+        {
             let _ = std::fs::write(&path, json);
         }
     }

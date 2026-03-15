@@ -2037,38 +2037,28 @@ impl<U: EventListener> Handler for Crosswords<U> {
     }
 
     fn shell_prompt_start(&mut self) {
-        let row = self.grid.cursor.pos.row.0 as usize
-            + self.grid.history_size();
+        let row = self.grid.cursor.pos.row.0 as usize + self.grid.history_size();
         trace!("Shell prompt start at absolute row {row}");
-        self.event_proxy.send_event(
-            RioEvent::ShellPromptStart { row },
-            self.window_id,
-        );
+        self.event_proxy
+            .send_event(RioEvent::ShellPromptStart { row }, self.window_id);
     }
 
     fn shell_command_start(&mut self) {
-        let row = self.grid.cursor.pos.row.0 as usize
-            + self.grid.history_size();
+        let row = self.grid.cursor.pos.row.0 as usize + self.grid.history_size();
         trace!("Shell command start at absolute row {row}");
-        self.event_proxy.send_event(
-            RioEvent::ShellCommandStart { row },
-            self.window_id,
-        );
+        self.event_proxy
+            .send_event(RioEvent::ShellCommandStart { row }, self.window_id);
     }
 
     fn shell_output_start(&mut self) {
-        let row = self.grid.cursor.pos.row.0 as usize
-            + self.grid.history_size();
+        let row = self.grid.cursor.pos.row.0 as usize + self.grid.history_size();
         trace!("Shell output start at absolute row {row}");
-        self.event_proxy.send_event(
-            RioEvent::ShellOutputStart { row },
-            self.window_id,
-        );
+        self.event_proxy
+            .send_event(RioEvent::ShellOutputStart { row }, self.window_id);
     }
 
     fn shell_command_finish(&mut self, exit_code: i32) {
-        let row = self.grid.cursor.pos.row.0 as usize
-            + self.grid.history_size();
+        let row = self.grid.cursor.pos.row.0 as usize + self.grid.history_size();
         trace!("Shell command finish at absolute row {row}, exit_code={exit_code}");
         self.event_proxy.send_event(
             RioEvent::ShellCommandFinish { row, exit_code },

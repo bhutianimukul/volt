@@ -19,8 +19,7 @@ impl ShellProfiler {
     pub fn on_first_prompt(&mut self) {
         if self.prompt_ready.is_none() {
             self.prompt_ready = Some(Instant::now());
-            if let (Some(start), Some(ready)) = (self.shell_start, self.prompt_ready)
-            {
+            if let (Some(start), Some(ready)) = (self.shell_start, self.prompt_ready) {
                 let duration = ready.duration_since(start);
                 if duration > Duration::from_millis(500) {
                     tracing::info!(

@@ -48,9 +48,7 @@ impl TestRunner {
             TestRunner::CargoTest => ("cargo", vec!["test", "--", "--failed"]),
             TestRunner::Pytest => ("pytest", vec!["--lf", "-v"]),
             TestRunner::Jest => ("npx", vec!["jest", "--onlyFailures"]),
-            TestRunner::RSpec => {
-                ("bundle", vec!["exec", "rspec", "--only-failures"])
-            }
+            TestRunner::RSpec => ("bundle", vec!["exec", "rspec", "--only-failures"]),
             _ => self.command(), // Fallback to full run
         }
     }
@@ -70,8 +68,7 @@ pub fn detect_test_runner(dir: &Path) -> Option<TestRunner> {
             return Some(TestRunner::Jest);
         }
         // Check package.json for jest in dependencies
-        if let Ok(content) = std::fs::read_to_string(dir.join("package.json"))
-        {
+        if let Ok(content) = std::fs::read_to_string(dir.join("package.json")) {
             if content.contains("\"jest\"") {
                 return Some(TestRunner::Jest);
             }
@@ -91,9 +88,7 @@ pub fn detect_test_runner(dir: &Path) -> Option<TestRunner> {
     {
         return Some(TestRunner::Pytest);
     }
-    if dir.join("build.gradle").exists()
-        || dir.join("build.gradle.kts").exists()
-    {
+    if dir.join("build.gradle").exists() || dir.join("build.gradle.kts").exists() {
         return Some(TestRunner::GradleTest);
     }
     if dir.join("pom.xml").exists() {
@@ -279,8 +274,7 @@ mod tests {
 
     #[test]
     fn test_parse_pytest_output() {
-        let output =
-            "====== 10 passed, 2 failed, 1 skipped in 3.45s ======";
+        let output = "====== 10 passed, 2 failed, 1 skipped in 3.45s ======";
         let result = parse_test_output(&TestRunner::Pytest, output);
         assert_eq!(result.passed, 10);
         assert_eq!(result.failed, 2);

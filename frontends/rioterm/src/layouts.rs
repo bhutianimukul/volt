@@ -35,9 +35,7 @@ pub fn builtin_presets() -> Vec<LayoutPreset> {
     vec![
         LayoutPreset {
             name: "dev".to_string(),
-            description: Some(
-                "Editor left, terminal right, logs bottom".to_string(),
-            ),
+            description: Some("Editor left, terminal right, logs bottom".to_string()),
             panes: vec![
                 PaneSpec {
                     command: None,
@@ -127,9 +125,7 @@ pub fn builtin_presets() -> Vec<LayoutPreset> {
         },
         LayoutPreset {
             name: "monitoring".to_string(),
-            description: Some(
-                "Three panes: main + two stacked right".to_string(),
-            ),
+            description: Some("Three panes: main + two stacked right".to_string()),
             panes: vec![
                 PaneSpec {
                     command: None,
@@ -144,9 +140,7 @@ pub fn builtin_presets() -> Vec<LayoutPreset> {
                     ratio: 0.35,
                 },
                 PaneSpec {
-                    command: Some(
-                        "tail -f /var/log/system.log".to_string(),
-                    ),
+                    command: Some("tail -f /var/log/system.log".to_string()),
                     working_dir: None,
                     split: SplitDirection::Down,
                     ratio: 0.5,
@@ -165,8 +159,7 @@ pub struct LayoutManager {
 
 impl LayoutManager {
     pub fn new() -> Self {
-        let layouts_dir =
-            rio_backend::config::config_dir_path().join("layouts");
+        let layouts_dir = rio_backend::config::config_dir_path().join("layouts");
         let _ = std::fs::create_dir_all(&layouts_dir);
 
         let mut presets = HashMap::new();
@@ -180,9 +173,7 @@ impl LayoutManager {
                 let path = entry.path();
                 if path.extension().map_or(false, |e| e == "toml") {
                     if let Ok(content) = std::fs::read_to_string(&path) {
-                        if let Ok(preset) =
-                            toml::from_str::<LayoutPreset>(&content)
-                        {
+                        if let Ok(preset) = toml::from_str::<LayoutPreset>(&content) {
                             presets.insert(preset.name.clone(), preset);
                         }
                     }
@@ -206,8 +197,7 @@ impl LayoutManager {
         let path = self.layouts_dir.join(format!("{}.toml", preset.name));
         let content = toml::to_string_pretty(&preset)
             .map_err(|e| format!("Failed to serialize: {}", e))?;
-        std::fs::write(&path, content)
-            .map_err(|e| format!("Failed to write: {}", e))?;
+        std::fs::write(&path, content).map_err(|e| format!("Failed to write: {}", e))?;
         self.presets.insert(preset.name.clone(), preset);
         Ok(())
     }

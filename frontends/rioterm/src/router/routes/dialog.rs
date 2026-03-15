@@ -21,7 +21,10 @@ pub fn screen(
     objects.push(Object::Quad(Quad {
         position: [0., 0.0],
         color: black,
-        size: [layout.width / context_dimension.dimension.scale, layout.height / context_dimension.dimension.scale],
+        size: [
+            layout.width / context_dimension.dimension.scale,
+            layout.height / context_dimension.dimension.scale,
+        ],
         ..Quad::default()
     }));
     objects.push(Object::Quad(Quad {

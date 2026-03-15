@@ -37,9 +37,7 @@ impl AiMode {
         match self {
             AiMode::Chat => (claude, vec![]),
             AiMode::Ask(question) => (claude, vec![question.clone()]),
-            AiMode::WithContext(dir) => {
-                (claude, vec!["--cwd".to_string(), dir.clone()])
-            }
+            AiMode::WithContext(dir) => (claude, vec!["--cwd".to_string(), dir.clone()]),
         }
     }
 

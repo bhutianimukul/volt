@@ -91,7 +91,11 @@ impl Connection {
             Connection::Ssh(ssh) => {
                 let mut cmd = String::from("ssh");
                 if let Some(user) = &ssh.user {
-                    cmd.push_str(&format!(" {}@{}", shell_quote(user), shell_quote(&ssh.host)));
+                    cmd.push_str(&format!(
+                        " {}@{}",
+                        shell_quote(user),
+                        shell_quote(&ssh.host)
+                    ));
                 } else {
                     cmd.push_str(&format!(" {}", shell_quote(&ssh.host)));
                 }
@@ -110,7 +114,11 @@ impl Connection {
                 cmd
             }
             Connection::Mysql(mysql) => {
-                let mut cmd = format!("mysql -h {} -u {}", shell_quote(&mysql.host), shell_quote(&mysql.user));
+                let mut cmd = format!(
+                    "mysql -h {} -u {}",
+                    shell_quote(&mysql.host),
+                    shell_quote(&mysql.user)
+                );
                 if let Some(port) = mysql.port {
                     cmd.push_str(&format!(" -P {}", port));
                 }
@@ -125,7 +133,11 @@ impl Connection {
                 cmd
             }
             Connection::Postgres(pg) => {
-                let mut cmd = format!("psql -h {} -U {}", shell_quote(&pg.host), shell_quote(&pg.user));
+                let mut cmd = format!(
+                    "psql -h {} -U {}",
+                    shell_quote(&pg.host),
+                    shell_quote(&pg.user)
+                );
                 if let Some(port) = pg.port {
                     cmd.push_str(&format!(" -p {}", port));
                 }
@@ -215,7 +227,10 @@ pub fn connection_config_path() -> PathBuf {
 }
 
 /// Search connections by name (fuzzy)
-pub fn search_connections<'a>(config: &'a ConnectionConfig, query: &str) -> Vec<(&'a String, &'a Connection)> {
+pub fn search_connections<'a>(
+    config: &'a ConnectionConfig,
+    query: &str,
+) -> Vec<(&'a String, &'a Connection)> {
     let q = query.to_lowercase();
     config
         .connections

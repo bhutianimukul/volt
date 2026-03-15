@@ -37,7 +37,9 @@ mod enabled {
             if !usage_caps.contains(wgpu::TextureUsages::COPY_DST)
                 || !usage_caps.contains(wgpu::TextureUsages::COPY_SRC)
             {
-                tracing::warn!("The selected backend does not support the filter chains!");
+                tracing::warn!(
+                    "The selected backend does not support the filter chains!"
+                );
 
                 return;
             }
@@ -200,8 +202,8 @@ mod enabled {
                     filter_dst_texture = &self.filter_intermediates[idx];
                 }
 
-                let dst_texture_view =
-                    filter_dst_texture.create_view(&wgpu::TextureViewDescriptor::default());
+                let dst_texture_view = filter_dst_texture
+                    .create_view(&wgpu::TextureViewDescriptor::default());
                 let dst_output_view =
                     librashader::runtime::wgpu::WgpuOutputView::new_from_raw(
                         &dst_texture_view,
@@ -209,7 +211,8 @@ mod enabled {
                         ctx.format,
                     );
                 let dst_viewport =
-                    Viewport::new_render_target_sized_origin(dst_output_view, None).unwrap();
+                    Viewport::new_render_target_sized_origin(dst_output_view, None)
+                        .unwrap();
 
                 // Framecount should be added forever: https://github.com/raphamorim/rio/issues/753
                 self.framecount = self.framecount.wrapping_add(1);

@@ -188,11 +188,7 @@ impl TmuxController {
                 session_id, name, ..
             } => {
                 self.active_session = Some(session_id.clone());
-                tracing::info!(
-                    "tmux session changed: {} ({})",
-                    name,
-                    session_id
-                );
+                tracing::info!("tmux session changed: {} ({})", name, session_id);
             }
             TmuxNotification::WindowAdd { window_id } => {
                 self.windows.insert(
@@ -294,10 +290,7 @@ mod tests {
     #[test]
     fn test_parse_session_changed() {
         let n = parse_notification("%session-changed $1 my-session");
-        assert!(matches!(
-            n,
-            Some(TmuxNotification::SessionChanged { .. })
-        ));
+        assert!(matches!(n, Some(TmuxNotification::SessionChanged { .. })));
     }
 
     #[test]
@@ -325,10 +318,7 @@ mod tests {
     #[test]
     fn test_parse_layout_change() {
         let n = parse_notification("%layout-change @1 abc123,80x24,0,0");
-        assert!(matches!(
-            n,
-            Some(TmuxNotification::LayoutChange { .. })
-        ));
+        assert!(matches!(n, Some(TmuxNotification::LayoutChange { .. })));
     }
 
     #[test]

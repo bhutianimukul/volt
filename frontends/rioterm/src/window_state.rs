@@ -29,7 +29,9 @@ pub struct SavedTab {
 
 impl WindowState {
     pub fn new() -> Self {
-        Self { windows: Vec::new() }
+        Self {
+            windows: Vec::new(),
+        }
     }
 
     /// Save a window's state
@@ -76,8 +78,7 @@ impl WindowState {
         if let Some(parent) = path.parent() {
             let _ = std::fs::create_dir_all(parent);
         }
-        let json =
-            serde_json::to_string_pretty(self).map_err(|e| e.to_string())?;
+        let json = serde_json::to_string_pretty(self).map_err(|e| e.to_string())?;
         std::fs::write(&path, json).map_err(|e| e.to_string())
     }
 
@@ -88,9 +89,7 @@ impl WindowState {
             return Self::new();
         }
         match std::fs::read_to_string(&path) {
-            Ok(content) => {
-                serde_json::from_str(&content).unwrap_or_else(|_| Self::new())
-            }
+            Ok(content) => serde_json::from_str(&content).unwrap_or_else(|_| Self::new()),
             Err(_) => Self::new(),
         }
     }

@@ -44,10 +44,29 @@ pub fn categorize(key: &str) -> EnvCategory {
     let k = key.to_uppercase();
 
     // Shell
-    if matches!(k.as_str(), "SHELL" | "BASH" | "ZSH_VERSION" | "FISH_VERSION"
-        | "SHLVL" | "TERM" | "TERM_PROGRAM" | "TERM_PROGRAM_VERSION"
-        | "COLORTERM" | "LANG" | "LC_ALL" | "LC_CTYPE" | "USER" | "LOGNAME"
-        | "HOME" | "TMPDIR" | "OLDPWD" | "PWD" | "HISTFILE" | "HISTSIZE") {
+    if matches!(
+        k.as_str(),
+        "SHELL"
+            | "BASH"
+            | "ZSH_VERSION"
+            | "FISH_VERSION"
+            | "SHLVL"
+            | "TERM"
+            | "TERM_PROGRAM"
+            | "TERM_PROGRAM_VERSION"
+            | "COLORTERM"
+            | "LANG"
+            | "LC_ALL"
+            | "LC_CTYPE"
+            | "USER"
+            | "LOGNAME"
+            | "HOME"
+            | "TMPDIR"
+            | "OLDPWD"
+            | "PWD"
+            | "HISTFILE"
+            | "HISTSIZE"
+    ) {
         return EnvCategory::Shell;
     }
 
@@ -57,26 +76,47 @@ pub fn categorize(key: &str) -> EnvCategory {
     }
 
     // Language/Runtime
-    if k.starts_with("PYTHON") || k.starts_with("NODE") || k.starts_with("NPM")
-        || k.starts_with("RUBY") || k.starts_with("GEM") || k.starts_with("CARGO")
-        || k.starts_with("RUST") || k.starts_with("GO") || k.starts_with("JAVA")
-        || k.starts_with("NVM") || k.starts_with("RBENV") || k.starts_with("PYENV")
-        || k.starts_with("VIRTUAL_ENV") || k.starts_with("CONDA")
-        || k == "CC" || k == "CXX" || k == "CFLAGS" || k == "LDFLAGS"
+    if k.starts_with("PYTHON")
+        || k.starts_with("NODE")
+        || k.starts_with("NPM")
+        || k.starts_with("RUBY")
+        || k.starts_with("GEM")
+        || k.starts_with("CARGO")
+        || k.starts_with("RUST")
+        || k.starts_with("GO")
+        || k.starts_with("JAVA")
+        || k.starts_with("NVM")
+        || k.starts_with("RBENV")
+        || k.starts_with("PYENV")
+        || k.starts_with("VIRTUAL_ENV")
+        || k.starts_with("CONDA")
+        || k == "CC"
+        || k == "CXX"
+        || k == "CFLAGS"
+        || k == "LDFLAGS"
     {
         return EnvCategory::Language;
     }
 
     // Terminal
-    if k.starts_with("TERM") || k.starts_with("DISPLAY") || k.starts_with("WAYLAND")
-        || k.starts_with("XDG") || k == "COLORTERM" || k == "COLUMNS" || k == "LINES"
+    if k.starts_with("TERM")
+        || k.starts_with("DISPLAY")
+        || k.starts_with("WAYLAND")
+        || k.starts_with("XDG")
+        || k == "COLORTERM"
+        || k == "COLUMNS"
+        || k == "LINES"
     {
         return EnvCategory::Terminal;
     }
 
     // Editor
-    if k == "EDITOR" || k == "VISUAL" || k == "PAGER" || k.starts_with("LESS")
-        || k.starts_with("VIM") || k.starts_with("NVIM")
+    if k == "EDITOR"
+        || k == "VISUAL"
+        || k == "PAGER"
+        || k.starts_with("LESS")
+        || k.starts_with("VIM")
+        || k.starts_with("NVIM")
     {
         return EnvCategory::Editor;
     }
@@ -87,10 +127,17 @@ pub fn categorize(key: &str) -> EnvCategory {
     }
 
     // Cloud/DevOps
-    if k.starts_with("AWS") || k.starts_with("AZURE") || k.starts_with("GCP")
-        || k.starts_with("GOOGLE") || k.starts_with("DOCKER") || k.starts_with("KUBE")
-        || k.starts_with("TERRAFORM") || k.starts_with("VAULT")
-        || k.starts_with("CI") || k.starts_with("GITHUB") || k.starts_with("GITLAB")
+    if k.starts_with("AWS")
+        || k.starts_with("AZURE")
+        || k.starts_with("GCP")
+        || k.starts_with("GOOGLE")
+        || k.starts_with("DOCKER")
+        || k.starts_with("KUBE")
+        || k.starts_with("TERRAFORM")
+        || k.starts_with("VAULT")
+        || k.starts_with("CI")
+        || k.starts_with("GITHUB")
+        || k.starts_with("GITLAB")
     {
         return EnvCategory::Cloud;
     }
@@ -102,15 +149,23 @@ pub fn categorize(key: &str) -> EnvCategory {
 pub fn is_secret(key: &str, value: &str) -> bool {
     let k = key.to_uppercase();
     // Key-based detection
-    if k.contains("SECRET") || k.contains("TOKEN") || k.contains("PASSWORD")
-        || k.contains("API_KEY") || k.contains("APIKEY") || k.contains("PRIVATE_KEY")
-        || k.contains("CREDENTIAL") || k.contains("AUTH")
+    if k.contains("SECRET")
+        || k.contains("TOKEN")
+        || k.contains("PASSWORD")
+        || k.contains("API_KEY")
+        || k.contains("APIKEY")
+        || k.contains("PRIVATE_KEY")
+        || k.contains("CREDENTIAL")
+        || k.contains("AUTH")
     {
         return true;
     }
     // Value-based detection
-    if value.starts_with("sk-") || value.starts_with("ghp_") || value.starts_with("AKIA")
-        || value.starts_with("xoxb-") || value.starts_with("xoxp-")
+    if value.starts_with("sk-")
+        || value.starts_with("ghp_")
+        || value.starts_with("AKIA")
+        || value.starts_with("xoxb-")
+        || value.starts_with("xoxp-")
     {
         return true;
     }
@@ -143,7 +198,9 @@ pub fn get_all_env_vars() -> Vec<EnvVar> {
         .collect();
 
     vars.sort_by(|a, b| {
-        a.category.name().cmp(b.category.name())
+        a.category
+            .name()
+            .cmp(b.category.name())
             .then(a.key.cmp(&b.key))
     });
 
@@ -252,6 +309,8 @@ mod tests {
         let validated = validate_path_entries();
         assert!(!validated.is_empty());
         // /usr/bin should exist
-        assert!(validated.iter().any(|(p, exists)| p == "/usr/bin" && *exists));
+        assert!(validated
+            .iter()
+            .any(|(p, exists)| p == "/usr/bin" && *exists));
     }
 }

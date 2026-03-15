@@ -37,8 +37,9 @@ impl SnippetStore {
             "docker-ps".into(),
             Snippet {
                 name: "Docker containers".into(),
-                command: "docker ps --format 'table {{.Names}}\\t{{.Status}}\\t{{.Ports}}'"
-                    .into(),
+                command:
+                    "docker ps --format 'table {{.Names}}\\t{{.Status}}\\t{{.Ports}}'"
+                        .into(),
                 description: Some("List running Docker containers".into()),
                 tags: vec!["docker".into()],
             },

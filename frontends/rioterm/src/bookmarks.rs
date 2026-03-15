@@ -98,12 +98,7 @@ impl BookmarkStore {
             .values()
             .filter(|bm| {
                 bm.command.to_lowercase().contains(&q)
-                    || bm
-                        .name
-                        .as_deref()
-                        .unwrap_or("")
-                        .to_lowercase()
-                        .contains(&q)
+                    || bm.name.as_deref().unwrap_or("").to_lowercase().contains(&q)
                     || bm.tags.iter().any(|t| t.to_lowercase().contains(&q))
                     || bm.output_preview.to_lowercase().contains(&q)
             })
@@ -141,8 +136,7 @@ impl BookmarkStore {
         if let Some(parent) = path.parent() {
             let _ = std::fs::create_dir_all(parent);
         }
-        let json =
-            serde_json::to_string_pretty(self).map_err(|e| e.to_string())?;
+        let json = serde_json::to_string_pretty(self).map_err(|e| e.to_string())?;
         std::fs::write(&path, json).map_err(|e| e.to_string())
     }
 
@@ -184,8 +178,7 @@ mod tests {
     #[test]
     fn test_name_and_tag() {
         let mut store = BookmarkStore::new();
-        let id =
-            store.add("deploy".into(), "".into(), PathBuf::from("/app"), Some(0));
+        let id = store.add("deploy".into(), "".into(), PathBuf::from("/app"), Some(0));
         store.set_name(id, "prod deploy".into());
         store.add_tag(id, "deploy".into());
         store.add_tag(id, "production".into());
@@ -219,10 +212,8 @@ mod tests {
     #[test]
     fn test_by_tag() {
         let mut store = BookmarkStore::new();
-        let id1 =
-            store.add("cmd1".into(), "".into(), PathBuf::from("/"), Some(0));
-        let _id2 =
-            store.add("cmd2".into(), "".into(), PathBuf::from("/"), Some(0));
+        let id1 = store.add("cmd1".into(), "".into(), PathBuf::from("/"), Some(0));
+        let _id2 = store.add("cmd2".into(), "".into(), PathBuf::from("/"), Some(0));
         store.add_tag(id1, "important".into());
 
         assert_eq!(store.by_tag("important").len(), 1);
@@ -243,8 +234,7 @@ mod tests {
     #[test]
     fn test_remove() {
         let mut store = BookmarkStore::new();
-        let id =
-            store.add("test".into(), "".into(), PathBuf::from("/"), Some(0));
+        let id = store.add("test".into(), "".into(), PathBuf::from("/"), Some(0));
         assert_eq!(store.len(), 1);
         assert!(store.remove(id));
         assert_eq!(store.len(), 0);

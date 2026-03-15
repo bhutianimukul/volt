@@ -22,7 +22,10 @@ pub enum AuditEvent {
     #[serde(rename = "session_end")]
     SessionEnd { duration_secs: u64 },
     #[serde(rename = "command_executed")]
-    CommandExecuted { command: String, working_dir: String },
+    CommandExecuted {
+        command: String,
+        working_dir: String,
+    },
     #[serde(rename = "command_completed")]
     CommandCompleted {
         command: String,

@@ -44,17 +44,9 @@ pub fn install_integration_scripts() {
             (integration_script_path(shell), integration_script(shell))
         {
             if let Err(e) = std::fs::write(&path, script) {
-                tracing::warn!(
-                    "Failed to write {} integration script: {}",
-                    shell,
-                    e
-                );
+                tracing::warn!("Failed to write {} integration script: {}", shell, e);
             } else {
-                tracing::info!(
-                    "Installed {} integration at {}",
-                    shell,
-                    path.display()
-                );
+                tracing::info!("Installed {} integration at {}", shell, path.display());
             }
         }
     }

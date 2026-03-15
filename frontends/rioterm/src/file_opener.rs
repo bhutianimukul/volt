@@ -28,8 +28,7 @@ pub fn parse_file_reference(text: &str) -> Option<(String, Option<u32>, Option<u
 
 /// Open a file in the configured editor at the given line
 pub fn open_in_editor(file: &str, line: Option<u32>, col: Option<u32>) {
-    let editor =
-        std::env::var("EDITOR").unwrap_or_else(|_| "code".to_string());
+    let editor = std::env::var("EDITOR").unwrap_or_else(|_| "code".to_string());
     let editor_base = editor.split_whitespace().next().unwrap_or("code");
 
     let result = match editor_base {

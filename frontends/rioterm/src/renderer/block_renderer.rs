@@ -40,8 +40,8 @@ pub fn render_block_decorations(
         // Exit code color and badge symbol
         let (badge_color, badge_text) = match block.exit_code {
             Some(0) => ([0.3, 0.8, 0.3, 1.0], "\u{2713}"), // Green checkmark
-            Some(_) => ([0.9, 0.3, 0.3, 1.0], "\u{2717}"),  // Red X
-            None => ([0.6, 0.6, 0.6, 0.5], "\u{25cb}"),      // Running indicator
+            Some(_) => ([0.9, 0.3, 0.3, 1.0], "\u{2717}"), // Red X
+            None => ([0.6, 0.6, 0.6, 0.5], "\u{25cb}"),    // Running indicator
         };
 
         // Block separator line (thin horizontal rule)

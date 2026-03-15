@@ -95,7 +95,8 @@ fn send_notification(title: &str, body: &str, is_error: bool) {
         let notification_class = Class::get("NSUserNotification");
 
         if let (Some(center_cls), Some(notif_cls)) = (center_class, notification_class) {
-            let center: *mut Object = msg_send![center_cls, defaultUserNotificationCenter];
+            let center: *mut Object =
+                msg_send![center_cls, defaultUserNotificationCenter];
             let notification: *mut Object = msg_send![notif_cls, new];
 
             let ns_string_class = Class::get("NSString").unwrap();
