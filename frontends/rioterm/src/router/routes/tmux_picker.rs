@@ -8,21 +8,22 @@ pub fn screen(
     sessions: &[(String, String, bool)],
     selected_index: usize,
 ) {
-    let accent = [0.3, 0.85, 0.4, 1.0]; // green (tmux brand)
-    let dim = [0.5, 0.5, 0.5, 1.0];
+    let bg = [0.06, 0.06, 0.08, 1.0];
+    let accent = [0.3, 0.85, 0.4, 1.0]; // green
+    let dim = [0.45, 0.45, 0.5, 1.0];
     let black = [0.0, 0.0, 0.0, 1.0];
     let white = [1.0, 1.0, 1.0, 1.0];
-    let highlight = [0.9882353, 0.7294118, 0.15686275, 1.0]; // yellow
-    let selected_bg = [0.15, 0.2, 0.15, 1.0]; // dark green-tinted for selected row
-    let attached_color = [0.4, 0.8, 1.0, 1.0]; // light blue for attached indicator
+    let highlight = [0.98, 0.73, 0.16, 1.0]; // yellow
+    let selected_bg = [0.15, 0.2, 0.15, 1.0];
+    let attached_color = [0.4, 0.8, 1.0, 1.0];
 
     let layout = sugarloaf.window_size();
     let mut objects = Vec::with_capacity(16);
 
-    // Full-screen black background
+    // Background
     objects.push(Object::Quad(Quad {
         position: [0., 0.0],
-        color: black,
+        color: bg,
         size: [
             layout.width / context_dimension.dimension.scale,
             layout.height,
@@ -30,7 +31,7 @@ pub fn screen(
         ..Quad::default()
     }));
 
-    // Green accent bar on the left
+    // Accent bar on the left
     objects.push(Object::Quad(Quad {
         position: [0., 30.0],
         color: accent,
@@ -40,7 +41,7 @@ pub fn screen(
 
     // Title
     let title_rt = sugarloaf.create_temp_rich_text();
-    sugarloaf.set_rich_text_font_size(&title_rt, 24.0);
+    sugarloaf.set_rich_text_font_size(&title_rt, 22.0);
     let content = sugarloaf.content();
     content
         .sel(title_rt)
@@ -55,19 +56,29 @@ pub fn screen(
         .build();
     objects.push(Object::RichText(RichText {
         id: title_rt,
-        position: [40., context_dimension.margin.top_y + 30.],
+        position: [40., context_dimension.margin.top_y + 25.],
         lines: None,
     }));
 
     // Subtitle
     let subtitle_rt = sugarloaf.create_temp_rich_text();
-    sugarloaf.set_rich_text_font_size(&subtitle_rt, 14.0);
+    sugarloaf.set_rich_text_font_size(&subtitle_rt, 13.0);
     let content = sugarloaf.content();
+    let session_count = sessions.len();
+    let subtitle_text = if session_count == 0 {
+        "No active sessions".to_string()
+    } else {
+        format!(
+            "{} session{}  |  Select to attach or create new",
+            session_count,
+            if session_count == 1 { "" } else { "s" }
+        )
+    };
     content
         .sel(subtitle_rt)
         .clear()
         .add_text(
-            "Select a session to attach or create a new one",
+            &subtitle_text,
             FragmentStyle {
                 color: dim,
                 ..FragmentStyle::default()
@@ -76,13 +87,13 @@ pub fn screen(
         .build();
     objects.push(Object::RichText(RichText {
         id: subtitle_rt,
-        position: [40., context_dimension.margin.top_y + 68.],
+        position: [40., context_dimension.margin.top_y + 55.],
         lines: None,
     }));
 
     // Body: session list
     let body_rt = sugarloaf.create_temp_rich_text();
-    sugarloaf.set_rich_text_font_size(&body_rt, 14.0);
+    sugarloaf.set_rich_text_font_size(&body_rt, 13.0);
 
     let key_bg_style = FragmentStyle {
         background_color: Some(highlight),
@@ -94,9 +105,8 @@ pub fn screen(
     let body = content.sel(body_rt).clear();
 
     if sessions.is_empty() {
-        body.new_line();
         body.add_text(
-            "   No tmux sessions found.",
+            "No tmux sessions found.",
             FragmentStyle {
                 color: dim,
                 ..FragmentStyle::default()
@@ -105,7 +115,7 @@ pub fn screen(
         .new_line()
         .new_line();
         body.add_text(
-            "   Press ",
+            "Press ",
             FragmentStyle {
                 color: dim,
                 ..FragmentStyle::default()
@@ -126,7 +136,6 @@ pub fn screen(
             },
         );
     } else {
-        body.new_line();
         body.add_text(
             "SESSIONS",
             FragmentStyle {
@@ -192,20 +201,26 @@ pub fn screen(
 
     // Footer
     body.new_line().new_line();
-    body.add_text(" Up/Down ", key_bg_style)
-        .add_text(" navigate  ", dim_style())
+    body.add_text(" \u{2191}\u{2193} ", key_bg_style)
+        .add_text(" navigate ", dim_style())
         .add_text(" Enter ", key_bg_style)
-        .add_text(" attach  ", dim_style())
+        .add_text(" attach ", dim_style())
         .add_text(" n ", key_bg_style)
-        .add_text(" new session  ", dim_style())
-        .add_text(" Escape ", key_bg_style)
+        .add_text(" new ", dim_style())
+        .add_text(" d ", key_bg_style)
+        .add_text(" detach ", dim_style())
+        .add_text(" x ", key_bg_style)
+        .add_text(" kill ", dim_style())
+        .add_text(" r ", key_bg_style)
+        .add_text(" rename ", dim_style())
+        .add_text(" Esc ", key_bg_style)
         .add_text(" close", dim_style());
 
     body.build();
 
     objects.push(Object::RichText(RichText {
         id: body_rt,
-        position: [40., context_dimension.margin.top_y + 100.],
+        position: [40., context_dimension.margin.top_y + 85.],
         lines: None,
     }));
 
@@ -214,7 +229,7 @@ pub fn screen(
 
 fn dim_style() -> FragmentStyle {
     FragmentStyle {
-        color: [0.5, 0.5, 0.5, 1.0],
+        color: [0.45, 0.45, 0.5, 1.0],
         ..FragmentStyle::default()
     }
 }

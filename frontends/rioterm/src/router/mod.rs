@@ -425,6 +425,40 @@ impl Route<'_> {
                         .send_write(cmd.into_bytes());
                     self.path = RoutePath::Terminal;
                 }
+                // 'd' to detach selected session
+                Key::Character(c) if c.as_str() == "d" || c.as_str() == "D" => {
+                    if let Some((_id, name, _attached)) =
+                        self.tmux_sessions.get(self.tmux_selected)
+                    {
+                        let cmd = format!("tmux detach-client -t {}\r", name);
+                        self.window.screen.ctx_mut().current_mut().messenger.send_write(cmd.into_bytes());
+                    }
+                }
+                // 'x' to kill selected session
+                Key::Character(c) if c.as_str() == "x" || c.as_str() == "X" => {
+                    if let Some((_id, name, _attached)) =
+                        self.tmux_sessions.get(self.tmux_selected)
+                    {
+                        let cmd = format!("tmux kill-session -t {}\r", name);
+                        self.window.screen.ctx_mut().current_mut().messenger.send_write(cmd.into_bytes());
+                        // Refresh session list
+                        self.tmux_sessions = crate::tmux_cc::TmuxController::list_sessions();
+                        if self.tmux_selected >= self.tmux_sessions.len() && self.tmux_selected > 0 {
+                            self.tmux_selected -= 1;
+                        }
+                    }
+                }
+                // 'r' to rename selected session
+                Key::Character(c) if c.as_str() == "r" || c.as_str() == "R" => {
+                    if let Some((_id, name, _attached)) =
+                        self.tmux_sessions.get(self.tmux_selected)
+                    {
+                        // Use tmux rename — for now just send the command
+                        let cmd = format!("tmux rename-session -t {} \r", name);
+                        self.window.screen.ctx_mut().current_mut().messenger.send_write(cmd.into_bytes());
+                        self.path = RoutePath::Terminal;
+                    }
+                }
                 _ => {}
             }
             return true;

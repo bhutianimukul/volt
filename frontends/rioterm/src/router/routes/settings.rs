@@ -8,24 +8,24 @@ pub fn screen(
     context_dimension: &ContextDimension,
     editor: &SettingsEditor,
 ) {
-    let accent = [0.1764706, 0.6039216, 1.0, 1.0]; // blue
-    let dim = [0.5, 0.5, 0.5, 1.0]; // gray
-    let highlight = [0.9882353, 0.7294118, 0.15686275, 1.0]; // yellow
+    let bg = [0.06, 0.06, 0.08, 1.0];
+    let accent = [0.2, 0.5, 1.0, 1.0]; // blue
+    let dim = [0.45, 0.45, 0.5, 1.0];
+    let highlight = [0.98, 0.73, 0.16, 1.0]; // yellow
     let black = [0.0, 0.0, 0.0, 1.0];
     let white = [1.0, 1.0, 1.0, 1.0];
-    let selected_bg = [0.15, 0.15, 0.2, 1.0]; // dark blue-gray for selected row
-    let editing_bg = [0.2, 0.15, 0.05, 1.0]; // warm dark for editing
-    let green = [0.3, 0.85, 0.4, 1.0]; // green for booleans true
-    let red = [0.85, 0.3, 0.3, 1.0]; // red for booleans false
+    let selected_bg = [0.15, 0.15, 0.2, 1.0];
+    let editing_bg = [0.2, 0.15, 0.05, 1.0];
+    let green = [0.3, 0.85, 0.4, 1.0];
+    let red = [0.85, 0.3, 0.3, 1.0];
 
     let layout = sugarloaf.window_size();
-
     let mut objects = Vec::with_capacity(32);
 
-    // Full-screen black background
+    // Background
     objects.push(Object::Quad(Quad {
         position: [0., 0.0],
-        color: black,
+        color: bg,
         size: [
             layout.width / context_dimension.dimension.scale,
             layout.height,
@@ -43,7 +43,7 @@ pub fn screen(
 
     // --- Title ---
     let title_rt = sugarloaf.create_temp_rich_text();
-    sugarloaf.set_rich_text_font_size(&title_rt, 28.0);
+    sugarloaf.set_rich_text_font_size(&title_rt, 22.0);
 
     let content = sugarloaf.content();
     content
@@ -60,13 +60,13 @@ pub fn screen(
 
     objects.push(Object::RichText(RichText {
         id: title_rt,
-        position: [40., context_dimension.margin.top_y + 30.],
+        position: [40., context_dimension.margin.top_y + 25.],
         lines: None,
     }));
 
     // --- Subtitle / Search bar ---
     let subtitle_rt = sugarloaf.create_temp_rich_text();
-    sugarloaf.set_rich_text_font_size(&subtitle_rt, 14.0);
+    sugarloaf.set_rich_text_font_size(&subtitle_rt, 13.0);
 
     let content = sugarloaf.content();
     let sub = content.sel(subtitle_rt).clear();
@@ -121,13 +121,13 @@ pub fn screen(
 
     objects.push(Object::RichText(RichText {
         id: subtitle_rt,
-        position: [40., context_dimension.margin.top_y + 68.],
+        position: [40., context_dimension.margin.top_y + 55.],
         lines: None,
     }));
 
     // --- Settings list ---
     let body_rt = sugarloaf.create_temp_rich_text();
-    sugarloaf.set_rich_text_font_size(&body_rt, 14.0);
+    sugarloaf.set_rich_text_font_size(&body_rt, 13.0);
 
     let label_style = FragmentStyle {
         color: dim,
@@ -203,13 +203,11 @@ pub fn screen(
             label_style
         };
 
-        // Pad label to fixed width for alignment
         let padded_label = format!("{:<28}", item.label);
         body.add_text(&padded_label, row_label_style);
 
         // Value
         if is_selected && editor.editing {
-            // Show edit buffer with cursor
             body.add_text(&editor.edit_buffer, editing_style);
             body.add_text("_", FragmentStyle {
                 color: highlight,
@@ -287,7 +285,7 @@ pub fn screen(
 
     objects.push(Object::RichText(RichText {
         id: body_rt,
-        position: [40., context_dimension.margin.top_y + 100.],
+        position: [40., context_dimension.margin.top_y + 85.],
         lines: None,
     }));
 
@@ -296,7 +294,7 @@ pub fn screen(
 
 fn dim_style() -> FragmentStyle {
     FragmentStyle {
-        color: [0.5, 0.5, 0.5, 1.0],
+        color: [0.45, 0.45, 0.5, 1.0],
         ..FragmentStyle::default()
     }
 }

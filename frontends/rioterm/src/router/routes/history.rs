@@ -8,20 +8,22 @@ pub fn screen(
     context_dimension: &ContextDimension,
     recorder: &SessionRecorder,
 ) {
-    let accent = [0.9882353, 0.7294118, 0.15686275, 1.0]; // yellow (Volt brand)
-    let dim = [0.5, 0.5, 0.5, 1.0];
+    let bg = [0.06, 0.06, 0.08, 1.0];
+    let accent = [0.7, 0.4, 0.9, 1.0]; // purple
+    let dim = [0.45, 0.45, 0.5, 1.0];
     let black = [0.0, 0.0, 0.0, 1.0];
     let white = [1.0, 1.0, 1.0, 1.0];
+    let highlight = [0.98, 0.73, 0.16, 1.0]; // yellow for key badges
     let green = [0.3, 0.9, 0.3, 1.0];
     let red = [0.9, 0.3, 0.3, 1.0];
 
     let layout = sugarloaf.window_size();
     let mut objects = Vec::with_capacity(16);
 
-    // Full-screen black background
+    // Background
     objects.push(Object::Quad(Quad {
         position: [0., 0.0],
-        color: black,
+        color: bg,
         size: [
             layout.width / context_dimension.dimension.scale,
             layout.height,
@@ -29,7 +31,7 @@ pub fn screen(
         ..Quad::default()
     }));
 
-    // Yellow accent bar on the left
+    // Accent bar on the left
     objects.push(Object::Quad(Quad {
         position: [0., 30.0],
         color: accent,
@@ -39,7 +41,7 @@ pub fn screen(
 
     // Title
     let title_rt = sugarloaf.create_temp_rich_text();
-    sugarloaf.set_rich_text_font_size(&title_rt, 24.0);
+    sugarloaf.set_rich_text_font_size(&title_rt, 22.0);
     let content = sugarloaf.content();
     content
         .sel(title_rt)
@@ -54,7 +56,34 @@ pub fn screen(
         .build();
     objects.push(Object::RichText(RichText {
         id: title_rt,
-        position: [40., context_dimension.margin.top_y + 30.],
+        position: [40., context_dimension.margin.top_y + 25.],
+        lines: None,
+    }));
+
+    // Subtitle
+    let subtitle_rt = sugarloaf.create_temp_rich_text();
+    sugarloaf.set_rich_text_font_size(&subtitle_rt, 13.0);
+    let content = sugarloaf.content();
+    let entry_count = recorder.len();
+    let subtitle_text = if entry_count == 0 {
+        "No commands recorded yet".to_string()
+    } else {
+        format!("{} commands recorded this session", entry_count)
+    };
+    content
+        .sel(subtitle_rt)
+        .clear()
+        .add_text(
+            &subtitle_text,
+            FragmentStyle {
+                color: dim,
+                ..FragmentStyle::default()
+            },
+        )
+        .build();
+    objects.push(Object::RichText(RichText {
+        id: subtitle_rt,
+        position: [40., context_dimension.margin.top_y + 55.],
         lines: None,
     }));
 
@@ -82,6 +111,11 @@ pub fn screen(
         color: red,
         ..FragmentStyle::default()
     };
+    let key_bg_style = FragmentStyle {
+        background_color: Some(highlight),
+        color: black,
+        ..FragmentStyle::default()
+    };
 
     let content = sugarloaf.content();
     let body = content.sel(body_rt);
@@ -90,55 +124,72 @@ pub fn screen(
     let entries = recorder.recent(50);
 
     if entries.is_empty() {
-        body.new_line()
-            .add_text("  No commands recorded yet.", dim_style)
+        body.add_text("No commands recorded yet.", dim_style)
+            .new_line()
             .new_line();
-        body.new_line()
-            .add_text(
-                "  Commands will appear here as you use the terminal.",
-                dim_style,
-            )
-            .new_line();
+        body.add_text(
+            "Commands will appear here as you use the terminal.",
+            dim_style,
+        )
+        .new_line()
+        .new_line();
+        body.add_text(
+            "Volt records commands automatically via shell integration.",
+            dim_style,
+        )
+        .new_line();
+        body.add_text(
+            "If commands are not appearing, ensure your shell is",
+            dim_style,
+        )
+        .new_line();
+        body.add_text(
+            "configured with Volt's shell integration hooks.",
+            dim_style,
+        )
+        .new_line();
     } else {
-        body.new_line()
-            .add_text(
-                &format!("RECENT COMMANDS ({})", entries.len()),
-                header_style,
-            )
-            .new_line();
-        body.new_line();
+        body.add_text(
+            &format!("RECENT COMMANDS ({})", entries.len()),
+            header_style,
+        )
+        .new_line();
 
         for entry in entries.iter().rev() {
             // Status indicator
             let (status, style) = match entry.exit_code {
                 Some(0) => (" ok ", ok_style),
-                Some(code) => {
-                    // We can't easily format dynamic strings into a static style,
-                    // so just show a generic fail marker
-                    let _ = code;
-                    ("FAIL", fail_style)
-                }
+                Some(_code) => ("FAIL", fail_style),
                 None => (" .. ", dim_style),
             };
 
-            body.add_text("  [", dim_style);
+            body.add_text("[", dim_style);
             body.add_text(status, style);
             body.add_text("]  ", dim_style);
 
-            // Command text (or placeholder)
+            // Command text
             let cmd_display = if entry.command.is_empty() {
-                "(command)"
+                "(no command text captured)"
             } else {
                 &entry.command
             };
-            body.add_text(cmd_display, cmd_style);
+            // Truncate very long commands for display
+            let cmd_truncated = if cmd_display.len() > 80 {
+                format!("{}...", &cmd_display[..77])
+            } else {
+                cmd_display.to_string()
+            };
+            body.add_text(&cmd_truncated, cmd_style);
 
             // Duration if available
             if let Some(ms) = entry.duration_ms {
                 if ms < 1000 {
                     body.add_text(&format!("  {}ms", ms), dim_style);
                 } else {
-                    body.add_text(&format!("  {:.1}s", ms as f64 / 1000.0), dim_style);
+                    body.add_text(
+                        &format!("  {:.1}s", ms as f64 / 1000.0),
+                        dim_style,
+                    );
                 }
             }
 
@@ -161,26 +212,23 @@ pub fn screen(
 
     // Footer
     body.new_line().new_line();
-    body.add_text(
-        "  Press ",
-        dim_style,
-    );
-    body.add_text(
-        "Escape",
-        FragmentStyle {
-            color: [0.4, 0.8, 1.0, 1.0],
-            ..FragmentStyle::default()
-        },
-    );
-    body.add_text(" to close", dim_style);
+    body.add_text(" Escape ", key_bg_style)
+        .add_text(" close", footer_dim_style());
 
     body.build();
 
     objects.push(Object::RichText(RichText {
         id: body_rt,
-        position: [40., context_dimension.margin.top_y + 70.],
+        position: [40., context_dimension.margin.top_y + 85.],
         lines: None,
     }));
 
     sugarloaf.set_objects(objects);
+}
+
+fn footer_dim_style() -> FragmentStyle {
+    FragmentStyle {
+        color: [0.45, 0.45, 0.5, 1.0],
+        ..FragmentStyle::default()
+    }
 }

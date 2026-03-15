@@ -3,22 +3,24 @@ use rio_backend::sugarloaf::{FragmentStyle, Object, Quad, RichText, Sugarloaf};
 
 #[inline]
 pub fn screen(sugarloaf: &mut Sugarloaf, context_dimension: &ContextDimension) {
-    let accent = [0.9882353, 0.7294118, 0.15686275, 1.0]; // yellow (Volt brand)
-    let dim = [0.5, 0.5, 0.5, 1.0];
+    let bg = [0.06, 0.06, 0.08, 1.0];
+    let accent = [0.9, 0.5, 0.3, 1.0]; // orange
+    let dim = [0.45, 0.45, 0.5, 1.0];
     let black = [0.0, 0.0, 0.0, 1.0];
     let white = [1.0, 1.0, 1.0, 1.0];
-    let key_color = [0.4, 0.8, 1.0, 1.0]; // light blue for keys
-    let success_color = [0.3, 0.85, 0.4, 1.0]; // green for exit code 0
-    let fail_color = [0.9, 0.3, 0.3, 1.0]; // red for non-zero exit codes
+    let highlight = [0.98, 0.73, 0.16, 1.0]; // yellow for key badges
+    let key_color = [0.4, 0.8, 1.0, 1.0]; // light blue for labels
+    let success_color = [0.3, 0.85, 0.4, 1.0];
+    let fail_color = [0.9, 0.3, 0.3, 1.0];
     let tag_color = [0.7, 0.5, 1.0, 1.0]; // purple for tags
 
     let layout = sugarloaf.window_size();
     let mut objects = Vec::with_capacity(16);
 
-    // Full-screen black background
+    // Background
     objects.push(Object::Quad(Quad {
         position: [0., 0.0],
-        color: black,
+        color: bg,
         size: [
             layout.width / context_dimension.dimension.scale,
             layout.height,
@@ -26,7 +28,7 @@ pub fn screen(sugarloaf: &mut Sugarloaf, context_dimension: &ContextDimension) {
         ..Quad::default()
     }));
 
-    // Yellow accent bar on the left
+    // Accent bar on the left
     objects.push(Object::Quad(Quad {
         position: [0., 30.0],
         color: accent,
@@ -36,7 +38,7 @@ pub fn screen(sugarloaf: &mut Sugarloaf, context_dimension: &ContextDimension) {
 
     // Title
     let title_rt = sugarloaf.create_temp_rich_text();
-    sugarloaf.set_rich_text_font_size(&title_rt, 24.0);
+    sugarloaf.set_rich_text_font_size(&title_rt, 22.0);
     let content = sugarloaf.content();
     content
         .sel(title_rt)
@@ -51,7 +53,39 @@ pub fn screen(sugarloaf: &mut Sugarloaf, context_dimension: &ContextDimension) {
         .build();
     objects.push(Object::RichText(RichText {
         id: title_rt,
-        position: [40., context_dimension.margin.top_y + 30.],
+        position: [40., context_dimension.margin.top_y + 25.],
+        lines: None,
+    }));
+
+    // Subtitle
+    let subtitle_rt = sugarloaf.create_temp_rich_text();
+    sugarloaf.set_rich_text_font_size(&subtitle_rt, 13.0);
+    let store = crate::bookmarks::BookmarkStore::load();
+    let bookmarks = store.list();
+    let subtitle_text = if bookmarks.is_empty() {
+        "No bookmarks saved yet".to_string()
+    } else {
+        format!(
+            "{} saved command{}",
+            bookmarks.len(),
+            if bookmarks.len() == 1 { "" } else { "s" }
+        )
+    };
+    let content = sugarloaf.content();
+    content
+        .sel(subtitle_rt)
+        .clear()
+        .add_text(
+            &subtitle_text,
+            FragmentStyle {
+                color: dim,
+                ..FragmentStyle::default()
+            },
+        )
+        .build();
+    objects.push(Object::RichText(RichText {
+        id: subtitle_rt,
+        position: [40., context_dimension.margin.top_y + 55.],
         lines: None,
     }));
 
@@ -75,20 +109,42 @@ pub fn screen(sugarloaf: &mut Sugarloaf, context_dimension: &ContextDimension) {
         color: dim,
         ..FragmentStyle::default()
     };
+    let key_bg_style = FragmentStyle {
+        background_color: Some(highlight),
+        color: black,
+        ..FragmentStyle::default()
+    };
 
     let content = sugarloaf.content();
     let body = content.sel(body_rt);
     body.clear();
 
-    let store = crate::bookmarks::BookmarkStore::load();
-    let bookmarks = store.list();
-
     if bookmarks.is_empty() {
-        body.new_line().add_text("  No bookmarks saved yet.", dim_style);
-    } else {
-        body.new_line()
-            .add_text("SAVED COMMANDS", header_style)
+        body.add_text("No bookmarks yet.", dim_style)
+            .new_line()
             .new_line();
+        body.add_text(
+            "To bookmark a command, right-click on a command block",
+            dim_style,
+        )
+        .new_line();
+        body.add_text(
+            "and select \"Bookmark\", or use the bookmark API from",
+            dim_style,
+        )
+        .new_line();
+        body.add_text("shell integration hooks.", dim_style)
+            .new_line();
+        body.new_line();
+        body.add_text("Open with ", dim_style)
+            .add_text("Cmd+Shift+K", FragmentStyle {
+                color: accent,
+                ..FragmentStyle::default()
+            })
+            .add_text(" anytime.", dim_style)
+            .new_line();
+    } else {
+        body.add_text("SAVED COMMANDS", header_style).new_line();
 
         for bm in &bookmarks {
             // Command
@@ -140,17 +196,23 @@ pub fn screen(sugarloaf: &mut Sugarloaf, context_dimension: &ContextDimension) {
 
     // Footer
     body.new_line().new_line();
-    body.add_text("  Press ", dim_style)
-        .add_text("Escape", key_style)
-        .add_text(" to close", dim_style);
+    body.add_text(" Escape ", key_bg_style)
+        .add_text(" close", footer_dim_style());
 
     body.build();
 
     objects.push(Object::RichText(RichText {
         id: body_rt,
-        position: [40., context_dimension.margin.top_y + 70.],
+        position: [40., context_dimension.margin.top_y + 85.],
         lines: None,
     }));
 
     sugarloaf.set_objects(objects);
+}
+
+fn footer_dim_style() -> FragmentStyle {
+    FragmentStyle {
+        color: [0.45, 0.45, 0.5, 1.0],
+        ..FragmentStyle::default()
+    }
 }
