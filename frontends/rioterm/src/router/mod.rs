@@ -33,6 +33,7 @@ pub struct Route<'a> {
     pub assistant: assistant::Assistant,
     pub path: RoutePath,
     pub window: RouteWindow<'a>,
+    pub settings_editor: crate::settings_editor::SettingsEditor,
 }
 
 impl Route<'_> {
@@ -47,6 +48,7 @@ impl Route<'_> {
             assistant,
             path,
             window,
+            settings_editor: crate::settings_editor::SettingsEditor::new(),
         }
     }
 }
@@ -267,8 +269,79 @@ impl Route<'_> {
         }
 
         if self.path == RoutePath::Settings {
-            if key_event.logical_key == Key::Named(NamedKey::Escape) {
-                self.path = RoutePath::Terminal;
+            // Only handle key press events, not releases
+            if key_event.state != rio_window::event::ElementState::Pressed {
+                return true;
+            }
+
+            let editor = &mut self.settings_editor;
+
+            if editor.editing {
+                match &key_event.logical_key {
+                    Key::Named(NamedKey::Escape) => {
+                        editor.cancel_edit();
+                    }
+                    Key::Named(NamedKey::Enter) => {
+                        editor.confirm_edit();
+                    }
+                    Key::Named(NamedKey::Backspace) => {
+                        editor.backspace();
+                    }
+                    Key::Character(c) => {
+                        for ch in c.chars() {
+                            editor.type_char(ch);
+                        }
+                    }
+                    Key::Named(NamedKey::Space) => {
+                        editor.type_char(' ');
+                    }
+                    _ => {}
+                }
+            } else if editor.searching {
+                match &key_event.logical_key {
+                    Key::Named(NamedKey::Escape) => {
+                        editor.toggle_search();
+                    }
+                    Key::Named(NamedKey::Enter) => {
+                        // Stop searching, keep filter active
+                        editor.searching = false;
+                    }
+                    Key::Named(NamedKey::Backspace) => {
+                        editor.backspace();
+                    }
+                    Key::Character(c) => {
+                        for ch in c.chars() {
+                            editor.type_char(ch);
+                        }
+                    }
+                    Key::Named(NamedKey::Space) => {
+                        editor.type_char(' ');
+                    }
+                    _ => {}
+                }
+            } else {
+                match &key_event.logical_key {
+                    Key::Named(NamedKey::Escape) => {
+                        self.path = RoutePath::Terminal;
+                    }
+                    Key::Named(NamedKey::ArrowUp) => {
+                        editor.move_up();
+                    }
+                    Key::Named(NamedKey::ArrowDown) => {
+                        editor.move_down();
+                    }
+                    Key::Named(NamedKey::Enter) => {
+                        if editor.selected_is_bool() {
+                            editor.toggle_bool();
+                        } else {
+                            editor.start_editing();
+                        }
+                    }
+                    Key::Character(c) if c.as_str() == "/" => {
+                        editor.toggle_search();
+                    }
+                    _ => {}
+                }
             }
             return true;
         }
@@ -461,6 +534,7 @@ impl Router<'_> {
             window,
             path: RoutePath::Terminal,
             assistant: Assistant::new(),
+            settings_editor: crate::settings_editor::SettingsEditor::new(),
         };
 
         if let Some(err) = &self.propagated_report {
@@ -498,6 +572,7 @@ impl Router<'_> {
                 window,
                 path: RoutePath::Terminal,
                 assistant: Assistant::new(),
+                settings_editor: crate::settings_editor::SettingsEditor::new(),
             },
         );
     }

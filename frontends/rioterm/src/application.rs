@@ -771,6 +771,7 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                     if route.path == RoutePath::Settings {
                         route.path = RoutePath::Terminal;
                     } else {
+                        route.settings_editor.reload_from_config(&self.config);
                         route.path = RoutePath::Settings;
                     }
                     route.request_redraw();
@@ -1713,7 +1714,10 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                         );
                     }
                     RoutePath::Settings => {
-                        route.window.screen.render_settings(&self.config);
+                        route
+                            .window
+                            .screen
+                            .render_settings(&route.settings_editor);
                     }
                     RoutePath::Help => {
                         route.window.screen.render_help();

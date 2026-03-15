@@ -1,30 +1,26 @@
 use crate::context::grid::ContextDimension;
-use rio_backend::config::Config;
+use crate::settings_editor::SettingsEditor;
 use rio_backend::sugarloaf::{FragmentStyle, Object, Quad, RichText, Sugarloaf};
-
-/// Convert an RGBA f32 color array to a hex string like "#RRGGBB".
-fn color_to_hex(c: &[f32; 4]) -> String {
-    let r = (c[0] * 255.0) as u8;
-    let g = (c[1] * 255.0) as u8;
-    let b = (c[2] * 255.0) as u8;
-    format!("#{:02X}{:02X}{:02X}", r, g, b)
-}
 
 #[inline]
 pub fn screen(
     sugarloaf: &mut Sugarloaf,
     context_dimension: &ContextDimension,
-    config: &Config,
+    editor: &SettingsEditor,
 ) {
     let accent = [0.1764706, 0.6039216, 1.0, 1.0]; // blue
-    let dim = [0.5, 0.5, 0.5, 1.0]; // gray for labels
+    let dim = [0.5, 0.5, 0.5, 1.0]; // gray
     let highlight = [0.9882353, 0.7294118, 0.15686275, 1.0]; // yellow
     let black = [0.0, 0.0, 0.0, 1.0];
     let white = [1.0, 1.0, 1.0, 1.0];
+    let selected_bg = [0.15, 0.15, 0.2, 1.0]; // dark blue-gray for selected row
+    let editing_bg = [0.2, 0.15, 0.05, 1.0]; // warm dark for editing
+    let green = [0.3, 0.85, 0.4, 1.0]; // green for booleans true
+    let red = [0.85, 0.3, 0.3, 1.0]; // red for booleans false
 
     let layout = sugarloaf.window_size();
 
-    let mut objects = Vec::with_capacity(16);
+    let mut objects = Vec::with_capacity(32);
 
     // Full-screen black background
     objects.push(Object::Quad(Quad {
@@ -68,23 +64,60 @@ pub fn screen(
         lines: None,
     }));
 
-    // --- Subtitle ---
+    // --- Subtitle / Search bar ---
     let subtitle_rt = sugarloaf.create_temp_rich_text();
     sugarloaf.set_rich_text_font_size(&subtitle_rt, 14.0);
 
-    let config_path = rio_backend::config::config_file_path();
     let content = sugarloaf.content();
-    content
-        .sel(subtitle_rt)
-        .clear()
+    let sub = content.sel(subtitle_rt).clear();
+
+    if editor.searching {
+        sub.add_text(
+            "Search: ",
+            FragmentStyle {
+                color: accent,
+                ..FragmentStyle::default()
+            },
+        )
         .add_text(
-            &format!("Edit {} to change settings", config_path.display()),
+            &editor.search_query,
+            FragmentStyle {
+                color: white,
+                ..FragmentStyle::default()
+            },
+        )
+        .add_text(
+            "_",
+            FragmentStyle {
+                color: accent,
+                ..FragmentStyle::default()
+            },
+        );
+    } else if !editor.search_query.is_empty() {
+        sub.add_text(
+            &format!("Filtered: \"{}\"  ", editor.search_query),
+            FragmentStyle {
+                color: accent,
+                ..FragmentStyle::default()
+            },
+        )
+        .add_text(
+            "/ to clear",
             FragmentStyle {
                 color: dim,
                 ..FragmentStyle::default()
             },
-        )
-        .build();
+        );
+    } else {
+        sub.add_text(
+            "Interactive settings editor  |  / to search",
+            FragmentStyle {
+                color: dim,
+                ..FragmentStyle::default()
+            },
+        );
+    }
+    sub.build();
 
     objects.push(Object::RichText(RichText {
         id: subtitle_rt,
@@ -92,7 +125,7 @@ pub fn screen(
         lines: None,
     }));
 
-    // --- Settings body ---
+    // --- Settings list ---
     let body_rt = sugarloaf.create_temp_rich_text();
     sugarloaf.set_rich_text_font_size(&body_rt, 14.0);
 
@@ -113,143 +146,142 @@ pub fn screen(
         color: black,
         ..FragmentStyle::default()
     };
+    let selected_style = FragmentStyle {
+        background_color: Some(selected_bg),
+        color: white,
+        ..FragmentStyle::default()
+    };
+    let editing_style = FragmentStyle {
+        background_color: Some(editing_bg),
+        color: highlight,
+        ..FragmentStyle::default()
+    };
 
     let content = sugarloaf.content();
     let body = content.sel(body_rt).clear();
 
-    // ── Font ──
-    body.add_text("FONT", category_style).new_line();
+    let filtered = editor.filtered_items();
+    let mut last_category = String::new();
 
-    let family_name = config
-        .fonts
-        .family
-        .as_deref()
-        .unwrap_or(&config.fonts.regular.family);
-    body.add_text("  Family:      ", label_style)
-        .add_text(family_name, value_style)
-        .new_line();
+    let end = std::cmp::min(
+        editor.scroll_offset + editor.visible_rows,
+        filtered.len(),
+    );
+    let visible_range = editor.scroll_offset..end;
 
-    body.add_text("  Size:        ", label_style)
-        .add_text(&format!("{:.1}", config.fonts.size), value_style)
-        .new_line();
+    for (display_idx, &item) in filtered.iter().enumerate() {
+        if !visible_range.contains(&display_idx) {
+            continue;
+        }
 
-    body.add_text("  Line height: ", label_style)
-        .add_text(&format!("{:.1}", config.line_height), value_style)
-        .new_line();
+        let is_selected = display_idx == editor.selected_index;
 
-    body.add_text("", label_style).new_line();
+        // Category header
+        if item.category != last_category {
+            if !last_category.is_empty() {
+                body.add_text("", label_style).new_line();
+            }
+            body.add_text(&item.category.to_uppercase(), category_style)
+                .new_line();
+            last_category = item.category.clone();
+        }
 
-    // ── Window ──
-    body.add_text("WINDOW", category_style).new_line();
+        // Selection indicator
+        if is_selected {
+            body.add_text(" > ", FragmentStyle {
+                color: highlight,
+                ..FragmentStyle::default()
+            });
+        } else {
+            body.add_text("   ", label_style);
+        }
 
-    body.add_text("  Opacity:     ", label_style)
-        .add_text(&format!("{:.2}", config.window.opacity), value_style)
-        .new_line();
+        // Label
+        let row_label_style = if is_selected {
+            selected_style
+        } else {
+            label_style
+        };
 
-    let bg_image = config
-        .window
-        .background_image
-        .as_ref()
-        .map(|_| "configured")
-        .unwrap_or("none");
-    body.add_text("  Background:  ", label_style)
-        .add_text(bg_image, value_style)
-        .new_line();
+        // Pad label to fixed width for alignment
+        let padded_label = format!("{:<28}", item.label);
+        body.add_text(&padded_label, row_label_style);
 
-    body.add_text("", label_style).new_line();
-
-    // ── Navigation ──
-    body.add_text("NAVIGATION", category_style).new_line();
-
-    body.add_text("  Mode:        ", label_style)
-        .add_text(&format!("{:?}", config.navigation.mode), value_style)
-        .new_line();
-
-    body.add_text("  Hide single: ", label_style)
-        .add_text(
-            if config.navigation.hide_if_single {
-                "yes"
+        // Value
+        if is_selected && editor.editing {
+            // Show edit buffer with cursor
+            body.add_text(&editor.edit_buffer, editing_style);
+            body.add_text("_", FragmentStyle {
+                color: highlight,
+                ..FragmentStyle::default()
+            });
+        } else {
+            let val_display = item.value.display();
+            let val_style = if item.value.is_bool() {
+                let is_true = matches!(item.value, crate::settings_editor::SettingValue::Bool(true));
+                FragmentStyle {
+                    color: if is_true { green } else { red },
+                    ..FragmentStyle::default()
+                }
+            } else if is_selected {
+                FragmentStyle {
+                    color: highlight,
+                    ..FragmentStyle::default()
+                }
             } else {
-                "no"
+                value_style
+            };
+            body.add_text(&val_display, val_style);
+        }
+
+        // Description for selected item
+        if is_selected && !editor.editing {
+            body.add_text(&format!("  {}", item.description), FragmentStyle {
+                color: dim,
+                ..FragmentStyle::default()
+            });
+        }
+
+        body.new_line();
+    }
+
+    // Scroll indicator
+    if filtered.len() > editor.visible_rows {
+        body.add_text("", label_style).new_line();
+        body.add_text(
+            &format!(
+                "   Showing {}-{} of {}",
+                editor.scroll_offset + 1,
+                end,
+                filtered.len()
+            ),
+            FragmentStyle {
+                color: dim,
+                ..FragmentStyle::default()
             },
-            value_style,
         )
         .new_line();
+    }
 
     body.add_text("", label_style).new_line();
-
-    // ── Colors ──
-    body.add_text("COLORS", category_style).new_line();
-
-    let bg_hex = color_to_hex(&config.colors.background.0);
-    body.add_text("  Background:  ", label_style)
-        .add_text(&bg_hex, value_style)
-        .new_line();
-
-    let fg_hex = color_to_hex(&config.colors.foreground);
-    body.add_text("  Foreground:  ", label_style)
-        .add_text(&fg_hex, value_style)
-        .new_line();
-
-    let cursor_hex = color_to_hex(&config.colors.cursor);
-    body.add_text("  Cursor:      ", label_style)
-        .add_text(&cursor_hex, value_style)
-        .new_line();
-
     body.add_text("", label_style).new_line();
 
-    // ── Shell ──
-    body.add_text("SHELL", category_style).new_line();
-
-    let program = if config.shell.program.is_empty() {
-        "(default)"
+    // --- Footer with keybindings ---
+    if editor.editing {
+        body.add_text(" Enter ", key_bg_style)
+            .add_text(" confirm  ", dim_style())
+            .add_text(" Escape ", key_bg_style)
+            .add_text(" cancel", dim_style());
     } else {
-        &config.shell.program
-    };
-    body.add_text("  Program:     ", label_style)
-        .add_text(program, value_style)
-        .new_line();
-
-    let args = if config.shell.args.is_empty() {
-        String::from("(none)")
-    } else {
-        config.shell.args.join(" ")
-    };
-    body.add_text("  Args:        ", label_style)
-        .add_text(&args, value_style)
-        .new_line();
-
-    let working_dir = config.working_dir.as_deref().unwrap_or("(default)");
-    body.add_text("  Working dir: ", label_style)
-        .add_text(working_dir, value_style)
-        .new_line();
-
-    body.add_text("", label_style).new_line();
-
-    // ── Developer ──
-    body.add_text("DEVELOPER", category_style).new_line();
-
-    body.add_text("  Log level:   ", label_style)
-        .add_text(&config.developer.log_level, value_style)
-        .new_line();
-
-    body.add_text("  Log file:    ", label_style)
-        .add_text(
-            if config.developer.enable_log_file {
-                "enabled"
-            } else {
-                "disabled"
-            },
-            value_style,
-        )
-        .new_line();
-
-    body.add_text("", label_style).new_line();
-    body.add_text("", label_style).new_line();
-
-    // ── Footer ──
-    body.add_text(" Escape ", key_bg_style)
-        .add_text(" close", dim_style());
+        body.add_text(" Up/Down ", key_bg_style)
+            .add_text(" navigate  ", dim_style())
+            .add_text(" Enter ", key_bg_style)
+            .add_text(" edit  ", dim_style())
+            .add_text(" / ", key_bg_style)
+            .add_text(" search  ", dim_style())
+            .add_text(" Escape ", key_bg_style)
+            .add_text(" close", dim_style());
+    }
 
     body.build();
 

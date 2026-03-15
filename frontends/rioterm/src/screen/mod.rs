@@ -2795,12 +2795,15 @@ impl Screen<'_> {
         self.sugarloaf.render();
     }
 
-    pub fn render_settings(&mut self, config: &rio_backend::config::Config) {
+    pub fn render_settings(
+        &mut self,
+        editor: &crate::settings_editor::SettingsEditor,
+    ) {
         self.sugarloaf.clear();
         crate::router::routes::settings::screen(
             &mut self.sugarloaf,
             &self.context_manager.current().dimension,
-            config,
+            editor,
         );
         self.sugarloaf.render();
     }

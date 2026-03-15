@@ -32,6 +32,7 @@ mod router;
 mod scheduler;
 mod screen;
 mod session_export;
+mod settings_editor;
 mod shell_integration;
 mod shell_intelligence;
 mod slash_commands;
