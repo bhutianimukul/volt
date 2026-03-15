@@ -2911,7 +2911,12 @@ impl Screen<'_> {
     }
 
     /// Extract the text on the current cursor line from the terminal grid.
-    /// Strips shell prompt characters ($, %, #, >) to isolate the actual command.
+    /// Strips common shell prompt prefixes to isolate the actual command.
+    ///
+    /// Uses a conservative approach: only strips prompt characters (`$`, `%`,
+    /// `#`, `>`) that appear as the *first* such character in the line,
+    /// typically right before the command.  Using `rfind` would incorrectly
+    /// strip redirects like `echo foo > bar`.
     pub fn extract_current_command_line(&self) -> String {
         let terminal = self.ctx().current().terminal.lock();
         let cursor_line = terminal.grid.cursor.pos.row;
@@ -2930,14 +2935,24 @@ impl Screen<'_> {
 
         let trimmed = line_text.trim_end().to_string();
 
-        // Strip common shell prompts: skip everything up to and including
-        // the last '$', '%', '#', or '>' that appears before the actual command.
-        // This handles prompts like "user@host:~$ ", "% ", "> ", etc.
+        // Strip common shell prompts by finding the *first* prompt character
+        // (`$`, `%`, `#`, `>`) followed by a space.  This avoids stripping
+        // redirect operators or other in-command uses of these characters.
+        // Handles prompts like "user@host:~$ ", "% ", "# ", "> ", etc.
         if let Some(pos) =
-            trimmed.rfind(|c| c == '$' || c == '%' || c == '#' || c == '>')
+            trimmed.find(|c| c == '$' || c == '%' || c == '#' || c == '>')
         {
             let after = &trimmed[pos + 1..];
-            after.trim_start().to_string()
+            // Only treat this as a prompt if it is followed by whitespace
+            // (or is at the end of the string).  Otherwise leave the line as-is.
+            if after.is_empty() || after.starts_with(' ') || after.starts_with('\t') {
+                let cmd = after.trim_start().to_string();
+                if !cmd.is_empty() {
+                    return cmd;
+                }
+            }
+            // Fallback: return the whole trimmed line when stripping yields nothing useful
+            trimmed
         } else {
             trimmed
         }
