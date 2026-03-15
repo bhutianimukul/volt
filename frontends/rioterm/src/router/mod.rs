@@ -58,6 +58,8 @@ pub struct Route<'a> {
     pub connections_list: Vec<(String, String, String, String)>,
     /// Scroll offset for the slash commands viewer
     pub slash_commands_scroll: usize,
+    /// Currently selected index in the slash commands viewer
+    pub slash_selected: usize,
     /// Currently selected index in the layouts viewer
     pub layouts_selected: usize,
     /// Currently selected category index in the settings sidebar
@@ -109,6 +111,7 @@ impl Route<'_> {
             connections_selected: 0,
             connections_list: Vec::new(),
             slash_commands_scroll: 0,
+            slash_selected: 0,
             layouts_selected: 0,
             settings_category: 0,
             settings_in_sidebar: true,
@@ -1069,26 +1072,43 @@ impl Route<'_> {
             if key_event.state != rio_window::event::ElementState::Pressed {
                 return true;
             }
+            let all_cmds = crate::slash_commands::all_commands();
+            let cmd_count = all_cmds.len();
             match &key_event.logical_key {
                 Key::Named(NamedKey::Escape) => {
                     self.slash_commands_scroll = 0;
+                    self.slash_selected = 0;
                     self.path = RoutePath::Terminal;
                 }
                 Key::Named(NamedKey::ArrowDown) => {
-                    self.slash_commands_scroll =
-                        self.slash_commands_scroll.saturating_add(1);
+                    if cmd_count > 0 && self.slash_selected + 1 < cmd_count {
+                        self.slash_selected += 1;
+                    }
                 }
                 Key::Named(NamedKey::ArrowUp) => {
-                    self.slash_commands_scroll =
-                        self.slash_commands_scroll.saturating_sub(1);
+                    self.slash_selected = self.slash_selected.saturating_sub(1);
                 }
                 Key::Named(NamedKey::PageDown) => {
-                    self.slash_commands_scroll =
-                        self.slash_commands_scroll.saturating_add(20);
+                    self.slash_selected =
+                        (self.slash_selected + 10).min(cmd_count.saturating_sub(1));
                 }
                 Key::Named(NamedKey::PageUp) => {
-                    self.slash_commands_scroll =
-                        self.slash_commands_scroll.saturating_sub(20);
+                    self.slash_selected = self.slash_selected.saturating_sub(10);
+                }
+                Key::Named(NamedKey::Enter) => {
+                    // Insert the selected slash command into the terminal
+                    if let Some(cmd) = all_cmds.get(self.slash_selected) {
+                        let text = format!("/{}", cmd.name);
+                        self.window
+                            .screen
+                            .ctx_mut()
+                            .current_mut()
+                            .messenger
+                            .send_write(text.into_bytes());
+                    }
+                    self.slash_commands_scroll = 0;
+                    self.slash_selected = 0;
+                    self.path = RoutePath::Terminal;
                 }
                 _ => {}
             }
@@ -1679,6 +1699,7 @@ impl Router<'_> {
             connections_selected: 0,
             connections_list: Vec::new(),
             slash_commands_scroll: 0,
+            slash_selected: 0,
             layouts_selected: 0,
             settings_category: 0,
             settings_in_sidebar: true,
@@ -1742,6 +1763,7 @@ impl Router<'_> {
                 connections_selected: 0,
                 connections_list: Vec::new(),
                 slash_commands_scroll: 0,
+                slash_selected: 0,
                 layouts_selected: 0,
                 settings_category: 0,
                 settings_in_sidebar: true,

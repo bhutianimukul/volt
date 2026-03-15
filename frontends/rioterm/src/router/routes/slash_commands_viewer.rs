@@ -7,6 +7,7 @@ pub fn screen(
     sugarloaf: &mut Sugarloaf,
     context_dimension: &ContextDimension,
     scroll_offset: usize,
+    selected_index: usize,
 ) {
     let bg = [0.06, 0.06, 0.08, 1.0];
     let accent = [0.98, 0.73, 0.16, 1.0]; // yellow/gold (Volt brand)
@@ -111,7 +112,17 @@ pub fn screen(
         CommandCategory::Debug,
     ];
 
+    let selected_style = FragmentStyle {
+        color: white,
+        ..FragmentStyle::default()
+    };
+    let selected_cmd_style = FragmentStyle {
+        color: [0.5, 0.9, 1.0, 1.0],
+        ..FragmentStyle::default()
+    };
+
     let mut line_idx: usize = 0;
+    let mut flat_cmd_idx: usize = 0;
     for category in &categories {
         if line_idx > scroll_offset {
             body.new_line()
@@ -121,8 +132,13 @@ pub fn screen(
         line_idx += 1;
 
         for cmd in commands.iter().filter(|c| c.category == *category) {
+            let is_selected = flat_cmd_idx == selected_index;
             if line_idx > scroll_offset {
-                body.add_text(&format!("  /{}", cmd.name), cmd_style);
+                if is_selected {
+                    body.add_text(&format!("> /{}", cmd.name), selected_cmd_style);
+                } else {
+                    body.add_text(&format!("  /{}", cmd.name), cmd_style);
+                }
 
                 // Padding dots
                 let pad_len = 16usize.saturating_sub(cmd.name.len() + 1);
@@ -130,11 +146,17 @@ pub fn screen(
                 body.add_text(&dots, dim_style);
                 body.add_text(" ", dim_style);
 
-                body.add_text(cmd.description, desc_style).new_line();
+                let d_style = if is_selected {
+                    selected_style
+                } else {
+                    desc_style
+                };
+                body.add_text(cmd.description, d_style).new_line();
                 body.add_text(&format!("    {}", cmd.usage), dim_style)
                     .new_line();
             }
             line_idx += 1;
+            flat_cmd_idx += 1;
         }
     }
 
@@ -152,7 +174,9 @@ pub fn screen(
     let fc = sugarloaf.content().sel(footer_rt);
     fc.clear().new_line();
     fc.add_text(" \u{2191}\u{2193} ", key_bg_style)
-        .add_text(" scroll  ", dim_style)
+        .add_text(" navigate  ", dim_style)
+        .add_text(" Enter ", key_bg_style)
+        .add_text(" insert  ", dim_style)
         .add_text(" Escape ", key_bg_style)
         .add_text(" close", dim_style);
     fc.build();

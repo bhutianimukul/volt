@@ -854,6 +854,7 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                         route.path = RoutePath::Terminal;
                     } else {
                         route.slash_commands_scroll = 0;
+                        route.slash_selected = 0;
                         route.path = RoutePath::SlashCommands;
                     }
                     route.request_redraw();
@@ -2106,10 +2107,10 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                         );
                     }
                     RoutePath::SlashCommands => {
-                        route
-                            .window
-                            .screen
-                            .render_slash_commands(route.slash_commands_scroll);
+                        route.window.screen.render_slash_commands(
+                            route.slash_commands_scroll,
+                            route.slash_selected,
+                        );
                     }
                     RoutePath::Layouts => {
                         route.window.screen.render_layouts(route.layouts_selected);
