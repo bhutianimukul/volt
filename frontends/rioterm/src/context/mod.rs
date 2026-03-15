@@ -140,6 +140,9 @@ pub struct ContextManager<T: EventListener> {
     pub config: ContextManagerConfig,
     pub titles: ContextManagerTitles,
     pub block_manager: BlockManager,
+    pub notification_manager: crate::notifications::NotificationManager,
+    pub dock_badge: crate::dock_badge::DockBadgeManager,
+    pub trigger_engine: crate::triggers::TriggerEngine,
 }
 
 pub fn create_dead_context<T: rio_backend::event::EventListener>(
@@ -397,6 +400,8 @@ impl<T: EventListener + Clone + std::marker::Send + 'static> ContextManager<T> {
             config: ctx_config,
             titles,
             block_manager: BlockManager::new(),
+            notification_manager: crate::notifications::NotificationManager::new(),
+            dock_badge: crate::dock_badge::DockBadgeManager::new(),
         })
     }
 
@@ -445,6 +450,8 @@ impl<T: EventListener + Clone + std::marker::Send + 'static> ContextManager<T> {
             config,
             titles,
             block_manager: BlockManager::new(),
+            notification_manager: crate::notifications::NotificationManager::new(),
+            dock_badge: crate::dock_badge::DockBadgeManager::new(),
         })
     }
 

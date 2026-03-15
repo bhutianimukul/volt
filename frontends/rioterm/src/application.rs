@@ -547,6 +547,17 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                 if self.config.bell.audio {
                     self.handle_audio_bell();
                 }
+
+                // Handle dock badge for unfocused windows
+                if let Some(route) = self.router.routes.get_mut(&window_id) {
+                    let is_focused = route.window.is_focused;
+                    route
+                        .window
+                        .screen
+                        .context_manager()
+                        .dock_badge
+                        .on_bell(is_focused);
+                }
             }
             RioEventType::Rio(RioEvent::PrepareRender(millis)) => {
                 if let Some(route) = self.router.routes.get(&window_id) {
@@ -903,6 +914,12 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                         .context_manager
                         .block_manager
                         .on_output_start(row, String::new());
+                    route
+                        .window
+                        .screen
+                        .context_manager
+                        .notification_manager
+                        .command_started(String::new());
                 }
             }
             RioEventType::Rio(RioEvent::ShellCommandFinish { row, exit_code }) => {
@@ -913,6 +930,15 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                         .context_manager
                         .block_manager
                         .on_command_finish(row, exit_code);
+                    let is_focused = route.window.is_focused;
+                    if !is_focused {
+                        route
+                            .window
+                            .screen
+                            .context_manager
+                            .notification_manager
+                            .command_finished(exit_code);
+                    }
                 }
             }
             _ => {}

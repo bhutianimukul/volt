@@ -255,6 +255,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     setup_environment_variables(&config);
 
+    // Install shell integration scripts for OSC 133 block tracking
+    crate::shell_integration::install_integration_scripts();
+
     let window_event_loop =
         rio_window::event_loop::EventLoop::<EventPayload>::with_user_event().build()?;
 
