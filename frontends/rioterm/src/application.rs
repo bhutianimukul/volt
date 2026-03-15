@@ -948,6 +948,12 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                         .window
                         .screen
                         .context_manager
+                        .shell_profiler
+                        .on_first_prompt();
+                    route
+                        .window
+                        .screen
+                        .context_manager
                         .block_manager
                         .on_prompt_start(row);
                 }

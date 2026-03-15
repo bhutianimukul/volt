@@ -193,7 +193,7 @@ impl ScreenNavigation {
     ) {
         let (width, height, scale) = dimensions;
         let visible_width = width / scale;
-        let tabs_hidden = hide_if_single && len <= 1;
+        let tabs_hidden = false; // Always show navbar
 
         // ALWAYS draw tab bar background and buttons
         objects.push(Object::Quad(Quad {

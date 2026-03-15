@@ -145,6 +145,7 @@ pub struct ContextManager<T: EventListener> {
     pub trigger_engine: crate::triggers::TriggerEngine,
     pub audit_logger: crate::audit_log::AuditLogger,
     pub session_recorder: crate::time_travel::SessionRecorder,
+    pub shell_profiler: crate::shell_profiler::ShellProfiler,
 }
 
 pub fn create_dead_context<T: rio_backend::event::EventListener>(
@@ -411,6 +412,7 @@ impl<T: EventListener + Clone + std::marker::Send + 'static> ContextManager<T> {
             trigger_engine,
             audit_logger: crate::audit_log::AuditLogger::new(false),
             session_recorder: crate::time_travel::SessionRecorder::new(),
+            shell_profiler: crate::shell_profiler::ShellProfiler::new(),
         })
     }
 
@@ -470,6 +472,7 @@ impl<T: EventListener + Clone + std::marker::Send + 'static> ContextManager<T> {
             },
             audit_logger: crate::audit_log::AuditLogger::new(false),
             session_recorder: crate::time_travel::SessionRecorder::new(),
+            shell_profiler: crate::shell_profiler::ShellProfiler::new(),
         })
     }
 
