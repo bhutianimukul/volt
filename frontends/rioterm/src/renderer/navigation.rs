@@ -201,15 +201,6 @@ impl ScreenNavigation {
             ..Quad::default()
         }));
 
-        // Volt branding — small, subtle, separated from tabs by a divider
-        let brand_rt = sugarloaf.create_temp_rich_text();
-        sugarloaf.set_rich_text_font_size(&brand_rt, 11.);
-        let brand_dim = FragmentStyle { color: [0.4, 0.4, 0.45, 0.6], ..FragmentStyle::default() };
-        sugarloaf.content().sel(brand_rt).clear().new_line()
-            .add_text("Volt", FragmentStyle { color: [0.85, 0.65, 0.15, 0.9], ..FragmentStyle::default() })
-            .add_text("  |", brand_dim)
-            .build();
-        objects.push(Object::RichText(RichText { id: brand_rt, position: [4.0, position_y + 1.0], lines: None }));
 
         // Tab pills only when not hidden
         if !tabs_hidden {
