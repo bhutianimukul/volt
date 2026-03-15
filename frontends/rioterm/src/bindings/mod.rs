@@ -248,6 +248,8 @@ impl From<String> for Action {
             "showhistory" => Some(Action::ShowHistory),
             "showenvviewer" => Some(Action::ShowEnvViewer),
             "showbookmarks" => Some(Action::ShowBookmarks),
+            "showslashcommands" => Some(Action::ShowSlashCommands),
+            "showlayouts" => Some(Action::ShowLayouts),
             "selectprevtab" => Some(Action::SelectPrevTab),
             "selectnexttab" => Some(Action::SelectNextTab),
             "selectlasttab" => Some(Action::SelectLastTab),
@@ -535,6 +537,12 @@ pub enum Action {
 
     /// Show the bookmarks viewer overlay.
     ShowBookmarks,
+
+    /// Show the slash command palette overlay.
+    ShowSlashCommands,
+
+    /// Show the layout presets overlay.
+    ShowLayouts,
 
     /// Open the AI assistant (Claude Code) in a split pane.
     OpenAiAssistant,
@@ -1057,6 +1065,8 @@ pub fn platform_key_bindings(
         "h", ModifiersState::SUPER | ModifiersState::SHIFT; Action::ShowHistory;
         "e", ModifiersState::SUPER | ModifiersState::SHIFT; Action::ShowEnvViewer;
         "k", ModifiersState::SUPER | ModifiersState::SHIFT; Action::ShowBookmarks;
+        "p", ModifiersState::SUPER | ModifiersState::SHIFT; Action::ShowSlashCommands;
+        "l", ModifiersState::SUPER | ModifiersState::SHIFT; Action::ShowLayouts;
 
         // AI assistant
         "i", ModifiersState::SUPER | ModifiersState::SHIFT; Action::OpenAiAssistant;

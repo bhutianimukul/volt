@@ -1025,6 +1025,12 @@ impl Screen<'_> {
                     Act::ShowBookmarks => {
                         self.context_manager.toggle_bookmarks();
                     }
+                    Act::ShowSlashCommands => {
+                        self.context_manager.toggle_slash_commands();
+                    }
+                    Act::ShowLayouts => {
+                        self.context_manager.toggle_layouts();
+                    }
                     Act::OpenAiAssistant => {
                         if crate::ai_assistant::is_claude_available() {
                             self.split_right();
@@ -2938,6 +2944,26 @@ impl Screen<'_> {
             &mut self.sugarloaf,
             &self.context_manager.current().dimension,
             connections,
+            selected_index,
+        );
+        self.sugarloaf.render();
+    }
+
+    pub fn render_slash_commands(&mut self, scroll_offset: usize) {
+        self.sugarloaf.clear();
+        crate::router::routes::slash_commands_viewer::screen(
+            &mut self.sugarloaf,
+            &self.context_manager.current().dimension,
+            scroll_offset,
+        );
+        self.sugarloaf.render();
+    }
+
+    pub fn render_layouts(&mut self, selected_index: usize) {
+        self.sugarloaf.clear();
+        crate::router::routes::layouts_viewer::screen(
+            &mut self.sugarloaf,
+            &self.context_manager.current().dimension,
             selected_index,
         );
         self.sugarloaf.render();

@@ -841,6 +841,28 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                     route.request_redraw();
                 }
             }
+            RioEventType::Rio(RioEvent::ToggleSlashCommands) => {
+                if let Some(route) = self.router.routes.get_mut(&window_id) {
+                    if route.path == RoutePath::SlashCommands {
+                        route.path = RoutePath::Terminal;
+                    } else {
+                        route.slash_commands_scroll = 0;
+                        route.path = RoutePath::SlashCommands;
+                    }
+                    route.request_redraw();
+                }
+            }
+            RioEventType::Rio(RioEvent::ToggleLayouts) => {
+                if let Some(route) = self.router.routes.get_mut(&window_id) {
+                    if route.path == RoutePath::Layouts {
+                        route.path = RoutePath::Terminal;
+                    } else {
+                        route.layouts_selected = 0;
+                        route.path = RoutePath::Layouts;
+                    }
+                    route.request_redraw();
+                }
+            }
             #[cfg(target_os = "macos")]
             RioEventType::Rio(RioEvent::CloseWindow) => {
                 self.router.routes.remove(&window_id);
@@ -1216,6 +1238,12 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                                             route.connections_selected = 0;
                                             route.path = RoutePath::Connections;
                                         }
+                                    }
+                                    NavButton::SlashCommands => {
+                                        route.window.screen.context_manager.toggle_slash_commands();
+                                    }
+                                    NavButton::Layouts => {
+                                        route.window.screen.context_manager.toggle_layouts();
                                     }
                                     _ => {}
                                 }
@@ -1933,6 +1961,12 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                             &route.connections_list,
                             route.connections_selected,
                         );
+                    }
+                    RoutePath::SlashCommands => {
+                        route.window.screen.render_slash_commands(route.slash_commands_scroll);
+                    }
+                    RoutePath::Layouts => {
+                        route.window.screen.render_layouts(route.layouts_selected);
                     }
                 }
 

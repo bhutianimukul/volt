@@ -256,6 +256,8 @@ pub fn screen(
         .add_text(" navigate  ", footer_dim_style())
         .add_text(" Enter ", key_bg_style)
         .add_text(" paste cmd  ", footer_dim_style())
+        .add_text(" e ", key_bg_style)
+        .add_text(" export .cast  ", footer_dim_style())
         .add_text(" PgUp/PgDn ", key_bg_style)
         .add_text(" jump  ", footer_dim_style())
         .add_text(" Escape ", key_bg_style)

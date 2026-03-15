@@ -92,6 +92,8 @@ pub enum RioEvent {
     ToggleTmuxPicker,
     ToggleEnvViewer,
     ToggleBookmarks,
+    ToggleSlashCommands,
+    ToggleLayouts,
     SelectNativeTabByIndex(usize),
     SelectNativeTabLast,
     SelectNativeTabNext,
@@ -264,6 +266,8 @@ impl Debug for RioEvent {
             RioEvent::ToggleTmuxPicker => write!(f, "ToggleTmuxPicker"),
             RioEvent::ToggleEnvViewer => write!(f, "ToggleEnvViewer"),
             RioEvent::ToggleBookmarks => write!(f, "ToggleBookmarks"),
+            RioEvent::ToggleSlashCommands => write!(f, "ToggleSlashCommands"),
+            RioEvent::ToggleLayouts => write!(f, "ToggleLayouts"),
         }
     }
 }

@@ -50,6 +50,10 @@ pub struct Route<'a> {
     pub connections_selected: usize,
     /// Cached connections list: (name, type_name, host_info, command)
     pub connections_list: Vec<(String, String, String, String)>,
+    /// Scroll offset for the slash commands viewer
+    pub slash_commands_scroll: usize,
+    /// Currently selected index in the layouts viewer
+    pub layouts_selected: usize,
 }
 
 impl Route<'_> {
@@ -73,6 +77,8 @@ impl Route<'_> {
             bookmarks_scroll: 0,
             connections_selected: 0,
             connections_list: Vec::new(),
+            slash_commands_scroll: 0,
+            layouts_selected: 0,
         }
     }
 }
@@ -420,6 +426,38 @@ impl Route<'_> {
                     self.history_selected = 0;
                     self.path = RoutePath::Terminal;
                 }
+                Key::Character(c) if c.as_str() == "e" || c.as_str() == "E" => {
+                    // Export session as .cast file to Desktop
+                    let entries = self.window.screen.context_manager.session_recorder.recent(500);
+                    let mut recording = crate::session_export::SessionRecording::new(80, 24);
+                    let mut ts = 0.0_f64;
+                    for entry in entries.iter().rev() {
+                        recording.add_input(ts, format!("{}\r\n", entry.command));
+                        ts += 0.5;
+                        if !entry.output_preview.is_empty() {
+                            recording.add_output(ts, entry.output_preview.clone());
+                            ts += 0.3;
+                        }
+                    }
+                    let desktop = dirs::desktop_dir().unwrap_or_else(|| {
+                        std::path::PathBuf::from(std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string()))
+                            .join("Desktop")
+                    });
+                    let timestamp = std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .map(|d| d.as_secs())
+                        .unwrap_or(0);
+                    let filename = format!("volt-session-{}.cast", timestamp);
+                    let path = desktop.join(&filename);
+                    match recording.save_to_file(&path) {
+                        Ok(()) => {
+                            tracing::info!("Session exported to {}", path.display());
+                        }
+                        Err(e) => {
+                            tracing::error!("Failed to export session: {}", e);
+                        }
+                    }
+                }
                 _ => {}
             }
             return true;
@@ -512,6 +550,61 @@ impl Route<'_> {
                         self.connections_selected = 0;
                         self.path = RoutePath::Terminal;
                     }
+                }
+                _ => {}
+            }
+            return true;
+        }
+
+        if self.path == RoutePath::SlashCommands {
+            if key_event.state != rio_window::event::ElementState::Pressed {
+                return true;
+            }
+            match &key_event.logical_key {
+                Key::Named(NamedKey::Escape) => {
+                    self.slash_commands_scroll = 0;
+                    self.path = RoutePath::Terminal;
+                }
+                Key::Named(NamedKey::ArrowDown) => {
+                    self.slash_commands_scroll = self.slash_commands_scroll.saturating_add(1);
+                }
+                Key::Named(NamedKey::ArrowUp) => {
+                    self.slash_commands_scroll = self.slash_commands_scroll.saturating_sub(1);
+                }
+                Key::Named(NamedKey::PageDown) => {
+                    self.slash_commands_scroll = self.slash_commands_scroll.saturating_add(20);
+                }
+                Key::Named(NamedKey::PageUp) => {
+                    self.slash_commands_scroll = self.slash_commands_scroll.saturating_sub(20);
+                }
+                _ => {}
+            }
+            return true;
+        }
+
+        if self.path == RoutePath::Layouts {
+            if key_event.state != rio_window::event::ElementState::Pressed {
+                return true;
+            }
+            match &key_event.logical_key {
+                Key::Named(NamedKey::Escape) => {
+                    self.layouts_selected = 0;
+                    self.path = RoutePath::Terminal;
+                }
+                Key::Named(NamedKey::ArrowUp) => {
+                    self.layouts_selected = self.layouts_selected.saturating_sub(1);
+                }
+                Key::Named(NamedKey::ArrowDown) => {
+                    let max_idx = crate::router::routes::layouts_viewer::presets().len().saturating_sub(1);
+                    if self.layouts_selected < max_idx {
+                        self.layouts_selected += 1;
+                    }
+                }
+                Key::Named(NamedKey::Enter) => {
+                    // Layout presets coming soon — close the viewer for now
+                    tracing::info!("Layout preset selected: index={}", self.layouts_selected);
+                    self.layouts_selected = 0;
+                    self.path = RoutePath::Terminal;
                 }
                 _ => {}
             }
@@ -792,6 +885,8 @@ impl Router<'_> {
             bookmarks_scroll: 0,
             connections_selected: 0,
             connections_list: Vec::new(),
+            slash_commands_scroll: 0,
+            layouts_selected: 0,
         };
 
         if let Some(err) = &self.propagated_report {
@@ -838,6 +933,8 @@ impl Router<'_> {
                 bookmarks_scroll: 0,
                 connections_selected: 0,
                 connections_list: Vec::new(),
+                slash_commands_scroll: 0,
+                layouts_selected: 0,
             },
         );
     }

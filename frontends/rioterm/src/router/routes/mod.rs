@@ -5,7 +5,9 @@ pub mod dialog;
 pub mod env_viewer;
 pub mod help;
 pub mod history;
+pub mod layouts_viewer;
 pub mod settings;
+pub mod slash_commands_viewer;
 pub mod tmux_picker;
 pub mod welcome;
 
@@ -22,4 +24,6 @@ pub enum RoutePath {
     EnvViewer,
     Bookmarks,
     Connections,
+    SlashCommands,
+    Layouts,
 }

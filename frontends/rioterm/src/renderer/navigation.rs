@@ -379,6 +379,8 @@ impl ScreenNavigation {
             ("Env",       [0.2, 0.6, 0.7, 1.0],   32.0),  // cyan
             ("Bookmarks", [0.7, 0.4, 0.2, 1.0],   68.0),  // orange
             ("Connect",   [0.2, 0.7, 0.5, 1.0],   56.0),  // teal
+            ("Cmds",      [0.8, 0.6, 0.1, 1.0],   40.0),  // gold
+            ("Layout",    [0.3, 0.5, 0.8, 1.0],   48.0),  // blue
         ];
 
         for (label, color, w) in &buttons {
@@ -424,6 +426,8 @@ pub enum NavButton {
     EnvViewer,
     Bookmarks,
     Connections,
+    SlashCommands,
+    Layouts,
 }
 
 /// Check if a click (in logical pixels) hit a top bar button.
@@ -467,6 +471,10 @@ pub fn status_button_at_position(x: f32, y: f32, win_height: f32, visible_width:
     let bookmarks_w = 68.0_f32;
     let connections_x = bookmarks_x + bookmarks_w + btn_gap;
     let connections_w = 56.0_f32;
+    let cmds_x = connections_x + connections_w + btn_gap;
+    let cmds_w = 40.0_f32;
+    let layout_x = cmds_x + cmds_w + btn_gap;
+    let layout_w = 48.0_f32;
 
     if x >= ai_x && x <= ai_x + ai_w {
         return Some(NavButton::AiAssistant);
@@ -482,6 +490,12 @@ pub fn status_button_at_position(x: f32, y: f32, win_height: f32, visible_width:
     }
     if x >= connections_x && x <= connections_x + connections_w {
         return Some(NavButton::Connections);
+    }
+    if x >= cmds_x && x <= cmds_x + cmds_w {
+        return Some(NavButton::SlashCommands);
+    }
+    if x >= layout_x && x <= layout_x + layout_w {
+        return Some(NavButton::Layouts);
     }
 
     // Right side
