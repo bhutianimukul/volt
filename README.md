@@ -6,7 +6,7 @@
 <p align="center">A fast, modern GPU-accelerated terminal emulator built in Rust</p>
 
 <p align="center">
-  <img src="misc/screenshots/terminal.png" alt="Volt Terminal" width="800">
+  <img src="misc/screenshots/window.png" alt="Volt Terminal" width="800">
 </p>
 
 ## Highlights
@@ -16,7 +16,7 @@
 - Split panes with drag-to-resize dividers
 - 40+ interactive settings with live preview
 - Built-in AI assistant, session history, bookmarks, connections manager
-- 6 layout presets, session export, tmux integration
+- Tmux integration with session picker
 - Colorful status bar with one-click access to all features
 
 ## Color-Coded Tabs
@@ -26,12 +26,6 @@
 Each tab gets a unique color. Double-click to rename:
 
 <img src="misc/screenshots/rename-tab.png" alt="Rename tab" width="800">
-
-## Split Panes & AI Assistant
-
-<img src="misc/screenshots/splits.png" alt="Split panes with AI" width="800">
-
-Split vertically (Cmd+D), zoom any pane (Cmd+Shift+Enter), broadcast input to all panes (Cmd+Shift+B). The AI assistant (Cmd+Shift+I) opens Claude Code in a split.
 
 ## Interactive Settings (Cmd+,)
 
@@ -69,33 +63,11 @@ Save important commands. Enter to paste, `d` to delete. Persistent across sessio
 
 SSH, MySQL, PostgreSQL, Redis, Kubernetes, Docker. Create with `n`, connect with Enter, edit config with `e`.
 
-## Layout Presets (Cmd+Shift+L)
-
-<img src="misc/screenshots/layouts.png" alt="Layout presets" width="800">
-
-Six presets: Side by Side, Top/Bottom, Dev, Quad, Three Column, Fullscreen.
-
-## Session Export (Cmd+Shift+X)
-
-<img src="misc/screenshots/export.png" alt="Session export" width="800">
-
-Export as Asciinema (.cast), Plain Text, HTML, or JSON.
-
 ## Tmux Integration (Cmd+Shift+M)
 
 <img src="misc/screenshots/tmux.png" alt="Tmux picker" width="800">
 
 Sidebar list with session details. Attach, detach, kill, rename, create sessions.
-
-## Session Sharing (Cmd+Shift+S)
-
-<img src="misc/screenshots/sharing.png" alt="Session sharing" width="800">
-
-Host or connect to shared terminal sessions over the network.
-
-## Windowed View
-
-<img src="misc/screenshots/window.png" alt="Volt window" width="800">
 
 ## Keyboard Shortcuts
 
