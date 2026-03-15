@@ -368,13 +368,23 @@ impl ScreenNavigation {
         let sb = content.sel(sb_rt);
         sb.clear().new_line();
 
-        // Clean minimal status bar — just branding + hints
+        // Status bar with all features
         let sb_brand = FragmentStyle { color: [0.85, 0.65, 0.15, 0.9], ..FragmentStyle::default() };
         sb.add_text(" Volt", sb_brand);
-        sb.add_text("  ", sb_sep);
-        sb.add_text("Help: Cmd+?", sb_text);
-        sb.add_text("  ", sb_sep);
-        sb.add_text("Settings: Cmd+,", sb_text);
+        sb.add_text(" ", sb_sep);
+        sb.add_text("AI ", sb_purple);
+        sb.add_text("|", sb_sep);
+        sb.add_text(" History ", sb_text);
+        sb.add_text("|", sb_sep);
+        sb.add_text(" Env ", sb_text);
+        sb.add_text("|", sb_sep);
+        sb.add_text(" Bookmarks ", sb_text);
+        sb.add_text("|", sb_sep);
+        sb.add_text(" Connect ", sb_accent);
+        sb.add_text("|", sb_sep);
+        sb.add_text(" Cmds ", sb_gold);
+        sb.add_text("|", sb_sep);
+        sb.add_text(" Layout ", sb_text);
 
         sb.build();
 

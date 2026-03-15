@@ -456,7 +456,7 @@ pub fn screen(
     sugarloaf.set_rich_text_font_size(&footer_rt, 11.0);
 
     let key_bg_style = FragmentStyle {
-        background_color: Some(highlight),
+        
         color: black,
         ..FragmentStyle::default()
     };
