@@ -591,6 +591,118 @@ impl Route<'_> {
                         self.path = RoutePath::Terminal;
                     }
                 }
+                Key::Character(c) if c.as_str() == "n" || c.as_str() == "N" => {
+                    #[cfg(target_os = "macos")]
+                    {
+                        use objc::runtime::{Class, Object};
+                        use objc::{msg_send, sel, sel_impl};
+                        use std::ffi::CString;
+
+                        unsafe {
+                            let ns_string_class = Class::get("NSString").unwrap();
+                            let alert_class = Class::get("NSAlert").unwrap();
+                            let text_field_class = Class::get("NSTextField").unwrap();
+
+                            // Helper to show input dialog
+                            let ask = |title: &str, prompt: &str| -> Option<String> {
+                                let alert: *mut Object = msg_send![alert_class, new];
+                                let title_ns: *mut Object = msg_send![ns_string_class,
+                                    stringWithUTF8String: CString::new(title).unwrap().as_ptr()];
+                                let _: () = msg_send![alert, setMessageText: title_ns];
+                                let info_ns: *mut Object = msg_send![ns_string_class,
+                                    stringWithUTF8String: CString::new(prompt).unwrap().as_ptr()];
+                                let _: () = msg_send![alert, setInformativeText: info_ns];
+                                let ok_ns: *mut Object = msg_send![ns_string_class,
+                                    stringWithUTF8String: CString::new("OK").unwrap().as_ptr()];
+                                let _: () = msg_send![alert, addButtonWithTitle: ok_ns];
+                                let cancel_ns: *mut Object = msg_send![ns_string_class,
+                                    stringWithUTF8String: CString::new("Cancel").unwrap().as_ptr()];
+                                let _: () = msg_send![alert, addButtonWithTitle: cancel_ns];
+
+                                let frame: ((f64, f64), (f64, f64)) = ((0.0, 0.0), (300.0, 24.0));
+                                let input: *mut Object = msg_send![text_field_class, alloc];
+                                let input: *mut Object = msg_send![input, initWithFrame: frame];
+                                let _: () = msg_send![alert, setAccessoryView: input];
+                                let window: *mut Object = msg_send![alert, window];
+                                let _: () = msg_send![window, setInitialFirstResponder: input];
+
+                                let response: i64 = msg_send![alert, runModal];
+                                if response == 1000 {
+                                    let value: *mut Object = msg_send![input, stringValue];
+                                    let utf8: *const std::ffi::c_char = msg_send![value, UTF8String];
+                                    let s = std::ffi::CStr::from_ptr(utf8).to_string_lossy().to_string();
+                                    if !s.is_empty() { Some(s) } else { None }
+                                } else {
+                                    None
+                                }
+                            };
+
+                            // Collect connection details
+                            if let Some(name) = ask("New Connection", "Connection name:") {
+                                if let Some(conn_type) = ask("Connection Type", "Type (ssh, mysql, postgres, redis, kubectl, docker):") {
+                                    if let Some(host) = ask("Host", "Hostname or IP:") {
+                                        let user = ask("User (optional)", "Username (leave empty to skip):");
+
+                                        // Build TOML entry and append to connections.toml
+                                        let conn_path = crate::connections::connection_config_path();
+                                        let mut content = std::fs::read_to_string(&conn_path).unwrap_or_default();
+
+                                        content.push_str(&format!("\n[connections.{}]\n", name));
+                                        content.push_str(&format!("type = \"{}\"\n", conn_type));
+                                        content.push_str(&format!("host = \"{}\"\n", host));
+                                        if let Some(u) = user {
+                                            content.push_str(&format!("user = \"{}\"\n", u));
+                                        }
+
+                                        let _ = std::fs::write(&conn_path, content);
+                                        tracing::info!("Connection '{}' created", name);
+
+                                        // Refresh the list
+                                        let config = crate::connections::load_connections();
+                                        self.connections_list = config.connections.iter()
+                                            .map(|(cname, conn)| (cname.clone(), conn.type_name().to_string(), conn.to_command(), conn.icon().to_string()))
+                                            .collect();
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                Key::Character(c) if c.as_str() == "d" || c.as_str() == "D" => {
+                    if let Some((name, _, _, _)) = self.connections_list.get(self.connections_selected) {
+                        let conn_path = crate::connections::connection_config_path();
+                        if let Ok(content) = std::fs::read_to_string(&conn_path) {
+                            // Remove the [connections.NAME] section
+                            let section_header = format!("[connections.{}]", name);
+                            let lines: Vec<&str> = content.lines().collect();
+                            let mut remove_start = None;
+                            let mut remove_end = None;
+                            for (i, line) in lines.iter().enumerate() {
+                                if line.trim() == section_header {
+                                    remove_start = Some(i);
+                                }
+                                if remove_start.is_some() && i > remove_start.unwrap() && line.starts_with('[') {
+                                    remove_end = Some(i);
+                                    break;
+                                }
+                            }
+                            if let Some(start) = remove_start {
+                                let end = remove_end.unwrap_or(lines.len());
+                                let mut lines = lines;
+                                lines.drain(start..end);
+                                let _ = std::fs::write(&conn_path, lines.join("\n"));
+                            }
+                        }
+                        // Refresh
+                        let config = crate::connections::load_connections();
+                        self.connections_list = config.connections.iter()
+                            .map(|(cname, conn)| (cname.clone(), conn.type_name().to_string(), conn.to_command(), conn.icon().to_string()))
+                            .collect();
+                        if self.connections_selected >= self.connections_list.len() && self.connections_selected > 0 {
+                            self.connections_selected -= 1;
+                        }
+                    }
+                }
                 Key::Character(c) if c.as_str() == "e" || c.as_str() == "E" => {
                     // Open connections.toml in the default editor
                     let path = crate::connections::connection_config_path();

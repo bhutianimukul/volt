@@ -281,8 +281,12 @@ pub fn screen(
         .add_text(" navigate  ", dim_style())
         .add_text(" Enter ", key_bg_style)
         .add_text(" connect  ", dim_style())
+        .add_text(" n ", key_bg_style)
+        .add_text(" new  ", dim_style())
+        .add_text(" d ", key_bg_style)
+        .add_text(" delete  ", dim_style())
         .add_text(" e ", key_bg_style)
-        .add_text(" edit config  ", dim_style())
+        .add_text(" edit file  ", dim_style())
         .add_text(" Esc ", key_bg_style)
         .add_text(" close", dim_style());
 
