@@ -2795,16 +2795,19 @@ impl Screen<'_> {
                 .messenger
                 .send_write(&b"\x1b[200~"[..]);
 
-            // Write filtered escape sequences.
-            //
-            // We remove `\x1b` to ensure it's impossible for the pasted text to write the bracketed
-            // paste end escape `\x1b[201~` and `\x03` since some shells incorrectly terminate
-            // bracketed paste on its receival.
-            let filtered = text.replace(['\x1b', '\x03'], "");
-            self.ctx_mut()
-                .current_mut()
-                .messenger
-                .send_write(filtered.into_bytes());
+            // Filter escape sequences but keep \x03 (Ctrl+C) so user can interrupt.
+            // Only filter \x1b to prevent bracketed paste escape injection.
+            let filtered = text.replace('\x1b', "");
+
+            // Send in chunks to avoid blocking the event loop on large pastes.
+            // This allows Ctrl+C to be processed between chunks.
+            const CHUNK_SIZE: usize = 4096;
+            for chunk in filtered.as_bytes().chunks(CHUNK_SIZE) {
+                self.ctx_mut()
+                    .current_mut()
+                    .messenger
+                    .send_write(chunk.to_vec());
+            }
 
             self.ctx_mut()
                 .current_mut()
