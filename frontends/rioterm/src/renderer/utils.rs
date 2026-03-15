@@ -31,8 +31,11 @@ pub fn padding_top_from_config(
                 0.0
             };
             return additional + padding_y_top;
-        } else if navigation.hide_if_single && num_tabs == 1 {
-            return default_padding;
+        }
+        // Always add tab bar padding for TopTab — even with single tab
+        // since we always render the tab bar now
+        if navigation.mode == NavigationMode::TopTab {
+            return constants::PADDING_Y + constants::PADDING_Y_BOTTOM_TABS + padding_y_top;
         }
     }
 
