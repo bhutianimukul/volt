@@ -196,7 +196,7 @@ impl Application<'_> {
                 stringWithUTF8String: path_str.as_ptr()];
 
             let ns_image: *mut Object = msg_send![ns_image_class, alloc];
-            let ns_image: *mut Object = msg_send![ns_image, initByReferencingFile: ns_path];
+            let ns_image: *mut Object = msg_send![ns_image, initWithContentsOfFile: ns_path];
 
             if ns_image.is_null() {
                 tracing::warn!("Failed to create NSImage from icon file");
