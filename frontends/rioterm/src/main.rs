@@ -6,6 +6,7 @@
 
 mod application;
 mod bindings;
+mod bookmarks;
 mod cli;
 mod connections;
 mod consequences;
@@ -27,11 +28,13 @@ mod router;
 mod scheduler;
 mod screen;
 mod session_export;
+mod shell_integration;
 mod shell_intelligence;
 mod slash_commands;
 mod structured_output;
 mod test_runner;
 mod time_travel;
+mod triggers;
 mod tmux_cc;
 mod undo;
 mod watcher;
