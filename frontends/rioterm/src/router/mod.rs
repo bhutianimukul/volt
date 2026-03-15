@@ -310,6 +310,12 @@ impl Route<'_> {
 
     #[inline]
     pub fn quit(&mut self) {
+        // Save session history before exiting
+        self.window
+            .screen
+            .context_manager
+            .session_recorder
+            .save_to_disk();
         std::process::exit(0);
     }
 
@@ -757,10 +763,16 @@ impl Route<'_> {
                     self.env_selected = self.env_selected.saturating_sub(20);
                 }
                 Key::Named(NamedKey::Enter) => {
-                    // Copy the selected variable's KEY=VALUE to the PTY
+                    // Copy the selected variable's KEY=VALUE to clipboard AND paste to terminal
                     let all_vars = crate::env_inspector::get_all_env_vars();
                     if let Some(var) = all_vars.get(self.env_selected) {
                         let text = format!("{}={}", var.key, var.value);
+                        // Copy to clipboard
+                        self.window.screen.clipboard.borrow_mut().set(
+                            rio_backend::clipboard::ClipboardType::Clipboard,
+                            text.clone(),
+                        );
+                        // Also paste into terminal
                         self.window
                             .screen
                             .ctx_mut()
