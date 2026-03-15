@@ -16,8 +16,8 @@
     </filter>
   </defs>
 
-  <!-- Pure black background -->
-  <rect x="32" y="32" width="960" height="960" rx="215" ry="215" fill="#000000"/>
+  <!-- Full black background — no rounded corners, fills entire icon -->
+  <rect x="0" y="0" width="1024" height="1024" fill="#000000"/>
 
   <!-- Yellow lightning bolt -->
   <g filter="url(#glow)">

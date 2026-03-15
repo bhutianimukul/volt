@@ -191,13 +191,12 @@ impl ScreenNavigation {
         hide_if_single: bool,
         dimensions: (f32, f32, f32),
     ) {
-        if hide_if_single && len <= 1 {
-            return;
-        }
-
         let (width, height, scale) = dimensions;
         let visible_width = width / scale;
+        let tabs_hidden = hide_if_single && len <= 1;
 
+        // Tab bar + buttons only if tabs should show
+        if !tabs_hidden {
         // Ensure current tab is visible
         self.ensure_tab_visible(current, visible_width);
 
@@ -350,7 +349,9 @@ impl ScreenNavigation {
             .add_text("Help", FragmentStyle { color: btn_fg, ..FragmentStyle::default() }).build();
         objects.push(Object::RichText(RichText { id: rt, position: [help_x + 6.0, btn_y + 1.0], lines: None }));
 
-        // --- Bottom status bar (VS Code style — clean, minimal) ---
+        } // end if !tabs_hidden
+
+        // --- Bottom status bar — ALWAYS rendered, even with single tab ---
         let sb_h = 22.0_f32;
         let sb_y = (height / scale) - sb_h;
 
