@@ -30,6 +30,9 @@ pub struct GraphicRenderRequest {
 pub struct BottomLayer {
     pub data: types::Raster,
     pub should_fit: bool,
+    /// Dark overlay opacity (0.0 = no overlay, 1.0 = fully black).
+    /// Used to dim background images for readability.
+    pub overlay_opacity: f32,
 }
 
 #[derive(Default)]

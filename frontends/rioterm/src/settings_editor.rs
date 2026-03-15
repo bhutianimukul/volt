@@ -321,6 +321,39 @@ impl SettingsEditor {
             Err(e) => tracing::error!("Failed to serialize config: {}", e),
         }
     }
+
+    /// Remove the background image from the config
+    pub fn remove_background_image(&self) {
+        let config_path = rio_backend::config::config_file_path();
+
+        let content = match std::fs::read_to_string(&config_path) {
+            Ok(c) => c,
+            Err(e) => {
+                tracing::error!("Cannot read config: {}", e);
+                return;
+            }
+        };
+        let mut doc: toml::Table = match content.parse() {
+            Ok(d) => d,
+            Err(e) => {
+                tracing::error!("Invalid TOML: {}", e);
+                return;
+            }
+        };
+
+        // Remove the [window.background-image] section
+        if let Some(toml::Value::Table(window_table)) = doc.get_mut("window") {
+            window_table.remove("background-image");
+        }
+
+        match toml::to_string_pretty(&doc) {
+            Ok(output) => match std::fs::write(&config_path, &output) {
+                Ok(_) => tracing::info!("Background image removed"),
+                Err(e) => tracing::error!("Failed to write config: {}", e),
+            },
+            Err(e) => tracing::error!("Failed to serialize config: {}", e),
+        }
+    }
 }
 
 fn insert_value(table: &mut toml::Table, key: &str, value: &SettingValue) {

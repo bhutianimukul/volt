@@ -82,8 +82,16 @@ impl Renderer {
         if config.window.opacity < 1. {
             dynamic_background.1.a = config.window.opacity as f64;
             dynamic_background.2 = true;
-        } else if config.window.background_image.is_some() {
-            dynamic_background.1 = wgpu::Color::TRANSPARENT;
+        } else if let Some(ref bg_image) = config.window.background_image {
+            // Use semi-transparent dark background to dim the image for readability
+            // opacity 0.4 means 60% dark overlay
+            let overlay = 1.0 - bg_image.opacity.clamp(0.0, 1.0) as f64;
+            dynamic_background.1 = wgpu::Color {
+                r: 0.0,
+                g: 0.0,
+                b: 0.0,
+                a: overlay,
+            };
             dynamic_background.2 = true;
         }
 

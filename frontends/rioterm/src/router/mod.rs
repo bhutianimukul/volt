@@ -508,6 +508,30 @@ impl Route<'_> {
                             }
                         }
                     }
+                    Key::Named(NamedKey::Backspace) => {
+                        // Remove background image if that's the selected setting
+                        let categories_list = editor.categories();
+                        let current_cat_name = categories_list
+                            .get(self.settings_category)
+                            .cloned()
+                            .unwrap_or_default();
+                        let items_in_cat = editor.items_for_category(&current_cat_name);
+                        if let Some(real_item) = items_in_cat.get(editor.selected_index) {
+                            if real_item.key == "window.background-image" {
+                                let real_idx = editor
+                                    .items
+                                    .iter()
+                                    .position(|it| it.key == real_item.key);
+                                if let Some(ri) = real_idx {
+                                    editor.items[ri].value =
+                                        crate::settings_editor::SettingValue::String(
+                                            String::new(),
+                                        );
+                                    editor.remove_background_image();
+                                }
+                            }
+                        }
+                    }
                     Key::Character(c) if c.as_str() == "/" => {
                         editor.toggle_search();
                     }

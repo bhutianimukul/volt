@@ -432,13 +432,23 @@ pub fn screen(
                             );
                         }
                         if is_selected {
-                            body.add_text(
-                                "  [Enter to browse]",
-                                FragmentStyle {
-                                    color: dim,
-                                    ..FragmentStyle::default()
-                                },
-                            );
+                            if s.is_empty() {
+                                body.add_text(
+                                    "  [Enter to browse]",
+                                    FragmentStyle {
+                                        color: dim,
+                                        ..FragmentStyle::default()
+                                    },
+                                );
+                            } else {
+                                body.add_text(
+                                    "  [Enter browse | Backspace remove]",
+                                    FragmentStyle {
+                                        color: dim,
+                                        ..FragmentStyle::default()
+                                    },
+                                );
+                            }
                         }
                     }
                     SettingValue::String(s) if looks_like_color(s) => {

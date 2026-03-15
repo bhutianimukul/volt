@@ -254,8 +254,12 @@ impl Sugarloaf<'_> {
     #[inline]
     pub fn set_background_image(&mut self, image: &ImageProperties) -> &mut Self {
         let handle = Handle::from_path(image.path.to_owned());
+        // overlay_opacity is the inverse of image opacity:
+        // image.opacity=0.4 means 60% dark overlay
+        let overlay = 1.0 - image.opacity.clamp(0.0, 1.0);
         self.graphics.bottom_layer = Some(BottomLayer {
             should_fit: image.width.is_none() && image.height.is_none(),
+            overlay_opacity: overlay,
             data: types::Raster {
                 handle,
                 bounds: Rectangle {
@@ -266,6 +270,12 @@ impl Sugarloaf<'_> {
                 },
             },
         });
+        self
+    }
+
+    /// Remove the background image
+    pub fn clear_background_image(&mut self) -> &mut Self {
+        self.graphics.bottom_layer = None;
         self
     }
 

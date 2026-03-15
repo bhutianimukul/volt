@@ -14,7 +14,7 @@ pub enum SugarCursor {
     Underline([f32; 4]),
 }
 
-#[derive(Default, Clone, Deserialize, Debug, PartialEq)]
+#[derive(Clone, Deserialize, Debug, PartialEq)]
 pub struct ImageProperties {
     #[serde(default = "String::default")]
     pub path: String,
@@ -26,6 +26,29 @@ pub struct ImageProperties {
     pub x: f32,
     #[serde(default = "f32::default")]
     pub y: f32,
+    /// Opacity of the background image (0.0 = fully transparent, 1.0 = fully opaque).
+    /// Default is 0.4 for a subtle, non-distracting background.
+    #[serde(default = "ImageProperties::default_opacity")]
+    pub opacity: f32,
+}
+
+impl Default for ImageProperties {
+    fn default() -> Self {
+        Self {
+            path: String::default(),
+            width: None,
+            height: None,
+            x: 0.0,
+            y: 0.0,
+            opacity: 0.4,
+        }
+    }
+}
+
+impl ImageProperties {
+    fn default_opacity() -> f32 {
+        0.4
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
