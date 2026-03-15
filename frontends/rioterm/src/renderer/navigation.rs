@@ -215,7 +215,7 @@ impl ScreenNavigation {
         if !tabs_hidden {
         self.ensure_tab_visible(current, visible_width);
 
-        let left_margin = 46.0; // after "Volt  |"
+        let left_margin = 4.0; // after "Volt  |"
 
         // First pass: compute labels and positions
         let mut tab_layouts: Vec<(f32, f32, String)> = Vec::with_capacity(len); // (x, width, label)

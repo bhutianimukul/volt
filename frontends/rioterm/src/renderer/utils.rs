@@ -32,10 +32,9 @@ pub fn padding_top_from_config(
             };
             return additional + padding_y_top;
         }
-        // Always add tab bar padding for TopTab — even with single tab
-        // since we always render the tab bar now
+        // TopTab: always reserve space for the tab bar (22px) above terminal content
         if navigation.mode == NavigationMode::TopTab {
-            return constants::PADDING_Y + constants::PADDING_Y_BOTTOM_TABS + padding_y_top;
+            return 48.0 + padding_y_top;
         }
     }
 
