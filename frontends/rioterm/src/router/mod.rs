@@ -359,6 +359,13 @@ impl Route<'_> {
             return true;
         }
 
+        if self.path == RoutePath::History {
+            if key_event.logical_key == Key::Named(NamedKey::Escape) {
+                self.path = RoutePath::Terminal;
+            }
+            return true;
+        }
+
         if self.path == RoutePath::EnvViewer {
             if key_event.logical_key == Key::Named(NamedKey::Escape) {
                 self.path = RoutePath::Terminal;

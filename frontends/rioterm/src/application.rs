@@ -1640,7 +1640,7 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
             }
 
             WindowEvent::Ime(ime) => {
-                if route.path == RoutePath::Assistant || route.path == RoutePath::Settings || route.path == RoutePath::Help || route.path == RoutePath::EnvViewer || route.path == RoutePath::Bookmarks
+                if route.path == RoutePath::Assistant || route.path == RoutePath::Settings || route.path == RoutePath::Help || route.path == RoutePath::History || route.path == RoutePath::EnvViewer || route.path == RoutePath::Bookmarks
                 {
                     return;
                 }
@@ -1735,7 +1735,7 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
             }
 
             WindowEvent::DroppedFile(path) => {
-                if route.path == RoutePath::Assistant || route.path == RoutePath::Settings || route.path == RoutePath::Help || route.path == RoutePath::EnvViewer || route.path == RoutePath::Bookmarks
+                if route.path == RoutePath::Assistant || route.path == RoutePath::Settings || route.path == RoutePath::Help || route.path == RoutePath::History || route.path == RoutePath::EnvViewer || route.path == RoutePath::Bookmarks
                 {
                     return;
                 }
