@@ -554,7 +554,7 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                     route
                         .window
                         .screen
-                        .context_manager()
+                        .ctx_mut()
                         .dock_badge
                         .on_bell(is_focused);
                 }
@@ -1647,6 +1647,11 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
 
                 if has_regained_focus {
                     route.request_redraw();
+                }
+
+                // Clear dock badge when window regains focus
+                if focused {
+                    route.window.screen.ctx_mut().dock_badge.clear_badge();
                 }
 
                 route.window.screen.on_focus_change(focused);

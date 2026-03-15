@@ -306,6 +306,27 @@ pub fn build_settings_from_config(config: &rio_backend::config::Config) -> Vec<S
         },
         // ── Window ────────────────────────────────────────────
         SettingItem {
+            key: "window.width".into(),
+            label: "Window Width".into(),
+            category: "Window".into(),
+            value: SettingValue::Integer(config.window.width as i64),
+            description: "Initial window width in pixels".into(),
+        },
+        SettingItem {
+            key: "window.height".into(),
+            label: "Window Height".into(),
+            category: "Window".into(),
+            value: SettingValue::Integer(config.window.height as i64),
+            description: "Initial window height in pixels".into(),
+        },
+        SettingItem {
+            key: "window.mode".into(),
+            label: "Window Mode".into(),
+            category: "Window".into(),
+            value: SettingValue::String(format!("{:?}", config.window.mode).to_lowercase()),
+            description: "Window mode: windowed, maximized, fullscreen".into(),
+        },
+        SettingItem {
             key: "window.opacity".into(),
             label: "Window Opacity".into(),
             category: "Window".into(),
@@ -323,22 +344,49 @@ pub fn build_settings_from_config(config: &rio_backend::config::Config) -> Vec<S
             key: "window.decorations".into(),
             label: "Window Decorations".into(),
             category: "Window".into(),
-            value: SettingValue::String(format!("{:?}", config.window.decorations)),
-            description: "Window chrome style: Enabled, Disabled, Transparent, Buttonless".into(),
+            value: SettingValue::String(format!("{:?}", config.window.decorations).to_lowercase()),
+            description: "Window chrome style: enabled, disabled, transparent, buttonless".into(),
         },
         SettingItem {
-            key: "window.width".into(),
-            label: "Window Width".into(),
+            key: "window.background-image".into(),
+            label: "Background Image".into(),
             category: "Window".into(),
-            value: SettingValue::Integer(config.window.width as i64),
-            description: "Default window width in pixels".into(),
+            value: SettingValue::String(
+                config.window.background_image.as_ref()
+                    .map(|img| img.path.clone())
+                    .unwrap_or_default(),
+            ),
+            description: "Path to a background image file (PNG, JPG, etc.)".into(),
         },
         SettingItem {
-            key: "window.height".into(),
-            label: "Window Height".into(),
+            key: "window.macos-use-unified-titlebar".into(),
+            label: "macOS Unified Titlebar".into(),
             category: "Window".into(),
-            value: SettingValue::Integer(config.window.height as i64),
-            description: "Default window height in pixels".into(),
+            value: SettingValue::Bool(config.window.macos_use_unified_titlebar),
+            description: "Use unified titlebar style on macOS".into(),
+        },
+        SettingItem {
+            key: "window.macos-use-shadow".into(),
+            label: "macOS Window Shadow".into(),
+            category: "Window".into(),
+            value: SettingValue::Bool(config.window.macos_use_shadow),
+            description: "Enable window shadow on macOS".into(),
+        },
+        SettingItem {
+            key: "window.initial-title".into(),
+            label: "Initial Window Title".into(),
+            category: "Window".into(),
+            value: SettingValue::String(
+                config.window.initial_title.clone().unwrap_or_default(),
+            ),
+            description: "Custom initial window title (leave empty for default)".into(),
+        },
+        SettingItem {
+            key: "window.colorspace".into(),
+            label: "Colorspace".into(),
+            category: "Window".into(),
+            value: SettingValue::String(format!("{:?}", config.window.colorspace).to_lowercase()),
+            description: "Display colorspace: srgb, display-p3, rec2020".into(),
         },
         SettingItem {
             key: "padding-x".into(),
@@ -384,13 +432,27 @@ pub fn build_settings_from_config(config: &rio_backend::config::Config) -> Vec<S
             description: "Show the terminal-reported title in tabs".into(),
         },
         SettingItem {
+            key: "navigation.current-working-directory".into(),
+            label: "Show Current Working Dir".into(),
+            category: "Navigation".into(),
+            value: SettingValue::Bool(config.navigation.current_working_directory),
+            description: "Display the current working directory in navigation".into(),
+        },
+        SettingItem {
             key: "navigation.open-config-with-split".into(),
             label: "Open Config in Split".into(),
             category: "Navigation".into(),
             value: SettingValue::Bool(config.navigation.open_config_with_split),
             description: "Open config file in a split pane rather than a new tab".into(),
         },
-        // ── Colors ───────────────────────────────────────────
+        SettingItem {
+            key: "navigation.unfocused-split-opacity".into(),
+            label: "Unfocused Split Opacity".into(),
+            category: "Navigation".into(),
+            value: SettingValue::Float(config.navigation.unfocused_split_opacity),
+            description: "Opacity of unfocused split panes (0.0 to 1.0)".into(),
+        },
+        // ── Colors — Primary ────────────────────────────────
         SettingItem {
             key: "colors.background".into(),
             label: "Background Color".into(),
@@ -412,6 +474,236 @@ pub fn build_settings_from_config(config: &rio_backend::config::Config) -> Vec<S
             value: SettingValue::String(color_arr_to_hex(&config.colors.cursor)),
             description: "Cursor color (hex, e.g. #F5E0DC)".into(),
         },
+        SettingItem {
+            key: "colors.vi-cursor".into(),
+            label: "Vi Cursor Color".into(),
+            category: "Colors".into(),
+            value: SettingValue::String(color_arr_to_hex(&config.colors.vi_cursor)),
+            description: "Vi mode cursor color (hex)".into(),
+        },
+        // ── Colors — Selection ──────────────────────────────
+        SettingItem {
+            key: "colors.selection-background".into(),
+            label: "Selection Background".into(),
+            category: "Colors".into(),
+            value: SettingValue::String(color_arr_to_hex(&config.colors.selection_background)),
+            description: "Background color for selected text (hex)".into(),
+        },
+        SettingItem {
+            key: "colors.selection-foreground".into(),
+            label: "Selection Foreground".into(),
+            category: "Colors".into(),
+            value: SettingValue::String(color_arr_to_hex(&config.colors.selection_foreground)),
+            description: "Foreground color for selected text (hex)".into(),
+        },
+        // ── Colors — Tab Bar ────────────────────────────────
+        SettingItem {
+            key: "colors.tabs".into(),
+            label: "Tabs Background".into(),
+            category: "Colors".into(),
+            value: SettingValue::String(color_arr_to_hex(&config.colors.tabs)),
+            description: "Inactive tab background color (hex)".into(),
+        },
+        SettingItem {
+            key: "colors.tabs-active".into(),
+            label: "Active Tab Background".into(),
+            category: "Colors".into(),
+            value: SettingValue::String(color_arr_to_hex(&config.colors.tabs_active)),
+            description: "Active tab background color (hex)".into(),
+        },
+        SettingItem {
+            key: "colors.tabs-active-foreground".into(),
+            label: "Active Tab Foreground".into(),
+            category: "Colors".into(),
+            value: SettingValue::String(color_arr_to_hex(&config.colors.tabs_active_foreground)),
+            description: "Active tab text color (hex)".into(),
+        },
+        SettingItem {
+            key: "colors.tabs-foreground".into(),
+            label: "Tabs Foreground".into(),
+            category: "Colors".into(),
+            value: SettingValue::String(color_arr_to_hex(&config.colors.tabs_foreground)),
+            description: "Inactive tab text color (hex)".into(),
+        },
+        SettingItem {
+            key: "colors.tabs-active-highlight".into(),
+            label: "Active Tab Highlight".into(),
+            category: "Colors".into(),
+            value: SettingValue::String(color_arr_to_hex(&config.colors.tabs_active_highlight)),
+            description: "Highlight color on the active tab (hex)".into(),
+        },
+        SettingItem {
+            key: "colors.bar".into(),
+            label: "Bar Color".into(),
+            category: "Colors".into(),
+            value: SettingValue::String(color_arr_to_hex(&config.colors.bar)),
+            description: "Navigation bar background color (hex)".into(),
+        },
+        SettingItem {
+            key: "colors.split".into(),
+            label: "Split Divider Color".into(),
+            category: "Colors".into(),
+            value: SettingValue::String(color_arr_to_hex(&config.colors.split)),
+            description: "Color of the split pane divider (hex)".into(),
+        },
+        // ── Colors — ANSI Normal ────────────────────────────
+        SettingItem {
+            key: "colors.black".into(),
+            label: "Black (ANSI 0)".into(),
+            category: "Colors".into(),
+            value: SettingValue::String(color_arr_to_hex(&config.colors.black)),
+            description: "ANSI black color (hex)".into(),
+        },
+        SettingItem {
+            key: "colors.red".into(),
+            label: "Red (ANSI 1)".into(),
+            category: "Colors".into(),
+            value: SettingValue::String(color_arr_to_hex(&config.colors.red)),
+            description: "ANSI red color (hex)".into(),
+        },
+        SettingItem {
+            key: "colors.green".into(),
+            label: "Green (ANSI 2)".into(),
+            category: "Colors".into(),
+            value: SettingValue::String(color_arr_to_hex(&config.colors.green)),
+            description: "ANSI green color (hex)".into(),
+        },
+        SettingItem {
+            key: "colors.yellow".into(),
+            label: "Yellow (ANSI 3)".into(),
+            category: "Colors".into(),
+            value: SettingValue::String(color_arr_to_hex(&config.colors.yellow)),
+            description: "ANSI yellow color (hex)".into(),
+        },
+        SettingItem {
+            key: "colors.blue".into(),
+            label: "Blue (ANSI 4)".into(),
+            category: "Colors".into(),
+            value: SettingValue::String(color_arr_to_hex(&config.colors.blue)),
+            description: "ANSI blue color (hex)".into(),
+        },
+        SettingItem {
+            key: "colors.magenta".into(),
+            label: "Magenta (ANSI 5)".into(),
+            category: "Colors".into(),
+            value: SettingValue::String(color_arr_to_hex(&config.colors.magenta)),
+            description: "ANSI magenta color (hex)".into(),
+        },
+        SettingItem {
+            key: "colors.cyan".into(),
+            label: "Cyan (ANSI 6)".into(),
+            category: "Colors".into(),
+            value: SettingValue::String(color_arr_to_hex(&config.colors.cyan)),
+            description: "ANSI cyan color (hex)".into(),
+        },
+        SettingItem {
+            key: "colors.white".into(),
+            label: "White (ANSI 7)".into(),
+            category: "Colors".into(),
+            value: SettingValue::String(color_arr_to_hex(&config.colors.white)),
+            description: "ANSI white color (hex)".into(),
+        },
+        // ── Colors — ANSI Light/Bright ──────────────────────
+        SettingItem {
+            key: "colors.light-black".into(),
+            label: "Light Black (ANSI 8)".into(),
+            category: "Colors".into(),
+            value: SettingValue::String(color_arr_to_hex(&config.colors.light_black)),
+            description: "ANSI bright black color (hex)".into(),
+        },
+        SettingItem {
+            key: "colors.light-red".into(),
+            label: "Light Red (ANSI 9)".into(),
+            category: "Colors".into(),
+            value: SettingValue::String(color_arr_to_hex(&config.colors.light_red)),
+            description: "ANSI bright red color (hex)".into(),
+        },
+        SettingItem {
+            key: "colors.light-green".into(),
+            label: "Light Green (ANSI 10)".into(),
+            category: "Colors".into(),
+            value: SettingValue::String(color_arr_to_hex(&config.colors.light_green)),
+            description: "ANSI bright green color (hex)".into(),
+        },
+        SettingItem {
+            key: "colors.light-yellow".into(),
+            label: "Light Yellow (ANSI 11)".into(),
+            category: "Colors".into(),
+            value: SettingValue::String(color_arr_to_hex(&config.colors.light_yellow)),
+            description: "ANSI bright yellow color (hex)".into(),
+        },
+        SettingItem {
+            key: "colors.light-blue".into(),
+            label: "Light Blue (ANSI 12)".into(),
+            category: "Colors".into(),
+            value: SettingValue::String(color_arr_to_hex(&config.colors.light_blue)),
+            description: "ANSI bright blue color (hex)".into(),
+        },
+        SettingItem {
+            key: "colors.light-magenta".into(),
+            label: "Light Magenta (ANSI 13)".into(),
+            category: "Colors".into(),
+            value: SettingValue::String(color_arr_to_hex(&config.colors.light_magenta)),
+            description: "ANSI bright magenta color (hex)".into(),
+        },
+        SettingItem {
+            key: "colors.light-cyan".into(),
+            label: "Light Cyan (ANSI 14)".into(),
+            category: "Colors".into(),
+            value: SettingValue::String(color_arr_to_hex(&config.colors.light_cyan)),
+            description: "ANSI bright cyan color (hex)".into(),
+        },
+        SettingItem {
+            key: "colors.light-white".into(),
+            label: "Light White (ANSI 15)".into(),
+            category: "Colors".into(),
+            value: SettingValue::String(color_arr_to_hex(&config.colors.light_white)),
+            description: "ANSI bright white color (hex)".into(),
+        },
+        // ── Colors — Search ─────────────────────────────────
+        SettingItem {
+            key: "colors.search-match-background".into(),
+            label: "Search Match Background".into(),
+            category: "Colors".into(),
+            value: SettingValue::String(color_arr_to_hex(&config.colors.search_match_background)),
+            description: "Background color for search matches (hex)".into(),
+        },
+        SettingItem {
+            key: "colors.search-match-foreground".into(),
+            label: "Search Match Foreground".into(),
+            category: "Colors".into(),
+            value: SettingValue::String(color_arr_to_hex(&config.colors.search_match_foreground)),
+            description: "Foreground color for search matches (hex)".into(),
+        },
+        SettingItem {
+            key: "colors.search-focused-match-background".into(),
+            label: "Focused Match Background".into(),
+            category: "Colors".into(),
+            value: SettingValue::String(color_arr_to_hex(&config.colors.search_focused_match_background)),
+            description: "Background color for the focused search match (hex)".into(),
+        },
+        SettingItem {
+            key: "colors.search-focused-match-foreground".into(),
+            label: "Focused Match Foreground".into(),
+            category: "Colors".into(),
+            value: SettingValue::String(color_arr_to_hex(&config.colors.search_focused_match_foreground)),
+            description: "Foreground color for the focused search match (hex)".into(),
+        },
+        // ── Colors — Hints ──────────────────────────────────
+        SettingItem {
+            key: "colors.hint-foreground".into(),
+            label: "Hint Foreground".into(),
+            category: "Colors".into(),
+            value: SettingValue::String(color_arr_to_hex(&config.colors.hint_foreground)),
+            description: "Text color for keyboard hints (hex)".into(),
+        },
+        SettingItem {
+            key: "colors.hint-background".into(),
+            label: "Hint Background".into(),
+            category: "Colors".into(),
+            value: SettingValue::String(color_arr_to_hex(&config.colors.hint_background)),
+            description: "Background color for keyboard hints (hex)".into(),
+        },
         // ── Shell ────────────────────────────────────────────
         SettingItem {
             key: "shell.program".into(),
@@ -428,6 +720,20 @@ pub fn build_settings_from_config(config: &rio_backend::config::Config) -> Vec<S
                 config.working_dir.clone().unwrap_or_default(),
             ),
             description: "Default working directory for new tabs".into(),
+        },
+        SettingItem {
+            key: "env-vars".into(),
+            label: "Environment Variables".into(),
+            category: "Shell".into(),
+            value: SettingValue::String(config.env_vars.join(", ")),
+            description: "Extra environment variables (comma-separated KEY=VALUE pairs)".into(),
+        },
+        SettingItem {
+            key: "editor.program".into(),
+            label: "Editor Program".into(),
+            category: "Shell".into(),
+            value: SettingValue::String(config.editor.program.clone()),
+            description: "Editor to use when opening config files (e.g. vi, nano, code)".into(),
         },
         // ── General ──────────────────────────────────────────
         SettingItem {
@@ -472,6 +778,13 @@ pub fn build_settings_from_config(config: &rio_backend::config::Config) -> Vec<S
             value: SettingValue::Bool(config.draw_bold_text_with_light_colors),
             description: "Render bold text with lighter colors".into(),
         },
+        SettingItem {
+            key: "theme".into(),
+            label: "Theme".into(),
+            category: "General".into(),
+            value: SettingValue::String(config.theme.clone()),
+            description: "Theme name (looks for <name>.toml in themes directory)".into(),
+        },
         // ── Cursor ───────────────────────────────────────────
         SettingItem {
             key: "cursor.shape".into(),
@@ -500,14 +813,14 @@ pub fn build_settings_from_config(config: &rio_backend::config::Config) -> Vec<S
             label: "Scroll Multiplier".into(),
             category: "Scroll".into(),
             value: SettingValue::Float(config.scroll.multiplier as f32),
-            description: "Scroll speed multiplier".into(),
+            description: "Scroll speed multiplier (higher = faster scrolling)".into(),
         },
         SettingItem {
             key: "scroll.divider".into(),
             label: "Scroll Divider".into(),
             category: "Scroll".into(),
             value: SettingValue::Float(config.scroll.divider as f32),
-            description: "Scroll speed divider".into(),
+            description: "Scroll speed divider (higher = slower scrolling)".into(),
         },
         // ── Renderer ─────────────────────────────────────────
         SettingItem {
@@ -525,6 +838,13 @@ pub fn build_settings_from_config(config: &rio_backend::config::Config) -> Vec<S
             description: "GPU backend: Automatic, Vulkan, GL, DX12, Metal".into(),
         },
         SettingItem {
+            key: "renderer.strategy".into(),
+            label: "Renderer Strategy".into(),
+            category: "Renderer".into(),
+            value: SettingValue::String(format!("{:?}", config.renderer.strategy).to_lowercase()),
+            description: "Rendering strategy: events (redraw on change), game (continuous redraw)".into(),
+        },
+        SettingItem {
             key: "renderer.disable-unfocused-render".into(),
             label: "Disable Unfocused Render".into(),
             category: "Renderer".into(),
@@ -537,6 +857,61 @@ pub fn build_settings_from_config(config: &rio_backend::config::Config) -> Vec<S
             category: "Renderer".into(),
             value: SettingValue::Bool(config.renderer.disable_occluded_render),
             description: "Stop rendering when the window is fully occluded".into(),
+        },
+        // ── Keyboard ────────────────────────────────────────
+        SettingItem {
+            key: "keyboard.disable-ctlseqs-alt".into(),
+            label: "Disable Ctrl Seqs Alt".into(),
+            category: "Keyboard".into(),
+            value: SettingValue::Bool(config.keyboard.disable_ctlseqs_alt),
+            description: "Disable control sequences triggered by Alt key combinations".into(),
+        },
+        SettingItem {
+            key: "keyboard.ime-cursor-positioning".into(),
+            label: "IME Cursor Positioning".into(),
+            category: "Keyboard".into(),
+            value: SettingValue::Bool(config.keyboard.ime_cursor_positioning),
+            description: "Position IME input popup at the cursor location".into(),
+        },
+        // ── Title ───────────────────────────────────────────
+        SettingItem {
+            key: "title.placeholder".into(),
+            label: "Title Placeholder".into(),
+            category: "Title".into(),
+            value: SettingValue::String(
+                config.title.placeholder.clone().unwrap_or_default(),
+            ),
+            description: "Placeholder text for the window title when no title is set".into(),
+        },
+        SettingItem {
+            key: "title.content".into(),
+            label: "Title Content".into(),
+            category: "Title".into(),
+            value: SettingValue::String(config.title.content.clone()),
+            description: "Window title content (leave empty for default behavior)".into(),
+        },
+        // ── Bell ────────────────────────────────────────────
+        SettingItem {
+            key: "bell.visual".into(),
+            label: "Visual Bell".into(),
+            category: "Bell".into(),
+            value: SettingValue::Bool(config.bell.visual),
+            description: "Flash the screen on bell character".into(),
+        },
+        SettingItem {
+            key: "bell.audio".into(),
+            label: "Audio Bell".into(),
+            category: "Bell".into(),
+            value: SettingValue::Bool(config.bell.audio),
+            description: "Play a sound on bell character".into(),
+        },
+        // ── Hints ───────────────────────────────────────────
+        SettingItem {
+            key: "hints.alphabet".into(),
+            label: "Hints Alphabet".into(),
+            category: "Hints".into(),
+            value: SettingValue::String(config.hints.alphabet.clone()),
+            description: "Characters used for generating hint labels".into(),
         },
         // ── Developer ────────────────────────────────────────
         SettingItem {

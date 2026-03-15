@@ -371,6 +371,10 @@ impl<T: EventListener + Clone + std::marker::Send + 'static> ContextManager<T> {
 
         let titles = ContextManagerTitles::new(0, String::from("tab"), None);
 
+        // Initialize trigger engine with built-in rules
+        let mut trigger_engine = crate::triggers::TriggerEngine::new();
+        trigger_engine.load_rules(crate::triggers::builtin_triggers());
+
         // Sugarloaf has found errors and context need to notify it for the user
         if let Some(errors) = sugarloaf_errors {
             if !errors.fonts_not_found.is_empty() {
@@ -402,6 +406,7 @@ impl<T: EventListener + Clone + std::marker::Send + 'static> ContextManager<T> {
             block_manager: BlockManager::new(),
             notification_manager: crate::notifications::NotificationManager::new(),
             dock_badge: crate::dock_badge::DockBadgeManager::new(),
+            trigger_engine,
         })
     }
 
@@ -452,6 +457,13 @@ impl<T: EventListener + Clone + std::marker::Send + 'static> ContextManager<T> {
             block_manager: BlockManager::new(),
             notification_manager: crate::notifications::NotificationManager::new(),
             dock_badge: crate::dock_badge::DockBadgeManager::new(),
+            // TODO: Wire trigger_engine.check_line() into terminal output scanning
+            // (e.g., on OSC 133;D command-finish or periodic title update cycle)
+            trigger_engine: {
+                let mut te = crate::triggers::TriggerEngine::new();
+                te.load_rules(crate::triggers::builtin_triggers());
+                te
+            },
         })
     }
 
