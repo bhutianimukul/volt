@@ -2842,6 +2842,21 @@ impl Screen<'_> {
         self.sugarloaf.render();
     }
 
+    pub fn render_tmux_picker(
+        &mut self,
+        sessions: &[(String, String, bool)],
+        selected_index: usize,
+    ) {
+        self.sugarloaf.clear();
+        crate::router::routes::tmux_picker::screen(
+            &mut self.sugarloaf,
+            &self.context_manager.current().dimension,
+            sessions,
+            selected_index,
+        );
+        self.sugarloaf.render();
+    }
+
     /// Extract the text on the current cursor line from the terminal grid.
     /// Strips shell prompt characters ($, %, #, >) to isolate the actual command.
     pub fn extract_current_command_line(&self) -> String {

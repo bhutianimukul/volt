@@ -34,6 +34,10 @@ pub struct Route<'a> {
     pub path: RoutePath,
     pub window: RouteWindow<'a>,
     pub settings_editor: crate::settings_editor::SettingsEditor,
+    /// Cached tmux sessions for the picker: (id, name, attached)
+    pub tmux_sessions: Vec<(String, String, bool)>,
+    /// Currently selected index in the tmux picker
+    pub tmux_selected: usize,
 }
 
 impl Route<'_> {
@@ -49,6 +53,8 @@ impl Route<'_> {
             path,
             window,
             settings_editor: crate::settings_editor::SettingsEditor::new(),
+            tmux_sessions: Vec::new(),
+            tmux_selected: 0,
         }
     }
 }
@@ -353,6 +359,56 @@ impl Route<'_> {
             return true;
         }
 
+        if self.path == RoutePath::TmuxPicker {
+            if key_event.state != rio_window::event::ElementState::Pressed {
+                return true;
+            }
+
+            match &key_event.logical_key {
+                Key::Named(NamedKey::Escape) => {
+                    self.path = RoutePath::Terminal;
+                }
+                Key::Named(NamedKey::ArrowUp) => {
+                    if self.tmux_selected > 0 {
+                        self.tmux_selected -= 1;
+                    }
+                }
+                Key::Named(NamedKey::ArrowDown) => {
+                    if !self.tmux_sessions.is_empty()
+                        && self.tmux_selected < self.tmux_sessions.len() - 1
+                    {
+                        self.tmux_selected += 1;
+                    }
+                }
+                Key::Named(NamedKey::Enter) => {
+                    if let Some((_id, name, _attached)) =
+                        self.tmux_sessions.get(self.tmux_selected)
+                    {
+                        let cmd = format!("tmux -CC attach -t {}\r", name);
+                        self.window
+                            .screen
+                            .ctx_mut()
+                            .current_mut()
+                            .messenger
+                            .send_write(cmd.into_bytes());
+                        self.path = RoutePath::Terminal;
+                    }
+                }
+                Key::Character(c) if c.as_str() == "n" || c.as_str() == "N" => {
+                    let cmd = "tmux -CC new-session\r".to_string();
+                    self.window
+                        .screen
+                        .ctx_mut()
+                        .current_mut()
+                        .messenger
+                        .send_write(cmd.into_bytes());
+                    self.path = RoutePath::Terminal;
+                }
+                _ => {}
+            }
+            return true;
+        }
+
         false
     }
 }
@@ -535,6 +591,8 @@ impl Router<'_> {
             path: RoutePath::Terminal,
             assistant: Assistant::new(),
             settings_editor: crate::settings_editor::SettingsEditor::new(),
+            tmux_sessions: Vec::new(),
+            tmux_selected: 0,
         };
 
         if let Some(err) = &self.propagated_report {
@@ -573,6 +631,8 @@ impl Router<'_> {
                 path: RoutePath::Terminal,
                 assistant: Assistant::new(),
                 settings_editor: crate::settings_editor::SettingsEditor::new(),
+                tmux_sessions: Vec::new(),
+                tmux_selected: 0,
             },
         );
     }

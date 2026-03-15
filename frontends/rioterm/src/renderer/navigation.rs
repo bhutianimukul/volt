@@ -315,67 +315,44 @@ impl ScreenNavigation {
             }));
         }
 
-        // --- Right-side top bar buttons: [?] [⚙] ---
+        // --- Right-side top bar buttons ---
         let btn_gap = 4.0_f32;
         let btn_h = PADDING_Y_BOTTOM_TABS;
         let btn_y = position_y;
-        let btn_color = [0.25, 0.25, 0.3, 1.0];
-        let btn_fg = [0.8, 0.8, 0.8, 1.0];
-        let icon_btn_w = 22.0_f32;
+        let btn_fg = [0.7, 0.7, 0.7, 1.0];
 
-        // [⚙] Settings (rightmost)
-        let settings_x = visible_width - icon_btn_w - btn_gap;
-        objects.push(Object::Quad(Quad {
-            position: [settings_x, btn_y], color: btn_color,
-            size: [icon_btn_w, btn_h], border_radius: [3.0; 4], ..Quad::default()
-        }));
+        // Settings button (rightmost) — subtle, no background
+        let settings_x = visible_width - 20.0 - btn_gap;
+        let rt = sugarloaf.create_temp_rich_text();
+        sugarloaf.set_rich_text_font_size(&rt, 15.);
+        sugarloaf.content().sel(rt).clear().new_line()
+            .add_text("\u{2699}\u{FE0E}", FragmentStyle { color: btn_fg, ..FragmentStyle::default() }).build();
+        objects.push(Object::RichText(RichText { id: rt, position: [settings_x + 2.0, btn_y], lines: None }));
+
+        // Help button — subtle, no background
+        let help_x = settings_x - 20.0 - btn_gap;
         let rt = sugarloaf.create_temp_rich_text();
         sugarloaf.set_rich_text_font_size(&rt, 14.);
         sugarloaf.content().sel(rt).clear().new_line()
-            .add_text("\u{2699}", FragmentStyle { color: btn_fg, ..FragmentStyle::default() }).build();
-        objects.push(Object::RichText(RichText { id: rt, position: [settings_x + 3.0, btn_y], lines: None }));
+            .add_text("\u{24D8}", FragmentStyle { color: btn_fg, ..FragmentStyle::default() }).build();
+        objects.push(Object::RichText(RichText { id: rt, position: [help_x + 3.0, btn_y], lines: None }));
 
-        // [?] Help
-        let help_x = settings_x - icon_btn_w - btn_gap;
-        objects.push(Object::Quad(Quad {
-            position: [help_x, btn_y], color: btn_color,
-            size: [icon_btn_w, btn_h], border_radius: [3.0; 4], ..Quad::default()
-        }));
-        let rt = sugarloaf.create_temp_rich_text();
-        sugarloaf.set_rich_text_font_size(&rt, 13.);
-        sugarloaf.content().sel(rt).clear().new_line()
-            .add_text("?", FragmentStyle { color: btn_fg, ..FragmentStyle::default() }).build();
-        objects.push(Object::RichText(RichText { id: rt, position: [help_x + 7.0, btn_y], lines: None }));
-
-        // --- Bottom status bar with [AI] [tmux] buttons ---
-        let status_bar_h = 20.0_f32;
+        // --- Bottom status bar ---
+        let status_bar_h = 18.0_f32;
         let status_y = (height / scale) - status_bar_h;
 
-        // Status bar background
+        // Thin status bar background
         objects.push(Object::Quad(Quad {
             position: [0.0, status_y],
-            color: [0.1, 0.1, 0.12, 1.0],
+            color: [0.08, 0.08, 0.1, 1.0],
             size: [width, status_bar_h],
             ..Quad::default()
         }));
 
-        // [AI] button — purple, bottom left
-        let ai_btn_w = 30.0_f32;
-        let ai_color = [0.4, 0.2, 0.7, 1.0];
-        objects.push(Object::Quad(Quad {
-            position: [4.0, status_y + 1.0], color: ai_color,
-            size: [ai_btn_w, status_bar_h - 2.0], border_radius: [3.0; 4], ..Quad::default()
-        }));
-        let rt = sugarloaf.create_temp_rich_text();
-        sugarloaf.set_rich_text_font_size(&rt, 10.);
-        sugarloaf.content().sel(rt).clear().new_line()
-            .add_text("AI", FragmentStyle { color: [1.0, 1.0, 1.0, 0.95], ..FragmentStyle::default() }).build();
-        objects.push(Object::RichText(RichText { id: rt, position: [11.0, status_y + 1.0], lines: None }));
-
-        // [tmux] button — green, next to AI
-        let tmux_btn_w = 42.0_f32;
-        let tmux_color = [0.15, 0.5, 0.3, 1.0];
-        let tmux_x = 4.0 + ai_btn_w + btn_gap;
+        // [tmux] button — far right of status bar
+        let tmux_btn_w = 46.0_f32;
+        let tmux_color = [0.15, 0.45, 0.3, 1.0];
+        let tmux_x = visible_width - tmux_btn_w - btn_gap;
         objects.push(Object::Quad(Quad {
             position: [tmux_x, status_y + 1.0], color: tmux_color,
             size: [tmux_btn_w, status_bar_h - 2.0], border_radius: [3.0; 4], ..Quad::default()
@@ -383,8 +360,8 @@ impl ScreenNavigation {
         let rt = sugarloaf.create_temp_rich_text();
         sugarloaf.set_rich_text_font_size(&rt, 10.);
         sugarloaf.content().sel(rt).clear().new_line()
-            .add_text("tmux", FragmentStyle { color: [1.0, 1.0, 1.0, 0.9], ..FragmentStyle::default() }).build();
-        objects.push(Object::RichText(RichText { id: rt, position: [tmux_x + 6.0, status_y + 1.0], lines: None }));
+            .add_text("tmux", FragmentStyle { color: [1.0, 1.0, 1.0, 0.85], ..FragmentStyle::default() }).build();
+        objects.push(Object::RichText(RichText { id: rt, position: [tmux_x + 8.0, status_y + 1.0], lines: None }));
     }
 }
 
@@ -401,40 +378,34 @@ pub enum NavButton {
 }
 
 /// Check if a click (in logical pixels) hit a top bar button.
-/// Top bar (right): [? help] [⚙ settings]
 pub fn nav_button_at_position(x: f32, visible_width: f32) -> Option<NavButton> {
-    let icon_btn_w = 22.0_f32;
-    let settings_x = visible_width - icon_btn_w - NAV_BTN_GAP;
-    let help_x = settings_x - icon_btn_w - NAV_BTN_GAP;
+    let btn_w = 20.0_f32;
+    let settings_x = visible_width - btn_w - NAV_BTN_GAP;
+    let help_x = settings_x - btn_w - NAV_BTN_GAP;
 
-    if x >= settings_x && x <= settings_x + icon_btn_w {
+    if x >= settings_x && x <= settings_x + btn_w {
         return Some(NavButton::Settings);
     }
-    if x >= help_x && x <= help_x + icon_btn_w {
+    if x >= help_x && x <= help_x + btn_w {
         return Some(NavButton::Help);
     }
     None
 }
 
 /// Status bar height
-pub const STATUS_BAR_HEIGHT: f32 = 20.0;
+pub const STATUS_BAR_HEIGHT: f32 = 18.0;
 
 /// Check if a click (in logical pixels) hit a bottom status bar button.
-/// Bottom bar (left): [AI] [tmux]
-pub fn status_button_at_position(x: f32, y: f32, win_height: f32) -> Option<NavButton> {
+pub fn status_button_at_position(x: f32, y: f32, win_height: f32, visible_width: f32) -> Option<NavButton> {
     let status_y = win_height - STATUS_BAR_HEIGHT;
     if y < status_y || y > win_height {
         return None;
     }
 
-    let ai_btn_w = 30.0_f32;
-    let tmux_btn_w = 42.0_f32;
-    let ai_x = 4.0_f32;
-    let tmux_x = ai_x + ai_btn_w + NAV_BTN_GAP;
+    // tmux button is at far right
+    let tmux_btn_w = 46.0_f32;
+    let tmux_x = visible_width - tmux_btn_w - NAV_BTN_GAP;
 
-    if x >= ai_x && x <= ai_x + ai_btn_w {
-        return Some(NavButton::AiAssistant);
-    }
     if x >= tmux_x && x <= tmux_x + tmux_btn_w {
         return Some(NavButton::TmuxConnect);
     }

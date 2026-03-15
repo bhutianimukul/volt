@@ -787,6 +787,19 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                     route.request_redraw();
                 }
             }
+            RioEventType::Rio(RioEvent::ToggleTmuxPicker) => {
+                if let Some(route) = self.router.routes.get_mut(&window_id) {
+                    if route.path == RoutePath::TmuxPicker {
+                        route.path = RoutePath::Terminal;
+                    } else {
+                        use crate::tmux_cc::TmuxController;
+                        route.tmux_sessions = TmuxController::list_sessions();
+                        route.tmux_selected = 0;
+                        route.path = RoutePath::TmuxPicker;
+                    }
+                    route.request_redraw();
+                }
+            }
             #[cfg(target_os = "macos")]
             RioEventType::Rio(RioEvent::CloseWindow) => {
                 self.router.routes.remove(&window_id);
@@ -1046,28 +1059,14 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                         }
                     }
 
-                    // Check bottom status bar buttons [AI] [tmux]
+                    // Check bottom status bar buttons [tmux]
                     if let Some(btn) = crate::renderer::navigation::status_button_at_position(
-                        lx as f32, ly as f32, win_h,
+                        lx as f32, ly as f32, win_h, visible_w,
                     ) {
                         use crate::renderer::navigation::NavButton;
                         match btn {
-                            NavButton::AiAssistant => {
-                                if crate::ai_assistant::is_claude_available() {
-                                    route.window.screen.split_right();
-                                    let bytes = b"claude\r".to_vec();
-                                    route.window.screen.ctx_mut().current_mut().messenger.send_write(bytes);
-                                }
-                            }
                             NavButton::TmuxConnect => {
-                                use crate::tmux_cc::TmuxController;
-                                let sessions = TmuxController::list_sessions();
-                                let cmd = if let Some((_, name, _)) = sessions.first() {
-                                    format!("tmux -CC attach -t {}\r", name)
-                                } else {
-                                    "tmux -CC new-session\r".to_string()
-                                };
-                                route.window.screen.ctx_mut().current_mut().messenger.send_write(cmd.into_bytes());
+                                route.window.screen.context_manager.toggle_tmux_picker();
                             }
                             _ => {}
                         }
@@ -1749,6 +1748,12 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                     }
                     RoutePath::Help => {
                         route.window.screen.render_help();
+                    }
+                    RoutePath::TmuxPicker => {
+                        route.window.screen.render_tmux_picker(
+                            &route.tmux_sessions,
+                            route.tmux_selected,
+                        );
                     }
                 }
 
