@@ -90,8 +90,13 @@ pub fn screen(
             panes: vec![(0.0, 0.0, 0.48, 1.0), (0.52, 0.0, 0.48, 1.0)],
         },
         LayoutCard {
+            name: "Top / Bottom",
+            desc: "Two equal horizontal panes",
+            panes: vec![(0.0, 0.0, 1.0, 0.48), (0.0, 0.52, 1.0, 0.48)],
+        },
+        LayoutCard {
             name: "Dev",
-            desc: "Editor left, terminals right",
+            desc: "Editor left, two terminals right",
             panes: vec![
                 (0.0, 0.0, 0.55, 1.0),
                 (0.58, 0.0, 0.42, 0.48),
@@ -109,13 +114,18 @@ pub fn screen(
             ],
         },
         LayoutCard {
-            name: "Monitoring",
-            desc: "Wide main + two stacked",
+            name: "Three Column",
+            desc: "Three equal vertical panes",
             panes: vec![
-                (0.0, 0.0, 0.6, 1.0),
-                (0.63, 0.0, 0.37, 0.48),
-                (0.63, 0.52, 0.37, 0.48),
+                (0.0, 0.0, 0.31, 1.0),
+                (0.34, 0.0, 0.31, 1.0),
+                (0.68, 0.0, 0.32, 1.0),
             ],
+        },
+        LayoutCard {
+            name: "Fullscreen",
+            desc: "Single maximized pane",
+            panes: vec![(0.0, 0.0, 1.0, 1.0)],
         },
     ];
 

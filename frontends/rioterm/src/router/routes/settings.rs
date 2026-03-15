@@ -283,28 +283,6 @@ pub fn screen(
     let item_line_height = 20.0;
     let desc_extra_height = 14.0;
 
-    // Highlight quads for selected item
-    if !settings_in_sidebar {
-        for (i, _item) in cat_items.iter().enumerate() {
-            if i == editor.selected_index {
-                let item_y = items_start_y
-                    + (i as f32 * (item_line_height + desc_extra_height))
-                    - 3.0;
-                let bg_color = if editor.editing {
-                    editing_bg
-                } else {
-                    selected_bg
-                };
-                objects.push(Object::Quad(Quad {
-                    position: [panel_x - 10.0, item_y],
-                    color: bg_color,
-                    size: [full_w - panel_x, item_line_height + 2.0],
-                    ..Quad::default()
-                }));
-            }
-        }
-    }
-
     let panel_rt = sugarloaf.create_temp_rich_text();
     sugarloaf.set_rich_text_font_size(&panel_rt, 12.0);
 

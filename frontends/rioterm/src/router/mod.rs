@@ -1280,6 +1280,7 @@ impl Route<'_> {
             if key_event.state != rio_window::event::ElementState::Pressed {
                 return true;
             }
+            let layout_count: usize = 6; // 3 rows x 2 cols
             match &key_event.logical_key {
                 Key::Named(NamedKey::Escape) => {
                     self.layouts_selected = 0;
@@ -1291,7 +1292,7 @@ impl Route<'_> {
                     }
                 }
                 Key::Named(NamedKey::ArrowDown) => {
-                    if self.layouts_selected < 2 {
+                    if self.layouts_selected + 2 < layout_count {
                         self.layouts_selected += 2;
                     }
                 }
@@ -1301,43 +1302,42 @@ impl Route<'_> {
                     }
                 }
                 Key::Named(NamedKey::ArrowRight) => {
-                    if self.layouts_selected % 2 == 0 && self.layouts_selected < 3 {
+                    if self.layouts_selected % 2 == 0
+                        && self.layouts_selected + 1 < layout_count
+                    {
                         self.layouts_selected += 1;
                     }
                 }
                 Key::Named(NamedKey::Enter) => {
-                    // Apply the selected layout preset
                     match self.layouts_selected {
                         0 => {
-                            // Side by side: one split right
+                            // Side by Side
                             self.window.screen.split_right();
                         }
                         1 => {
-                            // Dev: split right, then split the right pane down
-                            self.window.screen.split_right();
+                            // Top / Bottom
                             self.window.screen.split_down();
                         }
                         2 => {
-                            // Quad: 4 equal panes in a 2x2 grid
-                            // 1. split_right → [A, *B*] focus on B
-                            // 2. split_down  → [A, B-top, *B-bot*] focus on B-bot
-                            // 3. prev_split  → [A, *B-top*, B-bot] focus on B-top
-                            // 4. prev_split  → [*A*, B-top, B-bot] focus on A
-                            // 5. split_down  → [A-top, *A-bot*, B-top, B-bot] focus on A-bot
+                            // Dev: editor left, two terminals right
+                            self.window.screen.split_right();
+                            self.window.screen.split_down();
+                        }
+                        3 => {
+                            // Quad: 2x2 grid
                             self.window.screen.split_right();
                             self.window.screen.split_down();
                             self.window.screen.context_manager.select_prev_split();
                             self.window.screen.context_manager.select_prev_split();
                             self.window.screen.split_down();
                         }
-                        3 => {
-                            // Monitoring: wide left + two stacked right
-                            // Split right first, then split the right pane down,
-                            // then go back to left pane (the wide main pane)
+                        4 => {
+                            // Three Column
                             self.window.screen.split_right();
-                            self.window.screen.split_down();
-                            self.window.screen.context_manager.select_prev_split();
-                            self.window.screen.context_manager.select_prev_split();
+                            self.window.screen.split_right();
+                        }
+                        5 => {
+                            // Fullscreen — already a single pane, do nothing
                         }
                         _ => {}
                     }
