@@ -10,7 +10,7 @@ env:
 
 jobs:
   build-macos:
-    name: macOS (universal)
+    name: macOS (Apple Silicon)
     runs-on: macos-latest
     permissions:
       contents: write
@@ -19,25 +19,12 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
 
-      - name: Add cross-compile target
-        run: rustup target add x86_64-apple-darwin
-
       - uses: Swatinem/rust-cache@v2
 
-      - name: Build aarch64
+      - name: Build
         run: |
           RUSTFLAGS='-C link-arg=-s' MACOSX_DEPLOYMENT_TARGET="11.0" \
-            cargo build --release --target=aarch64-apple-darwin -p volt
-
-      - name: Build x86_64
-        run: |
-          RUSTFLAGS='-C link-arg=-s' MACOSX_DEPLOYMENT_TARGET="10.15" \
-            cargo build --release --target=x86_64-apple-darwin -p volt
-
-      - name: Create universal binary
-        run: |
-          lipo target/{x86_64,aarch64}-apple-darwin/release/volt \
-            -create -output target/release/volt
+            cargo build --release -p volt
 
       - name: Package Volt.app
         run: |
@@ -58,18 +45,16 @@ jobs:
       - name: Create zip
         run: |
           cd target/release/osx
-          zip -r ../../../Volt-macos-universal.zip Volt.app
+          zip -r ../../../Volt-macos-arm64.zip Volt.app
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
-          files: Volt-macos-universal.zip
+          files: Volt-macos-arm64.zip
           body: |
-            ## Installation (macOS)
+            ## Installation (macOS Apple Silicon)
 
-            1. Download `Volt-macos-universal.zip`
+            1. Download `Volt-macos-arm64.zip`
             2. Unzip and drag `Volt.app` to `/Applications`
             3. First launch: right-click → Open (bypasses Gatekeeper for unsigned apps)
-
-            Works on both Intel and Apple Silicon Macs.
