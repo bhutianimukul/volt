@@ -1,96 +1,101 @@
-# Volt - GPU-Accelerated Terminal Emulator
+<p align="center">
+  <img src="misc/screenshots/volt-icon.png" width="128" alt="Volt Icon">
+</p>
 
-A fast, modern terminal emulator built in Rust with native Metal/WGPU rendering. Designed for developers who want speed, power, and a beautiful interface.
+<h1 align="center">Volt</h1>
+<p align="center">A fast, modern GPU-accelerated terminal emulator built in Rust</p>
 
-## Features
+<p align="center">
+  <img src="misc/screenshots/terminal.png" alt="Volt Terminal" width="800">
+</p>
 
-### Core Terminal
-- **GPU-accelerated rendering** via WGPU (Metal on macOS, Vulkan/DX on other platforms)
-- **Color-coded tabs** with click, rename (double-click), scroll, Cmd+1-9 jump
-- **Split panes** — vertical (Cmd+D) and horizontal splits with drag-to-resize dividers
-- **Pane zoom** (Cmd+Shift+Enter) and **broadcast mode** (Cmd+Shift+B)
-- **True color** (24-bit), font ligatures, Sixel/iTerm2/Kitty image protocols
-- **TOML config** with hot-reload (~/.config/volt/config.toml)
+## Highlights
 
-### Interactive Settings (Cmd+,)
-- 40+ configurable options organized by category
-- Navigate with arrow keys, edit inline, toggle booleans with Enter
-- Native image picker for background images with adjustable opacity
-- Import config from Alacritty, Ghostty, or Kitty
+- GPU-accelerated rendering (Metal/Vulkan/DX)
+- 10 color-coded tabs with Cmd+1-9, double-click to rename
+- Split panes with drag-to-resize dividers
+- 40+ interactive settings with live preview
+- Built-in AI assistant, session history, bookmarks, connections manager
+- 6 layout presets, session export, tmux integration
+- Colorful status bar with one-click access to all features
 
-### Help System (Cmd+?)
-- 4 categories: **Shortcuts**, **Features**, **Actions**, **Commands**
-- Actions launch features directly with Enter
-- Commands insert slash commands into the terminal
+## Color-Coded Tabs
 
-### Session History (Cmd+Shift+H)
-- Records all commands with exit codes, duration, timestamps
-- Arrow keys to navigate, Enter to paste command into terminal
-- `b` to bookmark, `e` to export session
-- Persists across restarts (~/.config/volt/history.json)
+<img src="misc/screenshots/tabs.png" alt="Color-coded tabs" width="800">
 
-### Environment Inspector (Cmd+Shift+E)
-- All environment variables grouped by category
-- Secrets auto-masked (API keys, tokens, passwords)
-- Enter copies KEY=VALUE to clipboard and terminal
+Each tab gets a unique color. Double-click to rename:
 
-### Bookmarks (Cmd+Shift+K)
-- Save important commands with tags and exit codes
-- Enter to paste, `d` to delete
-- Persistent storage (~/.config/volt/bookmarks.json)
+<img src="misc/screenshots/rename-tab.png" alt="Rename tab" width="800">
 
-### Connections Manager (status bar > Connect)
-- SSH, MySQL, PostgreSQL, Redis, Kubernetes, Docker connections
-- Create new connections with `n`, delete with `d`, edit config with `e`
-- Config file: ~/.config/volt/connections.toml
+## Split Panes & AI Assistant
 
-### Tmux Integration (Cmd+Shift+M)
-- Sidebar list of tmux sessions with attach/detach status
-- Enter to attach, `d` to detach, `x` to kill, `n` to create, `r` to rename
+<img src="misc/screenshots/splits.png" alt="Split panes with AI" width="800">
 
-### Layout Presets (Cmd+Shift+L)
-- **Side by Side** — two equal vertical panes
-- **Top / Bottom** — two equal horizontal panes
-- **Dev** — editor left, two terminals right
-- **Quad** — four equal panes (2x2 grid)
-- **Three Column** — three equal vertical panes
-- **Fullscreen** — single maximized pane
+Split vertically (Cmd+D), zoom any pane (Cmd+Shift+Enter), broadcast input to all panes (Cmd+Shift+B). The AI assistant (Cmd+Shift+I) opens Claude Code in a split.
 
-### Slash Commands (Cmd+Shift+P)
-- 20+ built-in commands organized by category
-- Navigate and select with arrow keys, Enter to insert
-- Categories: Navigation, Appearance, Tools, Session, Debug
+## Interactive Settings (Cmd+,)
 
-### Session Export (Cmd+Shift+X)
-- Export as **Asciinema** (.cast) — playable recordings
-- Export as **Plain Text** (.txt) — command history
-- Export as **HTML** (.html) — styled terminal output with embedded player
-- Export as **JSON** (.json) — structured session data
+<img src="misc/screenshots/settings.png" alt="Settings editor" width="800">
 
-### Session Sharing (Cmd+Shift+S)
-- Host a terminal session for others to view
-- Connect to a shared session
+40+ options organized by category. Navigate with arrow keys, toggle booleans with Enter, search with `/`. Import config from Alacritty, Ghostty, or Kitty with `i`.
 
-### Time Travel (Cmd+Shift+T)
-- Browse command timeline with sidebar navigation
-- Detail panel shows command, status, duration, directory, output preview
-- Enter to replay, `c` to copy command
+## Help System (Cmd+?)
 
-### AI Assistant (Cmd+Shift+I)
-- Opens Claude Code in a split pane
-- Automatic tab rename to "AI"
+<img src="misc/screenshots/help.png" alt="Help shortcuts" width="800">
 
-### Safety Features
-- **Destructive command detection** — warns on `rm -rf`, `git push -f`, etc. (20 patterns)
-- **Multi-line paste confirmation**
-- **Shell integration** auto-installs on launch
-- macOS notifications on long-running commands
-- Dock badge on terminal bell
+Four categories: Shortcuts, Features, Actions, Commands. Actions launch features directly with Enter.
 
-### Background Images
-- Set via Settings > Window > Background Image (native file picker)
-- Default 40% opacity for readability (configurable)
-- Remove with Backspace in settings
+## Session History (Cmd+Shift+H)
+
+<img src="misc/screenshots/history.png" alt="Session history" width="800">
+
+All commands recorded with exit codes, duration, and timestamps. Enter to paste, `b` to bookmark, `e` to export.
+
+## Environment Inspector (Cmd+Shift+E)
+
+<img src="misc/screenshots/env.png" alt="Environment variables" width="800">
+
+Variables grouped by category with secrets auto-masked. Enter copies KEY=VALUE to clipboard.
+
+## Bookmarks (Cmd+Shift+K)
+
+<img src="misc/screenshots/bookmarks.png" alt="Bookmarks" width="800">
+
+Save important commands. Enter to paste, `d` to delete. Persistent across sessions.
+
+## Connections Manager
+
+<img src="misc/screenshots/connections.png" alt="Connections" width="800">
+
+SSH, MySQL, PostgreSQL, Redis, Kubernetes, Docker. Create with `n`, connect with Enter, edit config with `e`.
+
+## Layout Presets (Cmd+Shift+L)
+
+<img src="misc/screenshots/layouts.png" alt="Layout presets" width="800">
+
+Six presets: Side by Side, Top/Bottom, Dev, Quad, Three Column, Fullscreen.
+
+## Session Export (Cmd+Shift+X)
+
+<img src="misc/screenshots/export.png" alt="Session export" width="800">
+
+Export as Asciinema (.cast), Plain Text, HTML, or JSON.
+
+## Tmux Integration (Cmd+Shift+M)
+
+<img src="misc/screenshots/tmux.png" alt="Tmux picker" width="800">
+
+Sidebar list with session details. Attach, detach, kill, rename, create sessions.
+
+## Session Sharing (Cmd+Shift+S)
+
+<img src="misc/screenshots/sharing.png" alt="Session sharing" width="800">
+
+Host or connect to shared terminal sessions over the network.
+
+## Windowed View
+
+<img src="misc/screenshots/window.png" alt="Volt window" width="800">
 
 ## Keyboard Shortcuts
 
@@ -114,11 +119,8 @@ A fast, modern terminal emulator built in Rust with native Metal/WGPU rendering.
 | Cmd+Shift+Enter | Zoom pane |
 | Cmd+Shift+B | Broadcast to all panes |
 | Cmd+1-9 | Jump to tab |
-| Ctrl+` | Quake mode |
 
 ## Status Bar
-
-The bottom status bar provides quick access to all features:
 
 ```
 Volt                    AI | History | Env | Bookmarks | Connect | Layout | Export | Share  tmux
@@ -128,32 +130,16 @@ Each item is color-coded and clickable.
 
 ## Installation
 
-### Build from source
-
 ```bash
 git clone https://github.com/bhutianimukul/volt.git
 cd volt
 cargo build --release -p volt
-```
-
-### Run
-
-```bash
 cargo run -p volt
-```
-
-### macOS .app Bundle
-
-```bash
-# Copy to Applications
-cp -r misc/osx/Volt.app /Applications/
-# Copy the binary
-cp target/release/volt /Applications/Volt.app/Contents/MacOS/
 ```
 
 ## Configuration
 
-Config file: `~/.config/volt/config.toml`
+Config: `~/.config/volt/config.toml`
 
 ```toml
 [fonts]
@@ -170,9 +156,6 @@ opacity = 0.4
 mode = "TopTab"
 ```
 
-Import from other terminals:
-- Open Settings (Cmd+,) → press `i` to auto-import from Alacritty, Ghostty, or Kitty
-
 ## Tech Stack
 
 | Component | Technology |
@@ -180,9 +163,7 @@ Import from other terminals:
 | Language | Rust |
 | GPU Rendering | WGPU (Metal/Vulkan/DX/GL) |
 | Text Shaping | skrifa + font-kit |
-| VT Parsing | Alacritty-derived parser |
 | Config | TOML via serde |
-| Logging | tracing |
 
 ## License
 

@@ -98,9 +98,9 @@ pub fn screen(
     match state {
         SharingState::Idle => {
             // Two action cards: Host / Connect
-            let card_w = 180.0_f32;
-            let card_h = 120.0_f32;
-            let card_gap = 20.0_f32;
+            let card_w = 220.0_f32;
+            let card_h = 130.0_f32;
+            let card_gap = 24.0_f32;
 
             for (i, (title, desc, icon)) in [
                 ("Host Session", "Others can view your terminal", "\u{25B6}"),
