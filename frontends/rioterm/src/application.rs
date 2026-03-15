@@ -1012,11 +1012,41 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                     _ => (),
                 }
 
-                // Check tab clicks BEFORE macOS deadzone check,
-                // since TopTab mode places tabs in the deadzone area
+                // Check nav button clicks and tab clicks BEFORE macOS deadzone
                 if state == ElementState::Pressed && button == MouseButton::Left {
                     let mx = route.window.screen.mouse.x as f64;
                     let my = route.window.screen.mouse.y as f64;
+                    let scale = route.window.screen.sugarloaf.scale_factor() as f64;
+                    let lx = mx / scale;
+                    let ly = my / scale;
+
+                    // Check nav buttons (right side of tab bar)
+                    if ly < 22.0 {
+                        let visible_w = route.window.screen.sugarloaf.window_size().width
+                            / route.window.screen.sugarloaf.scale_factor();
+                        if let Some(btn) = crate::renderer::navigation::nav_button_at_position(
+                            lx as f32, visible_w,
+                        ) {
+                            use crate::renderer::navigation::NavButton;
+                            match btn {
+                                NavButton::Help => {
+                                    route.window.screen.context_manager.toggle_help();
+                                    route.request_redraw();
+                                }
+                                NavButton::Settings => {
+                                    route.window.screen.context_manager.toggle_settings();
+                                    route.request_redraw();
+                                }
+                                NavButton::NewTab => {
+                                    route.window.screen.create_tab();
+                                    route.request_redraw();
+                                }
+                            }
+                            return;
+                        }
+                    }
+
+                    // Check tab clicks
                     if let Some(tab_idx) =
                         route.window.screen.tab_index_at_position(mx, my)
                     {
