@@ -11,10 +11,53 @@ Config file: `~/.config/volt/config.toml`
 
 ---
 
-## Keyboard Shortcuts
+## What Works RIGHT NOW (try these!)
+
+### 1. Color-Coded Tabs
+Open the terminal and press **Cmd+T** a few times. Each new tab gets a unique random color. You can instantly identify which tab is which by its color.
+
+### 2. Click Tabs to Switch
+**Click any tab** in the top bar to switch to it. No keyboard shortcut needed.
+
+### 3. Rename Tabs
+**Double-click** any tab to rename it. A dialog pops up — type a name and hit OK. Or press **Cmd+Shift+R**.
+
+### 4. Jump to Tab by Number
+Press **Cmd+1** through **Cmd+9** to jump directly to that tab. Cmd+9 goes to the last tab.
+
+### 5. Split Panes
+- **Cmd+D** — split the current pane to the right
+- **Cmd+Shift+D** — split the current pane downward (check your config for this binding)
+- **Drag the divider** between panes with your mouse to resize them
+- **Cmd+Shift+Enter** — zoom the current pane to fill the whole window (press again to unzoom)
+
+### 6. Broadcast Input
+Press **Cmd+Shift+B** to toggle broadcast mode. When active, everything you type goes to ALL panes at once. Great for running the same command on multiple servers. Press again to disable.
+
+### 7. Destructive Command Warning
+Try typing `rm -rf /tmp/test` and press Enter. Volt will show a warning dialog:
+- Shows what the command will do
+- Shows severity level (Warning/Danger)
+- You can choose "Execute Anyway" or "Cancel"
+
+Also catches: `git push --force`, `kubectl delete`, `chmod -R`, `docker prune`, `DROP TABLE`, `terraform destroy`, `git reset --hard`, `dd`, `mkfs`, `kill -9`, `sudo rm`, and more (20 patterns total).
+
+**Bypass:** Prefix with `!` to skip: `!rm -rf /tmp/junk`
+
+### 8. Settings Viewer
+Press **Cmd+,** to open the settings viewer. Shows all your current config values organized by category. Press **Escape** to go back to the terminal.
+
+### 9. Tab Scrolling
+When you have lots of tabs, **scroll your mouse wheel/trackpad** over the tab bar to scroll horizontally through them.
+
+### 10. Block Navigation
+Press **Cmd+Up** to jump to the previous command, **Cmd+Down** to jump to the next command. (Requires shell integration — see below.)
+
+---
+
+## Keyboard Shortcuts Reference
 
 ### Tab Management
-
 | Shortcut | Action |
 |----------|--------|
 | Cmd+T | New tab |
@@ -28,20 +71,19 @@ Config file: `~/.config/volt/config.toml`
 | Scroll on tab bar | Scroll tabs horizontally |
 
 ### Split Panes
-
 | Shortcut | Action |
 |----------|--------|
 | Cmd+D | Split right |
-| Cmd+Shift+D | Split down |
 | Cmd+Shift+Enter | Toggle zoom on current pane |
 | Cmd+Shift+B | Broadcast input to all panes |
 | Ctrl+Cmd+Arrow | Resize pane (keyboard) |
 | Drag divider | Resize pane (mouse) |
 
-### General
-
+### Navigation
 | Shortcut | Action |
 |----------|--------|
+| Cmd+Up | Jump to previous command block |
+| Cmd+Down | Jump to next command block |
 | Cmd+, | Open settings viewer |
 | Cmd+K | Clear scrollback |
 | Cmd+L | Clear screen |
@@ -49,156 +91,29 @@ Config file: `~/.config/volt/config.toml`
 | Cmd+Enter | Toggle fullscreen |
 | Cmd+N | New window |
 | Cmd+Q | Quit |
-| Cmd+V | Paste |
-| Cmd+C | Copy / Send SIGINT |
 
 ---
 
-## Features
+## Shell Integration Setup
 
-### Color-Coded Tabs
+To enable block tracking (Cmd+Up/Down navigation, command duration, exit codes), add this to your shell config:
 
-Every new tab gets a unique random accent color. The full tab bar is visible at all times — each tab is a solid color block so you can instantly identify tabs by color from anywhere. The active tab has a white bottom indicator strip.
-
-Tabs auto-size based on their label — short number labels are compact, renamed tabs expand to fit (max 20 characters with ".." truncation).
-
-### Command Consequences Preview
-
-Volt automatically detects destructive commands before execution:
-
-- `rm -rf` — shows file count and total size
-- `git push --force` — warns about overwriting remote history
-- `kubectl delete` — warns about Kubernetes resource deletion
-- `chmod -R` — warns about recursive permission changes
-- `docker prune/rm` — warns about container/image removal
-- SQL `DROP TABLE/DATABASE/TRUNCATE` — warns about data destruction
-
-When detected, a native macOS dialog appears with severity level, description, and details. Choose **"Execute Anyway"** or **"Cancel"**.
-
-**Bypass:** Prefix any command with `!` to skip the check: `!rm -rf /tmp/junk`
-
-### Settings Viewer (Cmd+,)
-
-Opens a dedicated settings view showing your current configuration organized by category:
-
-- **Font** — family, size
-- **Window** — opacity, background
-- **Navigation** — mode, hide if single
-- **Colors** — background, foreground, cursor
-- **Shell** — program, args
-- **Developer** — log level, log file
-
-Press **Escape** to return to the terminal. Edit `~/.config/volt/config.toml` to change settings.
-
-### Pane Zoom
-
-Press `Cmd+Shift+Enter` to zoom the current pane to fill the entire window, hiding all other panes. Press again to restore the split layout. Useful for focusing on one pane temporarily.
-
-### Broadcast Input
-
-Press `Cmd+Shift+B` to toggle broadcast mode. When active, everything you type is sent to ALL panes simultaneously. Press again to disable. Great for running the same command on multiple servers.
-
-### Mouse Divider Dragging
-
-When you have split panes, hover over the divider between panes — the cursor changes to a resize indicator. Click and drag to resize panes freely.
-
-### Tab Rename
-
-Double-click any tab or press `Cmd+Shift+R` to rename it. A native dialog appears where you can type a custom name. Custom names persist across title updates.
-
----
-
-## Scaffolded Features (Data Models Ready)
-
-These features have their core logic implemented and tested. They need UI wiring to become fully interactive.
-
-### OSC 133 Shell Integration (blocks.rs)
-
-Block model for tracking individual commands:
-
-- Detects prompt start, command start, output start, command finish
-- Tracks exit code and duration per command
-- Foundation for block-based UI (collapsible command blocks)
-
-### Structured Output Detection (structured_output.rs)
-
-Detects and parses:
-
-- **JSON** — full recursive descent parser, produces collapsible tree
-- **Tables** — detects aligned columns (kubectl, docker, ps output)
-- **Key-Value** — detects `key: value` and `key = value` patterns
-
-### Retroactive Piping (retroactive_pipe.rs)
-
-Pipe any previous command's captured output through a filter:
-
-```
-/pipe grep error   # Search old output for "error"
-/pipe jq '.name'   # Extract field from JSON output
-/pipe wc -l        # Count lines
+### For Zsh (~/.zshrc)
+```bash
+[ -f ~/.config/volt/shell/volt-integration.zsh ] && source ~/.config/volt/shell/volt-integration.zsh
 ```
 
-Smart filter suggestions based on output content.
+### For Bash (~/.bashrc)
+```bash
+[ -f ~/.config/volt/shell/volt-integration.bash ] && source ~/.config/volt/shell/volt-integration.bash
+```
 
-### Session Time-Travel (time_travel.rs)
+### For Fish (~/.config/fish/config.fish)
+```fish
+test -f ~/.config/volt/shell/volt-integration.fish && source ~/.config/volt/shell/volt-integration.fish
+```
 
-Records all commands with timestamp, exit code, duration, and output preview:
-
-- Search history: find commands matching a query
-- Find failed commands (exit code != 0)
-- Export session as text
-
-### Shell Intelligence (shell_intelligence.rs)
-
-- **Project detection**: Rust (Cargo.toml), Node (package.json), Python, Go, Ruby, Java, Docker, Terraform
-- **Git branch detection**: reads `.git/HEAD`
-- **Secret scanning**: detects API keys (AWS, GitHub, Stripe, Slack, OpenAI) before execution
-- **Smart suggestions**: context-aware commands per project type
-
-### Slash Command System (slash_commands.rs)
-
-20 built-in commands with fuzzy matching:
-
-- `/split`, `/zoom`, `/tab`, `/close` — Navigation
-- `/theme`, `/font`, `/opacity`, `/settings` — Appearance
-- `/undo`, `/pipe`, `/test`, `/debug` — Tools
-- `/search`, `/history`, `/bookmark`, `/share`, `/notify` — Session
-- `/sandbox`, `/ai`, `/layout` — Debug
-
-### Command-Level Undo (undo.rs)
-
-APFS clonefile checkpoints for zero-cost filesystem snapshots:
-
-- Creates snapshot before destructive commands
-- `volt undo` or `/undo` restores files
-- Named checkpoints: `/undo name "before migration"`
-- Rolling window: 50 checkpoints max
-
-### Tmux CC Mode Integration (tmux_cc.rs)
-
-Connect to tmux via Control Center mode:
-
-- tmux windows map to Volt tabs
-- tmux panes map to Volt splits
-- Session browser: list/attach/detach
-- Notification parsing for window/pane lifecycle
-
----
-
-## Inherited from Rio Terminal
-
-Volt is built on [Rio Terminal](https://github.com/raphamorim/rio) v0.2.37 (MIT license), inheriting:
-
-- **WGPU rendering** — GPU-accelerated via Metal (macOS), Vulkan, DirectX
-- **Font ligatures** — full OpenType support via skrifa
-- **True color** — 24-bit color (16 million colors)
-- **Image protocols** — Sixel, iTerm2, Kitty
-- **TOML configuration** — with hot-reload on file change
-- **Cross-platform** — macOS, Linux (X11/Wayland), Windows
-- **Kitty keyboard protocol** — full mode stack support
-- **Vi mode** — scrollback navigation
-- **URL detection** — clickable hyperlinks
-- **Color automation** — per-program tab colors
+The integration scripts emit OSC 133 sequences that tell Volt where each command starts and ends.
 
 ---
 
@@ -206,8 +121,7 @@ Volt is built on [Rio Terminal](https://github.com/raphamorim/rio) v0.2.37 (MIT 
 
 Config file: `~/.config/volt/config.toml`
 
-Example:
-
+### Example Config
 ```toml
 [fonts]
 family = "JetBrains Mono"
@@ -227,22 +141,60 @@ foreground = "#F9F4DA"
 [shell]
 program = "/bin/zsh"
 args = ["--login"]
+
+[developer]
+log-level = "OFF"
+```
+
+### Connection Manager
+Create `~/.config/volt/connections.toml` to save frequently used connections:
+
+```toml
+[connections.prod-server]
+type = "ssh"
+host = "prod.example.com"
+user = "deploy"
+
+[connections.staging-db]
+type = "mysql"
+host = "staging-db.example.com"
+user = "app"
+database = "myapp_staging"
+
+[connections.cache]
+type = "redis"
+host = "redis.example.com"
+port = 6379
 ```
 
 ---
 
-## Building
+## Feature Modules (Scaffolded — Coming Soon)
 
-```bash
-# Development
-cargo run -p volt
+These features have their core logic built and tested. They need UI integration to become interactive:
 
-# Release build
-cargo build --release -p volt
-
-# Run tests
-cargo test -p volt
-```
+| Module | What It Does | Tests |
+|--------|-------------|-------|
+| **Structured Output** | Detect JSON/table/CSV in command output, render as collapsible tree | 3 |
+| **Retroactive Piping** | Pipe old command output through grep/jq/awk without re-running | 5 |
+| **Session Time-Travel** | Record all commands with timestamps, search history | - |
+| **Slash Commands** | Type `/split`, `/undo`, `/test` etc. for quick actions (20 commands) | 3 |
+| **APFS Undo** | Snapshot files before destructive commands, restore with `/undo` | - |
+| **Tmux CC Mode** | Connect to tmux, map tmux windows→tabs and panes→splits | 7 |
+| **Test Runner** | `/test` auto-detects cargo/npm/pytest/go and runs tests | 3 |
+| **Notifications** | macOS notification when long commands (>10s) finish | 5 |
+| **Triggers** | Watch output for patterns (errors, warnings) and highlight/notify | 6 |
+| **Bookmarks** | Save important commands for quick reference later | 6 |
+| **Layout Presets** | Save/load pane arrangements (`dev`, `quad`, `monitoring`) | 3 |
+| **Session Export** | Export sessions as asciinema, text, HTML, or JSON | 5 |
+| **Shell Intelligence** | Detect project type, git branch, suggest commands | 8 |
+| **Env Inspector** | Categorized env var viewer with secret masking | 8 |
+| **Config Import** | Import settings from Alacritty, Ghostty, Kitty | 5 |
+| **Quake Mode** | Ctrl+` dropdown terminal (animated slide-down) | 4 |
+| **Block UI** | Visual decorations for command blocks (exit badges, duration) | 3 |
+| **Dock Badge** | Badge on dock icon when bell rings in unfocused window | 4 |
+| **Window State** | Save/restore window positions and tabs across restarts | 4 |
+| **Audit Log** | Structured security log of all terminal events | 4 |
 
 ---
 
@@ -250,23 +202,21 @@ cargo test -p volt
 
 ```
 frontends/rioterm/     — Main application (binary: volt)
-  src/
-    main.rs            — Entry point, config loading
-    application.rs     — Event loop, window management
-    screen/            — Terminal screen rendering
-    context/           — Pane/tab/grid management, blocks, titles
-    renderer/          — Navigation bar, text rendering
-    consequences.rs    — Destructive command detection
-    structured_output.rs — JSON/table/KV parsing
-    retroactive_pipe.rs  — Output re-piping
-    time_travel.rs     — Session recording
-    shell_intelligence.rs — Project/git/secret detection
-    slash_commands.rs   — Built-in command system
-    undo.rs            — APFS checkpoint undo
-    tmux_cc.rs         — Tmux CC mode integration
-
 sugarloaf/             — GPU rendering engine (WGPU)
 rio-backend/           — Terminal logic, ANSI parsing, config
 rio-window/            — Window management (Winit fork)
 teletypewriter/        — PTY/shell management
 ```
+
+## Building
+
+```bash
+cargo run -p volt          # Development build + run
+cargo build --release      # Release build
+cargo test -p volt         # Run all tests (245+)
+cargo clippy --workspace   # Lint
+```
+
+---
+
+*Volt is forked from [Rio Terminal](https://github.com/raphamorim/rio) v0.2.37 (MIT license).*

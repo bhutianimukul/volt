@@ -5,13 +5,16 @@
 #![windows_subsystem = "windows"]
 
 mod application;
+mod audit_log;
 mod bindings;
 mod bookmarks;
 mod cli;
+mod config_import;
 mod connections;
 mod consequences;
 mod constants;
 mod context;
+mod dock_badge;
 mod env_inspector;
 mod hints;
 mod ime;
@@ -39,6 +42,7 @@ mod triggers;
 mod tmux_cc;
 mod undo;
 mod watcher;
+mod window_state;
 
 use clap::Parser;
 use rio_backend::config::config_dir_path;
