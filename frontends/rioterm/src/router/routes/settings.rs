@@ -125,10 +125,7 @@ pub fn screen(
         lines: None,
     }));
 
-    // --- Settings list (compact layout) ---
-    let body_rt = sugarloaf.create_temp_rich_text();
-    sugarloaf.set_rich_text_font_size(&body_rt, 12.0);
-
+    // --- Settings list (two-column layout) ---
     let label_style = FragmentStyle {
         color: dim,
         ..FragmentStyle::default()
@@ -157,135 +154,194 @@ pub fn screen(
         ..FragmentStyle::default()
     };
 
-    let content = sugarloaf.content();
-    let body = content.sel(body_rt).clear();
-
     let filtered = editor.filtered_items();
-    let mut last_category = String::new();
 
-    let end = std::cmp::min(
-        editor.scroll_offset + editor.visible_rows,
-        filtered.len(),
-    );
-    let visible_range = editor.scroll_offset..end;
+    // Split items into two columns:
+    // Left: Font, Window, Navigation, Colors
+    // Right: everything else (General, Cursor, Scroll, Renderer, Developer, Shell, Keyboard, Title, Bell, Hints)
+    let left_categories = ["Font", "Window", "Navigation", "Colors"];
+    let mut left_items: Vec<(usize, &crate::settings_editor::SettingItem)> = Vec::new();
+    let mut right_items: Vec<(usize, &crate::settings_editor::SettingItem)> = Vec::new();
 
-    for (display_idx, &item) in filtered.iter().enumerate() {
-        if !visible_range.contains(&display_idx) {
-            continue;
+    for (idx, &item) in filtered.iter().enumerate() {
+        if left_categories.contains(&item.category.as_str()) {
+            left_items.push((idx, item));
+        } else {
+            right_items.push((idx, item));
         }
+    }
 
-        let is_selected = display_idx == editor.selected_index;
+    // Helper closure to build a column's rich text content
+    // We render each column as a separate RichText object at different x positions
+    let body_y = context_dimension.margin.top_y + 85.;
 
-        // Inline category tag when category changes
-        if item.category != last_category {
-            if !last_category.is_empty() {
-                // No blank line — keep it compact
+    // --- Left column ---
+    let left_rt = sugarloaf.create_temp_rich_text();
+    sugarloaf.set_rich_text_font_size(&left_rt, 12.0);
+
+    {
+        let content = sugarloaf.content();
+        let body = content.sel(left_rt).clear();
+        let mut last_category = String::new();
+
+        for &(display_idx, item) in left_items.iter() {
+            let is_selected = display_idx == editor.selected_index;
+
+            if item.category != last_category {
+                body.add_text(&format!("[{}]", item.category), category_style);
+                body.new_line();
+                last_category = item.category.clone();
             }
-            body.add_text(&format!("[{}]", item.category), category_style);
-            body.new_line();
-            last_category = item.category.clone();
-        }
 
-        // Selection indicator
-        if is_selected {
-            body.add_text("> ", FragmentStyle {
-                color: highlight,
-                ..FragmentStyle::default()
-            });
-        } else {
-            body.add_text("  ", label_style);
-        }
-
-        // Label (narrower padding for compact layout)
-        let row_label_style = if is_selected {
-            selected_style
-        } else {
-            label_style
-        };
-
-        let padded_label = format!("{:<22}", item.label);
-        body.add_text(&padded_label, row_label_style);
-
-        // Value
-        if is_selected && editor.editing {
-            body.add_text(&editor.edit_buffer, editing_style);
-            body.add_text("_", FragmentStyle {
-                color: highlight,
-                ..FragmentStyle::default()
-            });
-        } else {
-            let val_display = item.value.display();
-            let val_style = if item.value.is_bool() {
-                let is_true = matches!(item.value, crate::settings_editor::SettingValue::Bool(true));
-                FragmentStyle {
-                    color: if is_true { green } else { red },
-                    ..FragmentStyle::default()
-                }
-            } else if is_selected {
-                FragmentStyle {
+            if is_selected {
+                body.add_text("> ", FragmentStyle {
                     color: highlight,
                     ..FragmentStyle::default()
-                }
+                });
             } else {
-                value_style
-            };
-            body.add_text(&val_display, val_style);
-        }
+                body.add_text("  ", label_style);
+            }
 
-        // Only show description for the selected item (saves vertical space)
-        if is_selected && !editor.editing {
-            body.add_text(&format!("  {}", item.description), FragmentStyle {
-                color: dim,
-                ..FragmentStyle::default()
-            });
+            let row_label_style = if is_selected { selected_style } else { label_style };
+            let padded_label = format!("{:<22}", item.label);
+            body.add_text(&padded_label, row_label_style);
+
+            if is_selected && editor.editing {
+                body.add_text(&editor.edit_buffer, editing_style);
+                body.add_text("_", FragmentStyle {
+                    color: highlight,
+                    ..FragmentStyle::default()
+                });
+            } else {
+                let val_display = item.value.display();
+                let val_style = if item.value.is_bool() {
+                    let is_true = matches!(item.value, crate::settings_editor::SettingValue::Bool(true));
+                    FragmentStyle {
+                        color: if is_true { green } else { red },
+                        ..FragmentStyle::default()
+                    }
+                } else if is_selected {
+                    FragmentStyle {
+                        color: highlight,
+                        ..FragmentStyle::default()
+                    }
+                } else {
+                    value_style
+                };
+                body.add_text(&val_display, val_style);
+            }
+
+            if is_selected && !editor.editing {
+                body.add_text(&format!("  {}", item.description), FragmentStyle {
+                    color: dim,
+                    ..FragmentStyle::default()
+                });
+            }
+
+            body.new_line();
         }
 
         body.new_line();
+        body.new_line();
+
+        // Footer (only in left column)
+        if editor.editing {
+            body.add_text(" Enter ", key_bg_style)
+                .add_text(" confirm  ", dim_style())
+                .add_text(" Escape ", key_bg_style)
+                .add_text(" cancel", dim_style());
+        } else {
+            body.add_text(" Up/Down ", key_bg_style)
+                .add_text(" navigate  ", dim_style())
+                .add_text(" Enter ", key_bg_style)
+                .add_text(" edit  ", dim_style())
+                .add_text(" / ", key_bg_style)
+                .add_text(" search  ", dim_style())
+                .add_text(" Escape ", key_bg_style)
+                .add_text(" close", dim_style());
+        }
+
+        body.build();
     }
-
-    // Scroll indicator
-    if filtered.len() > editor.visible_rows {
-        body.add_text("", label_style).new_line();
-        body.add_text(
-            &format!(
-                "   Showing {}-{} of {}",
-                editor.scroll_offset + 1,
-                end,
-                filtered.len()
-            ),
-            FragmentStyle {
-                color: dim,
-                ..FragmentStyle::default()
-            },
-        )
-        .new_line();
-    }
-
-    body.add_text("", label_style).new_line();
-    body.add_text("", label_style).new_line();
-
-    // --- Footer with keybindings ---
-    if editor.editing {
-        body.add_text(" Enter ", key_bg_style)
-            .add_text(" confirm  ", dim_style())
-            .add_text(" Escape ", key_bg_style)
-            .add_text(" cancel", dim_style());
-    } else {
-        body.add_text(" Up/Down ", key_bg_style)
-            .add_text(" navigate  ", dim_style())
-            .add_text(" Enter ", key_bg_style)
-            .add_text(" edit  ", dim_style())
-            .add_text(" / ", key_bg_style)
-            .add_text(" search  ", dim_style())
-            .add_text(" Escape ", key_bg_style)
-            .add_text(" close", dim_style());
-    }
-
-    body.build();
 
     objects.push(Object::RichText(RichText {
-        id: body_rt,
-        position: [40., context_dimension.margin.top_y + 85.],
+        id: left_rt,
+        position: [40., body_y],
+        lines: None,
+    }));
+
+    // --- Right column ---
+    let right_rt = sugarloaf.create_temp_rich_text();
+    sugarloaf.set_rich_text_font_size(&right_rt, 12.0);
+
+    {
+        let content = sugarloaf.content();
+        let body = content.sel(right_rt).clear();
+        let mut last_category = String::new();
+
+        for &(display_idx, item) in right_items.iter() {
+            let is_selected = display_idx == editor.selected_index;
+
+            if item.category != last_category {
+                body.add_text(&format!("[{}]", item.category), category_style);
+                body.new_line();
+                last_category = item.category.clone();
+            }
+
+            if is_selected {
+                body.add_text("> ", FragmentStyle {
+                    color: highlight,
+                    ..FragmentStyle::default()
+                });
+            } else {
+                body.add_text("  ", label_style);
+            }
+
+            let row_label_style = if is_selected { selected_style } else { label_style };
+            let padded_label = format!("{:<22}", item.label);
+            body.add_text(&padded_label, row_label_style);
+
+            if is_selected && editor.editing {
+                body.add_text(&editor.edit_buffer, editing_style);
+                body.add_text("_", FragmentStyle {
+                    color: highlight,
+                    ..FragmentStyle::default()
+                });
+            } else {
+                let val_display = item.value.display();
+                let val_style = if item.value.is_bool() {
+                    let is_true = matches!(item.value, crate::settings_editor::SettingValue::Bool(true));
+                    FragmentStyle {
+                        color: if is_true { green } else { red },
+                        ..FragmentStyle::default()
+                    }
+                } else if is_selected {
+                    FragmentStyle {
+                        color: highlight,
+                        ..FragmentStyle::default()
+                    }
+                } else {
+                    value_style
+                };
+                body.add_text(&val_display, val_style);
+            }
+
+            if is_selected && !editor.editing {
+                body.add_text(&format!("  {}", item.description), FragmentStyle {
+                    color: dim,
+                    ..FragmentStyle::default()
+                });
+            }
+
+            body.new_line();
+        }
+
+        body.build();
+    }
+
+    objects.push(Object::RichText(RichText {
+        id: right_rt,
+        position: [380., body_y],
         lines: None,
     }));
 

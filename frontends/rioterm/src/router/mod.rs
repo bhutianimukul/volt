@@ -407,20 +407,17 @@ impl Route<'_> {
                 }
                 Key::Named(NamedKey::Enter) => {
                     // Copy selected command to PTY (paste, don't execute)
-                    let entries = self.window.screen.context_manager.session_recorder.recent(50);
-                    // entries are newest-first from recent(), we reverse in display
-                    let reversed: Vec<_> = entries.into_iter().rev().collect();
-                    let cmd_to_paste = reversed
-                        .get(self.history_selected)
-                        .filter(|e| !e.command.is_empty())
-                        .map(|e| e.command.clone());
-                    if let Some(cmd) = cmd_to_paste {
-                        self.window
-                            .screen
-                            .ctx_mut()
-                            .current_mut()
-                            .messenger
-                            .send_write(cmd.into_bytes());
+                    let entries: Vec<_> = self.window.screen.context_manager.session_recorder.all().iter().rev().collect();
+                    if let Some(entry) = entries.get(self.history_selected) {
+                        if !entry.command.is_empty() {
+                            let cmd = entry.command.clone();
+                            self.window
+                                .screen
+                                .ctx_mut()
+                                .current_mut()
+                                .messenger
+                                .send_write(cmd.into_bytes());
+                        }
                     }
                     self.history_scroll = 0;
                     self.history_selected = 0;
@@ -601,8 +598,32 @@ impl Route<'_> {
                     }
                 }
                 Key::Named(NamedKey::Enter) => {
-                    // Layout presets coming soon — close the viewer for now
-                    tracing::info!("Layout preset selected: index={}", self.layouts_selected);
+                    // Apply the selected layout preset
+                    match self.layouts_selected {
+                        0 => {
+                            // Side by side: one split right
+                            self.window.screen.split_right();
+                        }
+                        1 => {
+                            // Dev: split right, then split the right pane down
+                            self.window.screen.split_right();
+                            self.window.screen.split_down();
+                        }
+                        2 => {
+                            // Quad: split right, then split both panes down
+                            self.window.screen.split_right();
+                            self.window.screen.split_down();
+                            // Navigate to the left pane and split it down too
+                            self.window.screen.context_manager.select_prev_split();
+                            self.window.screen.split_down();
+                        }
+                        3 => {
+                            // Monitoring: split right, then split right pane down
+                            self.window.screen.split_right();
+                            self.window.screen.split_down();
+                        }
+                        _ => {}
+                    }
                     self.layouts_selected = 0;
                     self.path = RoutePath::Terminal;
                 }
