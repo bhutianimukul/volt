@@ -40,6 +40,8 @@ pub struct Route<'a> {
     pub tmux_selected: usize,
     /// Scroll offset for the environment viewer
     pub env_scroll: usize,
+    /// Currently selected index in the environment viewer
+    pub env_selected: usize,
     /// Scroll offset for the history viewer
     pub history_scroll: usize,
     /// Currently selected index in the history viewer
@@ -72,6 +74,7 @@ impl Route<'_> {
             tmux_sessions: Vec::new(),
             tmux_selected: 0,
             env_scroll: 0,
+            env_selected: 0,
             history_scroll: 0,
             history_selected: 0,
             bookmarks_scroll: 0,
@@ -370,6 +373,14 @@ impl Route<'_> {
                     Key::Character(c) if c.as_str() == "/" => {
                         editor.toggle_search();
                     }
+                    Key::Character(c) if c.as_str() == "i" => {
+                        if let Some((source, imported)) = crate::config_import::auto_import() {
+                            let toml = imported.to_volt_toml();
+                            let config_path = rio_backend::config::config_file_path();
+                            let _ = std::fs::write(&config_path, &toml);
+                            tracing::info!("Imported config from {}", source.name());
+                        }
+                    }
                     _ => {}
                 }
             }
@@ -455,6 +466,21 @@ impl Route<'_> {
                         }
                     }
                 }
+                Key::Character(c) if c.as_str() == "b" || c.as_str() == "B" => {
+                    // Bookmark the selected command
+                    let entries: Vec<_> = self.window.screen.context_manager.session_recorder.all().iter().rev().collect();
+                    if let Some(entry) = entries.get(self.history_selected) {
+                        let mut store = crate::bookmarks::BookmarkStore::load();
+                        store.add(
+                            entry.command.clone(),
+                            entry.output_preview.clone(),
+                            entry.working_dir.clone(),
+                            entry.exit_code,
+                        );
+                        let _ = store.save();
+                        tracing::info!("Bookmarked: {}", entry.command);
+                    }
+                }
                 _ => {}
             }
             return true;
@@ -467,19 +493,36 @@ impl Route<'_> {
             match &key_event.logical_key {
                 Key::Named(NamedKey::Escape) => {
                     self.env_scroll = 0;
+                    self.env_selected = 0;
                     self.path = RoutePath::Terminal;
                 }
                 Key::Named(NamedKey::ArrowDown) => {
-                    self.env_scroll = self.env_scroll.saturating_add(1);
+                    self.env_selected = self.env_selected.saturating_add(1);
                 }
                 Key::Named(NamedKey::ArrowUp) => {
-                    self.env_scroll = self.env_scroll.saturating_sub(1);
+                    self.env_selected = self.env_selected.saturating_sub(1);
                 }
                 Key::Named(NamedKey::PageDown) => {
-                    self.env_scroll = self.env_scroll.saturating_add(20);
+                    self.env_selected = self.env_selected.saturating_add(20);
                 }
                 Key::Named(NamedKey::PageUp) => {
-                    self.env_scroll = self.env_scroll.saturating_sub(20);
+                    self.env_selected = self.env_selected.saturating_sub(20);
+                }
+                Key::Named(NamedKey::Enter) => {
+                    // Copy the selected variable's KEY=VALUE to the PTY
+                    let all_vars = crate::env_inspector::get_all_env_vars();
+                    if let Some(var) = all_vars.get(self.env_selected) {
+                        let text = format!("{}={}", var.key, var.value);
+                        self.window
+                            .screen
+                            .ctx_mut()
+                            .current_mut()
+                            .messenger
+                            .send_write(text.into_bytes());
+                        self.env_scroll = 0;
+                        self.env_selected = 0;
+                        self.path = RoutePath::Terminal;
+                    }
                 }
                 _ => {}
             }
@@ -547,6 +590,25 @@ impl Route<'_> {
                         self.connections_selected = 0;
                         self.path = RoutePath::Terminal;
                     }
+                }
+                Key::Character(c) if c.as_str() == "e" || c.as_str() == "E" => {
+                    // Open connections.toml in the default editor
+                    let path = crate::connections::connection_config_path();
+                    // If file doesn't exist, create with template
+                    if !path.exists() {
+                        let _ = std::fs::write(&path, crate::connections::default_template());
+                    }
+                    // Open in editor via $EDITOR or fallback
+                    let editor = std::env::var("EDITOR").unwrap_or_else(|_| "nano".to_string());
+                    let cmd = format!("{} {}\r", editor, path.display());
+                    self.window
+                        .screen
+                        .ctx_mut()
+                        .current_mut()
+                        .messenger
+                        .send_write(cmd.into_bytes());
+                    self.connections_selected = 0;
+                    self.path = RoutePath::Terminal;
                 }
                 _ => {}
             }
@@ -901,6 +963,7 @@ impl Router<'_> {
             tmux_sessions: Vec::new(),
             tmux_selected: 0,
             env_scroll: 0,
+            env_selected: 0,
             history_scroll: 0,
             history_selected: 0,
             bookmarks_scroll: 0,
@@ -949,6 +1012,7 @@ impl Router<'_> {
                 tmux_sessions: Vec::new(),
                 tmux_selected: 0,
                 env_scroll: 0,
+                env_selected: 0,
                 history_scroll: 0,
                 history_selected: 0,
                 bookmarks_scroll: 0,

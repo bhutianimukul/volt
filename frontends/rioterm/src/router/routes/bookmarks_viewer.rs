@@ -205,12 +205,10 @@ pub fn screen(
 
     // Footer
     body.new_line().new_line();
-    body.add_text(" Escape ", key_bg_style)
-        .add_text(" close  ", footer_dim_style())
-        .add_text(" Up/Down ", key_bg_style)
+    body.add_text(" \u{2191}\u{2193} ", key_bg_style)
         .add_text(" scroll  ", footer_dim_style())
-        .add_text(" PgUp/PgDn ", key_bg_style)
-        .add_text(" fast scroll", footer_dim_style());
+        .add_text(" Escape ", key_bg_style)
+        .add_text(" close", footer_dim_style());
 
     body.build();
 

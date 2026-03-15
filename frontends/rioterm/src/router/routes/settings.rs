@@ -257,6 +257,8 @@ pub fn screen(
                 .add_text(" edit  ", dim_style())
                 .add_text(" / ", key_bg_style)
                 .add_text(" search  ", dim_style())
+                .add_text(" i ", key_bg_style)
+                .add_text(" import  ", dim_style())
                 .add_text(" Escape ", key_bg_style)
                 .add_text(" close", dim_style());
         }

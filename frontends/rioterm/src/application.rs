@@ -1945,7 +1945,7 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                         );
                     }
                     RoutePath::EnvViewer => {
-                        route.window.screen.render_env_viewer(route.env_scroll);
+                        route.window.screen.render_env_viewer(route.env_scroll, route.env_selected);
                     }
                     RoutePath::Bookmarks => {
                         route.window.screen.render_bookmarks(route.bookmarks_scroll);

@@ -2902,12 +2902,13 @@ impl Screen<'_> {
         self.sugarloaf.render();
     }
 
-    pub fn render_env_viewer(&mut self, scroll_offset: usize) {
+    pub fn render_env_viewer(&mut self, scroll_offset: usize, selected_index: usize) {
         self.sugarloaf.clear();
         crate::router::routes::env_viewer::screen(
             &mut self.sugarloaf,
             &self.context_manager.current().dimension,
             scroll_offset,
+            selected_index,
         );
         self.sugarloaf.render();
     }

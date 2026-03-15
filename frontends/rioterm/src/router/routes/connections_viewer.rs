@@ -237,9 +237,11 @@ pub fn screen(
     // Footer
     body.new_line().new_line();
     body.add_text(" \u{2191}\u{2193} ", key_bg_style)
-        .add_text(" navigate ", dim_style())
+        .add_text(" navigate  ", dim_style())
         .add_text(" Enter ", key_bg_style)
-        .add_text(" connect ", dim_style())
+        .add_text(" connect  ", dim_style())
+        .add_text(" e ", key_bg_style)
+        .add_text(" edit config  ", dim_style())
         .add_text(" Esc ", key_bg_style)
         .add_text(" close", dim_style());
 
