@@ -2782,6 +2782,62 @@ impl Screen<'_> {
 
     #[inline]
     pub fn paste(&mut self, text: &str, bracketed: bool) {
+        // Multi-line paste confirmation
+        let line_count = text.lines().count();
+        if line_count > 1 && !self.search_active() {
+            #[cfg(target_os = "macos")]
+            {
+                use objc::runtime::{Class, Object};
+                use objc::{msg_send, sel, sel_impl};
+                use std::ffi::CString;
+
+                unsafe {
+                    let alert_class = Class::get("NSAlert").unwrap();
+                    let alert: *mut Object = msg_send![alert_class, new];
+                    let ns_string_class = Class::get("NSString").unwrap();
+
+                    let title = format!("Paste {} lines?", line_count);
+                    let title_cstr = CString::new(title).unwrap();
+                    let title_ns: *mut Object = msg_send![ns_string_class,
+                        stringWithUTF8String: title_cstr.as_ptr()];
+                    let _: () = msg_send![alert, setMessageText: title_ns];
+
+                    // Show preview (first 5 lines)
+                    let preview: String =
+                        text.lines().take(5).collect::<Vec<_>>().join("\n");
+                    let info = if line_count > 5 {
+                        format!(
+                            "{}...\n\n({} more lines)",
+                            preview,
+                            line_count - 5
+                        )
+                    } else {
+                        preview
+                    };
+                    let info_cstr = CString::new(info).unwrap();
+                    let info_ns: *mut Object = msg_send![ns_string_class,
+                        stringWithUTF8String: info_cstr.as_ptr()];
+                    let _: () = msg_send![alert, setInformativeText: info_ns];
+
+                    let paste_cstr = CString::new("Paste").unwrap();
+                    let paste_ns: *mut Object = msg_send![ns_string_class,
+                        stringWithUTF8String: paste_cstr.as_ptr()];
+                    let _: () = msg_send![alert, addButtonWithTitle: paste_ns];
+
+                    let cancel_cstr = CString::new("Cancel").unwrap();
+                    let cancel_ns: *mut Object = msg_send![ns_string_class,
+                        stringWithUTF8String: cancel_cstr.as_ptr()];
+                    let _: () = msg_send![alert, addButtonWithTitle: cancel_ns];
+
+                    let response: i64 = msg_send![alert, runModal];
+                    if response != 1000 {
+                        // NSAlertFirstButtonReturn
+                        return; // User cancelled
+                    }
+                }
+            }
+        }
+
         if self.search_active() {
             for c in text.chars() {
                 self.search_input(c);
