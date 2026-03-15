@@ -2916,13 +2916,29 @@ impl Screen<'_> {
         self.sugarloaf.render();
     }
 
-    pub fn render_history(&mut self, scroll_offset: usize) {
+    pub fn render_history(&mut self, scroll_offset: usize, selected_index: usize) {
         self.sugarloaf.clear();
         crate::router::routes::history::screen(
             &mut self.sugarloaf,
             &self.context_manager.current().dimension,
             &self.context_manager.session_recorder,
             scroll_offset,
+            selected_index,
+        );
+        self.sugarloaf.render();
+    }
+
+    pub fn render_connections(
+        &mut self,
+        connections: &[(String, String, String, String)],
+        selected_index: usize,
+    ) {
+        self.sugarloaf.clear();
+        crate::router::routes::connections_viewer::screen(
+            &mut self.sugarloaf,
+            &self.context_manager.current().dimension,
+            connections,
+            selected_index,
         );
         self.sugarloaf.render();
     }

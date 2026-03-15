@@ -125,9 +125,9 @@ pub fn screen(
         lines: None,
     }));
 
-    // --- Settings list ---
+    // --- Settings list (compact layout) ---
     let body_rt = sugarloaf.create_temp_rich_text();
-    sugarloaf.set_rich_text_font_size(&body_rt, 13.0);
+    sugarloaf.set_rich_text_font_size(&body_rt, 12.0);
 
     let label_style = FragmentStyle {
         color: dim,
@@ -176,34 +176,34 @@ pub fn screen(
 
         let is_selected = display_idx == editor.selected_index;
 
-        // Category header
+        // Inline category tag when category changes
         if item.category != last_category {
             if !last_category.is_empty() {
-                body.add_text("", label_style).new_line();
+                // No blank line — keep it compact
             }
-            body.add_text(&item.category.to_uppercase(), category_style)
-                .new_line();
+            body.add_text(&format!("[{}]", item.category), category_style);
+            body.new_line();
             last_category = item.category.clone();
         }
 
         // Selection indicator
         if is_selected {
-            body.add_text(" > ", FragmentStyle {
+            body.add_text("> ", FragmentStyle {
                 color: highlight,
                 ..FragmentStyle::default()
             });
         } else {
-            body.add_text("   ", label_style);
+            body.add_text("  ", label_style);
         }
 
-        // Label
+        // Label (narrower padding for compact layout)
         let row_label_style = if is_selected {
             selected_style
         } else {
             label_style
         };
 
-        let padded_label = format!("{:<28}", item.label);
+        let padded_label = format!("{:<22}", item.label);
         body.add_text(&padded_label, row_label_style);
 
         // Value
@@ -232,7 +232,7 @@ pub fn screen(
             body.add_text(&val_display, val_style);
         }
 
-        // Description for selected item
+        // Only show description for the selected item (saves vertical space)
         if is_selected && !editor.editing {
             body.add_text(&format!("  {}", item.description), FragmentStyle {
                 color: dim,

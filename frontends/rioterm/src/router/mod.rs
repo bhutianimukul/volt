@@ -42,8 +42,14 @@ pub struct Route<'a> {
     pub env_scroll: usize,
     /// Scroll offset for the history viewer
     pub history_scroll: usize,
+    /// Currently selected index in the history viewer
+    pub history_selected: usize,
     /// Scroll offset for the bookmarks viewer
     pub bookmarks_scroll: usize,
+    /// Currently selected index in the connections viewer
+    pub connections_selected: usize,
+    /// Cached connections list: (name, type_name, host_info, command)
+    pub connections_list: Vec<(String, String, String, String)>,
 }
 
 impl Route<'_> {
@@ -63,7 +69,10 @@ impl Route<'_> {
             tmux_selected: 0,
             env_scroll: 0,
             history_scroll: 0,
+            history_selected: 0,
             bookmarks_scroll: 0,
+            connections_selected: 0,
+            connections_list: Vec::new(),
         }
     }
 }
@@ -375,19 +384,41 @@ impl Route<'_> {
             match &key_event.logical_key {
                 Key::Named(NamedKey::Escape) => {
                     self.history_scroll = 0;
+                    self.history_selected = 0;
                     self.path = RoutePath::Terminal;
                 }
                 Key::Named(NamedKey::ArrowDown) => {
-                    self.history_scroll = self.history_scroll.saturating_add(1);
+                    self.history_selected = self.history_selected.saturating_add(1);
                 }
                 Key::Named(NamedKey::ArrowUp) => {
-                    self.history_scroll = self.history_scroll.saturating_sub(1);
+                    self.history_selected = self.history_selected.saturating_sub(1);
                 }
                 Key::Named(NamedKey::PageDown) => {
-                    self.history_scroll = self.history_scroll.saturating_add(20);
+                    self.history_selected = self.history_selected.saturating_add(20);
                 }
                 Key::Named(NamedKey::PageUp) => {
-                    self.history_scroll = self.history_scroll.saturating_sub(20);
+                    self.history_selected = self.history_selected.saturating_sub(20);
+                }
+                Key::Named(NamedKey::Enter) => {
+                    // Copy selected command to PTY (paste, don't execute)
+                    let entries = self.window.screen.context_manager.session_recorder.recent(50);
+                    // entries are newest-first from recent(), we reverse in display
+                    let reversed: Vec<_> = entries.into_iter().rev().collect();
+                    let cmd_to_paste = reversed
+                        .get(self.history_selected)
+                        .filter(|e| !e.command.is_empty())
+                        .map(|e| e.command.clone());
+                    if let Some(cmd) = cmd_to_paste {
+                        self.window
+                            .screen
+                            .ctx_mut()
+                            .current_mut()
+                            .messenger
+                            .send_write(cmd.into_bytes());
+                    }
+                    self.history_scroll = 0;
+                    self.history_selected = 0;
+                    self.path = RoutePath::Terminal;
                 }
                 _ => {}
             }
@@ -440,6 +471,47 @@ impl Route<'_> {
                 }
                 Key::Named(NamedKey::PageUp) => {
                     self.bookmarks_scroll = self.bookmarks_scroll.saturating_sub(20);
+                }
+                _ => {}
+            }
+            return true;
+        }
+
+        if self.path == RoutePath::Connections {
+            if key_event.state != rio_window::event::ElementState::Pressed {
+                return true;
+            }
+            match &key_event.logical_key {
+                Key::Named(NamedKey::Escape) => {
+                    self.connections_selected = 0;
+                    self.path = RoutePath::Terminal;
+                }
+                Key::Named(NamedKey::ArrowUp) => {
+                    if self.connections_selected > 0 {
+                        self.connections_selected -= 1;
+                    }
+                }
+                Key::Named(NamedKey::ArrowDown) => {
+                    if !self.connections_list.is_empty()
+                        && self.connections_selected < self.connections_list.len() - 1
+                    {
+                        self.connections_selected += 1;
+                    }
+                }
+                Key::Named(NamedKey::Enter) => {
+                    if let Some((_name, _type_name, _host_info, command)) =
+                        self.connections_list.get(self.connections_selected)
+                    {
+                        let cmd = format!("{}\r", command);
+                        self.window
+                            .screen
+                            .ctx_mut()
+                            .current_mut()
+                            .messenger
+                            .send_write(cmd.into_bytes());
+                        self.connections_selected = 0;
+                        self.path = RoutePath::Terminal;
+                    }
                 }
                 _ => {}
             }
@@ -716,7 +788,10 @@ impl Router<'_> {
             tmux_selected: 0,
             env_scroll: 0,
             history_scroll: 0,
+            history_selected: 0,
             bookmarks_scroll: 0,
+            connections_selected: 0,
+            connections_list: Vec::new(),
         };
 
         if let Some(err) = &self.propagated_report {
@@ -759,7 +834,10 @@ impl Router<'_> {
                 tmux_selected: 0,
                 env_scroll: 0,
                 history_scroll: 0,
+                history_selected: 0,
                 bookmarks_scroll: 0,
+                connections_selected: 0,
+                connections_list: Vec::new(),
             },
         );
     }

@@ -8,6 +8,7 @@ pub fn screen(
     context_dimension: &ContextDimension,
     recorder: &SessionRecorder,
     scroll_offset: usize,
+    selected_index: usize,
 ) {
     let bg = [0.06, 0.06, 0.08, 1.0];
     let accent = [0.7, 0.4, 0.9, 1.0]; // purple
@@ -17,6 +18,7 @@ pub fn screen(
     let highlight = [0.98, 0.73, 0.16, 1.0]; // yellow for key badges
     let green = [0.3, 0.9, 0.3, 1.0];
     let red = [0.9, 0.3, 0.3, 1.0];
+    let selected_bg = [0.15, 0.15, 0.25, 1.0];
 
     let layout = sugarloaf.window_size();
     let mut objects = Vec::with_capacity(16);
@@ -156,12 +158,44 @@ pub fn screen(
         )
         .new_line();
 
+        // Clamp selected_index to valid range
+        let entry_count = entries.len();
+        let clamped_selected = if entry_count > 0 {
+            selected_index.min(entry_count - 1)
+        } else {
+            0
+        };
+
         let mut line_idx: usize = 0;
         for entry in entries.iter().rev() {
+            let display_idx = line_idx;
             line_idx += 1;
             if line_idx <= scroll_offset {
                 continue;
             }
+
+            let is_selected = display_idx == clamped_selected;
+
+            // Selection indicator
+            if is_selected {
+                body.add_text(" > ", FragmentStyle {
+                    color: highlight,
+                    ..FragmentStyle::default()
+                });
+            } else {
+                body.add_text("   ", dim_style);
+            }
+
+            let row_cmd_style = if is_selected {
+                FragmentStyle {
+                    background_color: Some(selected_bg),
+                    color: white,
+                    ..FragmentStyle::default()
+                }
+            } else {
+                cmd_style
+            };
+
             // Status indicator
             let (status, style) = match entry.exit_code {
                 Some(0) => (" ok ", ok_style),
@@ -185,7 +219,7 @@ pub fn screen(
             } else {
                 cmd_display.to_string()
             };
-            body.add_text(&cmd_truncated, cmd_style);
+            body.add_text(&cmd_truncated, row_cmd_style);
 
             // Duration if available
             if let Some(ms) = entry.duration_ms {
@@ -218,12 +252,14 @@ pub fn screen(
 
     // Footer
     body.new_line().new_line();
-    body.add_text(" Escape ", key_bg_style)
-        .add_text(" close  ", footer_dim_style())
-        .add_text(" Up/Down ", key_bg_style)
-        .add_text(" scroll  ", footer_dim_style())
+    body.add_text(" \u{2191}\u{2193} ", key_bg_style)
+        .add_text(" navigate  ", footer_dim_style())
+        .add_text(" Enter ", key_bg_style)
+        .add_text(" paste cmd  ", footer_dim_style())
         .add_text(" PgUp/PgDn ", key_bg_style)
-        .add_text(" fast scroll", footer_dim_style());
+        .add_text(" jump  ", footer_dim_style())
+        .add_text(" Escape ", key_bg_style)
+        .add_text(" close", footer_dim_style());
 
     body.build();
 

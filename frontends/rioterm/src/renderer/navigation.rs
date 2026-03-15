@@ -378,6 +378,7 @@ impl ScreenNavigation {
             ("History",   [0.5, 0.3, 0.7, 1.0],   52.0),  // purple-ish
             ("Env",       [0.2, 0.6, 0.7, 1.0],   32.0),  // cyan
             ("Bookmarks", [0.7, 0.4, 0.2, 1.0],   68.0),  // orange
+            ("Connect",   [0.2, 0.7, 0.5, 1.0],   56.0),  // teal
         ];
 
         for (label, color, w) in &buttons {
@@ -422,6 +423,7 @@ pub enum NavButton {
     History,
     EnvViewer,
     Bookmarks,
+    Connections,
 }
 
 /// Check if a click (in logical pixels) hit a top bar button.
@@ -463,6 +465,8 @@ pub fn status_button_at_position(x: f32, y: f32, win_height: f32, visible_width:
     let env_w = 32.0_f32;
     let bookmarks_x = env_x + env_w + btn_gap;
     let bookmarks_w = 68.0_f32;
+    let connections_x = bookmarks_x + bookmarks_w + btn_gap;
+    let connections_w = 56.0_f32;
 
     if x >= ai_x && x <= ai_x + ai_w {
         return Some(NavButton::AiAssistant);
@@ -475,6 +479,9 @@ pub fn status_button_at_position(x: f32, y: f32, win_height: f32, visible_width:
     }
     if x >= bookmarks_x && x <= bookmarks_x + bookmarks_w {
         return Some(NavButton::Bookmarks);
+    }
+    if x >= connections_x && x <= connections_x + connections_w {
+        return Some(NavButton::Connections);
     }
 
     // Right side

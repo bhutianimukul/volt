@@ -1,5 +1,6 @@
 pub mod assistant;
 pub mod bookmarks_viewer;
+pub mod connections_viewer;
 pub mod dialog;
 pub mod env_viewer;
 pub mod help;
@@ -20,4 +21,5 @@ pub enum RoutePath {
     TmuxPicker,
     EnvViewer,
     Bookmarks,
+    Connections,
 }

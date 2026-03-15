@@ -1192,6 +1192,31 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                                     NavButton::Bookmarks => {
                                         route.window.screen.context_manager.toggle_bookmarks();
                                     }
+                                    NavButton::Connections => {
+                                        if route.path == RoutePath::Connections {
+                                            route.path = RoutePath::Terminal;
+                                        } else {
+                                            // Load connections
+                                            let config = crate::connections::load_connections();
+                                            let mut list: Vec<(String, String, String, String)> = config
+                                                .connections
+                                                .iter()
+                                                .map(|(name, conn)| {
+                                                    let host_info = conn.to_command();
+                                                    (
+                                                        name.clone(),
+                                                        conn.type_name().to_string(),
+                                                        host_info.clone(),
+                                                        host_info,
+                                                    )
+                                                })
+                                                .collect();
+                                            list.sort_by(|a, b| a.0.cmp(&b.0));
+                                            route.connections_list = list;
+                                            route.connections_selected = 0;
+                                            route.path = RoutePath::Connections;
+                                        }
+                                    }
                                     _ => {}
                                 }
                                 route.request_redraw();
@@ -1898,7 +1923,16 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                         route.window.screen.render_bookmarks(route.bookmarks_scroll);
                     }
                     RoutePath::History => {
-                        route.window.screen.render_history(route.history_scroll);
+                        route.window.screen.render_history(
+                            route.history_scroll,
+                            route.history_selected,
+                        );
+                    }
+                    RoutePath::Connections => {
+                        route.window.screen.render_connections(
+                            &route.connections_list,
+                            route.connections_selected,
+                        );
                     }
                 }
 
