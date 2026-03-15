@@ -87,6 +87,7 @@ pub enum RioEvent {
     CreateNativeTab(Option<String>),
     CreateConfigEditor,
     ToggleSettings,
+    ToggleHelp,
     SelectNativeTabByIndex(usize),
     SelectNativeTabLast,
     SelectNativeTabNext,
@@ -254,6 +255,7 @@ impl Debug for RioEvent {
                 write!(f, "ShellCommandFinish({row}, exit={exit_code})")
             }
             RioEvent::ToggleSettings => write!(f, "ToggleSettings"),
+            RioEvent::ToggleHelp => write!(f, "ToggleHelp"),
         }
     }
 }

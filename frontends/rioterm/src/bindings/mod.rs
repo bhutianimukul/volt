@@ -244,6 +244,7 @@ impl From<String> for Action {
             "closeunfocusedtabs" => Some(Action::TabCloseUnfocused),
             "openconfigeditor" => Some(Action::ConfigEditor),
             "opensettings" => Some(Action::OpenSettings),
+            "showhelp" => Some(Action::ShowHelp),
             "selectprevtab" => Some(Action::SelectPrevTab),
             "selectnexttab" => Some(Action::SelectNextTab),
             "selectlasttab" => Some(Action::SelectLastTab),
@@ -517,6 +518,9 @@ pub enum Action {
 
     /// Toggle quake/dropdown terminal mode.
     ToggleQuakeMode,
+
+    /// Show the keyboard shortcut help overlay.
+    ShowHelp,
 
     /// Jump to the previous command block (Cmd+Up).
     JumpToPrevBlock,
@@ -1028,6 +1032,8 @@ pub fn platform_key_bindings(
         "q", ModifiersState::SUPER; Action::Quit;
         "n", ModifiersState::SUPER; Action::WindowCreateNew;
         ",", ModifiersState::SUPER; Action::OpenSettings;
+        "/", ModifiersState::SUPER | ModifiersState::SHIFT; Action::ShowHelp;
+        Key::Named(F1); Action::ShowHelp;
 
         // Quake mode
         "`", ModifiersState::CONTROL; Action::ToggleQuakeMode;
@@ -1117,6 +1123,8 @@ pub fn platform_key_bindings(
         "-", ModifiersState::CONTROL;  Action::DecreaseFontSize;
         "n", ModifiersState::CONTROL | ModifiersState::SHIFT; Action::WindowCreateNew;
         ",", ModifiersState::CONTROL | ModifiersState::SHIFT; Action::OpenSettings;
+        "/", ModifiersState::CONTROL | ModifiersState::SHIFT; Action::ShowHelp;
+        Key::Named(F1); Action::ShowHelp;
 
         // Search
         "f", ModifiersState::CONTROL | ModifiersState::SHIFT, ~BindingMode::SEARCH; Action::SearchForward;
@@ -1182,6 +1190,8 @@ pub fn platform_key_bindings(
         Key::Named(Enter), ModifiersState::ALT; Action::ToggleFullscreen;
         "n", ModifiersState::CONTROL | ModifiersState::SHIFT; Action::WindowCreateNew;
         ",", ModifiersState::CONTROL | ModifiersState::SHIFT; Action::OpenSettings;
+        "/", ModifiersState::CONTROL | ModifiersState::SHIFT; Action::ShowHelp;
+        Key::Named(F1); Action::ShowHelp;
         // This is actually a Windows Powershell shortcut
         // https://github.com/alacritty/alacritty/issues/2930
         // https://github.com/raphamorim/rio/issues/220#issuecomment-1761651339

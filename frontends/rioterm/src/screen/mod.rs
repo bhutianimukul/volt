@@ -995,6 +995,9 @@ impl Screen<'_> {
                     Act::OpenSettings => {
                         self.context_manager.toggle_settings();
                     }
+                    Act::ShowHelp => {
+                        self.context_manager.toggle_help();
+                    }
                     Act::WindowCreateNew => {
                         self.context_manager.create_new_window();
                     }
@@ -2798,6 +2801,15 @@ impl Screen<'_> {
             &mut self.sugarloaf,
             &self.context_manager.current().dimension,
             config,
+        );
+        self.sugarloaf.render();
+    }
+
+    pub fn render_help(&mut self) {
+        self.sugarloaf.clear();
+        crate::router::routes::help::screen(
+            &mut self.sugarloaf,
+            &self.context_manager.current().dimension,
         );
         self.sugarloaf.render();
     }

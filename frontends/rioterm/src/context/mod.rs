@@ -712,6 +712,12 @@ impl<T: EventListener + Clone + std::marker::Send + 'static> ContextManager<T> {
     }
 
     #[inline]
+    pub fn toggle_help(&mut self) {
+        self.event_proxy
+            .send_event(RioEvent::ToggleHelp, self.window_id);
+    }
+
+    #[inline]
     pub fn select_route_from_current_grid(&mut self) {
         self.current_route = self.current().route_id;
     }

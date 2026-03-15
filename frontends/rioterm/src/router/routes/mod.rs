@@ -1,5 +1,6 @@
 pub mod assistant;
 pub mod dialog;
+pub mod help;
 pub mod settings;
 pub mod welcome;
 
@@ -10,4 +11,5 @@ pub enum RoutePath {
     Welcome,
     ConfirmQuit,
     Settings,
+    Help,
 }

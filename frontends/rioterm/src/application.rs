@@ -776,6 +776,16 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                     route.request_redraw();
                 }
             }
+            RioEventType::Rio(RioEvent::ToggleHelp) => {
+                if let Some(route) = self.router.routes.get_mut(&window_id) {
+                    if route.path == RoutePath::Help {
+                        route.path = RoutePath::Terminal;
+                    } else {
+                        route.path = RoutePath::Help;
+                    }
+                    route.request_redraw();
+                }
+            }
             #[cfg(target_os = "macos")]
             RioEventType::Rio(RioEvent::CloseWindow) => {
                 self.router.routes.remove(&window_id);
@@ -1489,7 +1499,7 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
             }
 
             WindowEvent::Ime(ime) => {
-                if route.path == RoutePath::Assistant || route.path == RoutePath::Settings
+                if route.path == RoutePath::Assistant || route.path == RoutePath::Settings || route.path == RoutePath::Help
                 {
                     return;
                 }
@@ -1579,7 +1589,7 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
             }
 
             WindowEvent::DroppedFile(path) => {
-                if route.path == RoutePath::Assistant || route.path == RoutePath::Settings
+                if route.path == RoutePath::Assistant || route.path == RoutePath::Settings || route.path == RoutePath::Help
                 {
                     return;
                 }
@@ -1674,6 +1684,9 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                     }
                     RoutePath::Settings => {
                         route.window.screen.render_settings(&self.config);
+                    }
+                    RoutePath::Help => {
+                        route.window.screen.render_help();
                     }
                 }
 
