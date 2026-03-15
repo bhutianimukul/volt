@@ -58,6 +58,10 @@ pub struct Route<'a> {
     pub slash_commands_scroll: usize,
     /// Currently selected index in the layouts viewer
     pub layouts_selected: usize,
+    /// Currently selected category index in the settings sidebar
+    pub settings_category: usize,
+    /// Whether focus is on the settings sidebar (true) or settings panel (false)
+    pub settings_in_sidebar: bool,
 }
 
 impl Route<'_> {
@@ -85,6 +89,8 @@ impl Route<'_> {
             connections_list: Vec::new(),
             slash_commands_scroll: 0,
             layouts_selected: 0,
+            settings_category: 0,
+            settings_in_sidebar: true,
         }
     }
 }
@@ -355,22 +361,90 @@ impl Route<'_> {
                     }
                     _ => {}
                 }
-            } else {
+            } else if self.settings_in_sidebar {
+                // Sidebar mode: navigate categories
+                let categories = editor.categories();
+                let cat_count = categories.len();
                 match &key_event.logical_key {
                     Key::Named(NamedKey::Escape) => {
                         self.path = RoutePath::Terminal;
                     }
                     Key::Named(NamedKey::ArrowUp) => {
-                        editor.move_up();
+                        if self.settings_category > 0 {
+                            self.settings_category -= 1;
+                            // Reset panel selection when category changes
+                            editor.selected_index = 0;
+                        }
                     }
                     Key::Named(NamedKey::ArrowDown) => {
-                        editor.move_down();
+                        if cat_count > 0 && self.settings_category + 1 < cat_count {
+                            self.settings_category += 1;
+                            editor.selected_index = 0;
+                        }
+                    }
+                    Key::Named(NamedKey::Enter) | Key::Named(NamedKey::ArrowRight) => {
+                        self.settings_in_sidebar = false;
+                    }
+                    Key::Named(NamedKey::Tab) => {
+                        self.settings_in_sidebar = false;
+                    }
+                    Key::Character(c) if c.as_str() == "/" => {
+                        editor.toggle_search();
+                    }
+                    Key::Character(c) if c.as_str() == "i" => {
+                        if let Some((source, imported)) = crate::config_import::auto_import() {
+                            let toml = imported.to_volt_toml();
+                            let config_path = rio_backend::config::config_file_path();
+                            let _ = std::fs::write(&config_path, &toml);
+                            tracing::info!("Imported config from {}", source.name());
+                        }
+                    }
+                    _ => {}
+                }
+            } else {
+                // Panel mode: navigate settings within category
+                let categories = editor.categories();
+                let current_cat = categories.get(self.settings_category).cloned().unwrap_or_default();
+                let cat_items = editor.items_for_category(&current_cat);
+                let item_count = cat_items.len();
+                match &key_event.logical_key {
+                    Key::Named(NamedKey::Escape) => {
+                        self.path = RoutePath::Terminal;
+                    }
+                    Key::Named(NamedKey::ArrowUp) => {
+                        if editor.selected_index > 0 {
+                            editor.selected_index -= 1;
+                        }
+                    }
+                    Key::Named(NamedKey::ArrowDown) => {
+                        if item_count > 0 && editor.selected_index + 1 < item_count {
+                            editor.selected_index += 1;
+                        }
+                    }
+                    Key::Named(NamedKey::ArrowLeft) => {
+                        self.settings_in_sidebar = true;
+                    }
+                    Key::Named(NamedKey::Tab) => {
+                        self.settings_in_sidebar = true;
                     }
                     Key::Named(NamedKey::Enter) => {
-                        if editor.selected_is_bool() {
-                            editor.toggle_bool();
-                        } else {
-                            editor.start_editing();
+                        // Find the real index into editor.items for this category item
+                        if let Some(real_item) = cat_items.get(editor.selected_index) {
+                            let real_idx = editor.items.iter().position(|it| it.key == real_item.key);
+                            if let Some(ri) = real_idx {
+                                if editor.items[ri].value.is_bool() {
+                                    editor.items[ri].value = match &editor.items[ri].value {
+                                        crate::settings_editor::SettingValue::Bool(v) => crate::settings_editor::SettingValue::Bool(!v),
+                                        other => other.clone(),
+                                    };
+                                    editor.save_setting_by_index(ri);
+                                } else {
+                                    editor.edit_buffer = editor.items[ri].value.display();
+                                    editor.editing = true;
+                                    // Store the real index for editing
+                                    editor.editing_real_index = Some(ri);
+                                }
+                            }
                         }
                     }
                     Key::Character(c) if c.as_str() == "/" => {
@@ -1108,6 +1182,8 @@ impl Router<'_> {
             connections_list: Vec::new(),
             slash_commands_scroll: 0,
             layouts_selected: 0,
+            settings_category: 0,
+            settings_in_sidebar: true,
         };
 
         if let Some(err) = &self.propagated_report {
@@ -1158,6 +1234,8 @@ impl Router<'_> {
                 connections_list: Vec::new(),
                 slash_commands_scroll: 0,
                 layouts_selected: 0,
+                settings_category: 0,
+                settings_in_sidebar: true,
             },
         );
     }

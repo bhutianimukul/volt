@@ -1948,7 +1948,7 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                         route
                             .window
                             .screen
-                            .render_settings(&route.settings_editor);
+                            .render_settings(&route.settings_editor, route.settings_category, route.settings_in_sidebar);
                     }
                     RoutePath::Help => {
                         route.window.screen.render_help();

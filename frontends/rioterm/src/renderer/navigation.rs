@@ -195,18 +195,17 @@ impl ScreenNavigation {
         let visible_width = width / scale;
         let tabs_hidden = hide_if_single && len <= 1;
 
-        // Tab bar + buttons only if tabs should show
-        if !tabs_hidden {
-        // Ensure current tab is visible
-        self.ensure_tab_visible(current, visible_width);
-
-        // Draw tab bar background (full width)
+        // ALWAYS draw tab bar background and buttons
         objects.push(Object::Quad(Quad {
             position: [0.0, position_y],
             color: colors.bar,
             size: [width, PADDING_Y_BOTTOM_TABS],
             ..Quad::default()
         }));
+
+        // Tab pills only when not hidden
+        if !tabs_hidden {
+        self.ensure_tab_visible(current, visible_width);
 
         let left_margin = 4.0;
 
@@ -312,10 +311,9 @@ impl ScreenNavigation {
                 position: [tab_x + 6.0, position_y],
                 lines: None,
             }));
-        }
+        } // end if !tabs_hidden — tab pills only
 
-        // --- Top bar: right-side buttons with clear text labels ---
-        // Top bar right-side items — rendered as single text line, no rectangles
+        // Top bar buttons — ALWAYS rendered (even with single tab)
         let top_rt = sugarloaf.create_temp_rich_text();
         sugarloaf.set_rich_text_font_size(&top_rt, 11.);
         let top_dim = FragmentStyle { color: [0.5, 0.5, 0.55, 0.8], ..FragmentStyle::default() };
@@ -328,15 +326,12 @@ impl ScreenNavigation {
             .add_text("  ", top_dim)
             .build();
 
-        // Right-align: estimate ~70px for "Help  Settings  "
         let top_text_w = 110.0_f32;
         objects.push(Object::RichText(RichText {
             id: top_rt,
             position: [visible_width - top_text_w, position_y + 1.0],
             lines: None,
         }));
-
-        } // end if !tabs_hidden
 
         // --- Bottom status bar — ALWAYS rendered, even with single tab ---
         let sb_h = 22.0_f32;
@@ -399,6 +394,7 @@ impl ScreenNavigation {
             lines: None,
         }));
     }
+  }
 }
 
 /// Button positions for click detection (must match rendering)

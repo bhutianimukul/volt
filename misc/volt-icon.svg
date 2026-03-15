@@ -16,8 +16,11 @@
     </filter>
   </defs>
 
-  <!-- Full black background — no rounded corners, fills entire icon -->
+  <!-- Black background filling entire canvas to prevent white edges -->
   <rect x="0" y="0" width="1024" height="1024" fill="#000000"/>
+
+  <!-- Rounded black square (macOS style) on top -->
+  <rect x="32" y="32" width="960" height="960" rx="215" ry="215" fill="#000000"/>
 
   <!-- Yellow lightning bolt -->
   <g filter="url(#glow)">

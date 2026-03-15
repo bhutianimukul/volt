@@ -63,6 +63,8 @@ pub struct SettingsEditor {
     pub searching: bool,
     pub scroll_offset: usize,
     pub visible_rows: usize,
+    /// When editing from the panel view, this stores the real index into `items`.
+    pub editing_real_index: Option<usize>,
 }
 
 impl SettingsEditor {
@@ -76,6 +78,7 @@ impl SettingsEditor {
             searching: false,
             scroll_offset: 0,
             visible_rows: 20,
+            editing_real_index: None,
         }
     }
 
@@ -119,8 +122,14 @@ impl SettingsEditor {
         if !self.editing {
             return;
         }
-        let indices = self.filtered_indices();
-        if let Some(&idx) = indices.get(self.selected_index) {
+        // Use editing_real_index if available (panel mode), otherwise fall back to filtered
+        let idx = if let Some(ri) = self.editing_real_index {
+            Some(ri)
+        } else {
+            let indices = self.filtered_indices();
+            indices.get(self.selected_index).copied()
+        };
+        if let Some(idx) = idx {
             if let Some(new_val) =
                 SettingValue::from_input(&self.edit_buffer, &self.items[idx].value)
             {
@@ -130,11 +139,13 @@ impl SettingsEditor {
         }
         self.editing = false;
         self.edit_buffer.clear();
+        self.editing_real_index = None;
     }
 
     pub fn cancel_edit(&mut self) {
         self.editing = false;
         self.edit_buffer.clear();
+        self.editing_real_index = None;
     }
 
     pub fn type_char(&mut self, c: char) {
@@ -240,6 +251,27 @@ impl SettingsEditor {
             }
             Err(e) => tracing::error!("Failed to serialize config: {}", e),
         }
+    }
+
+    /// Returns the ordered list of unique category names.
+    pub fn categories(&self) -> Vec<String> {
+        let mut cats = Vec::new();
+        for item in &self.items {
+            if !cats.contains(&item.category) {
+                cats.push(item.category.clone());
+            }
+        }
+        cats
+    }
+
+    /// Returns items belonging to a specific category.
+    pub fn items_for_category(&self, category: &str) -> Vec<&SettingItem> {
+        self.items.iter().filter(|it| it.category == category).collect()
+    }
+
+    /// Public wrapper for save_setting so the router can call it.
+    pub fn save_setting_by_index(&self, idx: usize) {
+        self.save_setting(idx);
     }
 
     /// Returns true if the selected item is a bool (for toggle-on-Enter behavior).

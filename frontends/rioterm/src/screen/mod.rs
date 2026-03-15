@@ -2868,12 +2868,16 @@ impl Screen<'_> {
     pub fn render_settings(
         &mut self,
         editor: &crate::settings_editor::SettingsEditor,
+        settings_category: usize,
+        settings_in_sidebar: bool,
     ) {
         self.sugarloaf.clear();
         crate::router::routes::settings::screen(
             &mut self.sugarloaf,
             &self.context_manager.current().dimension,
             editor,
+            settings_category,
+            settings_in_sidebar,
         );
         self.sugarloaf.render();
     }
