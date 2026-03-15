@@ -1044,7 +1044,7 @@ pub fn platform_key_bindings(
         Key::Named(F1); Action::ShowHelp;
 
         // AI assistant
-        "a", ModifiersState::SUPER | ModifiersState::SHIFT; Action::OpenAiAssistant;
+        "i", ModifiersState::SUPER | ModifiersState::SHIFT; Action::OpenAiAssistant;
 
         // Quake mode
         "`", ModifiersState::CONTROL; Action::ToggleQuakeMode;

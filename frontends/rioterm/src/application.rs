@@ -1021,10 +1021,13 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                     let lx = mx / scale;
                     let ly = my / scale;
 
-                    // Check nav buttons (right side of tab bar)
+                    let visible_w = route.window.screen.sugarloaf.window_size().width
+                        / route.window.screen.sugarloaf.scale_factor();
+                    let win_h = route.window.screen.sugarloaf.window_size().height
+                        / route.window.screen.sugarloaf.scale_factor();
+
+                    // Check top bar nav buttons [?] [⚙]
                     if ly < 22.0 {
-                        let visible_w = route.window.screen.sugarloaf.window_size().width
-                            / route.window.screen.sugarloaf.scale_factor();
                         if let Some(btn) = crate::renderer::navigation::nav_button_at_position(
                             lx as f32, visible_w,
                         ) {
@@ -1032,19 +1035,44 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                             match btn {
                                 NavButton::Help => {
                                     route.window.screen.context_manager.toggle_help();
-                                    route.request_redraw();
                                 }
                                 NavButton::Settings => {
                                     route.window.screen.context_manager.toggle_settings();
-                                    route.request_redraw();
                                 }
-                                NavButton::NewTab => {
-                                    route.window.screen.create_tab();
-                                    route.request_redraw();
-                                }
+                                _ => {}
                             }
+                            route.request_redraw();
                             return;
                         }
+                    }
+
+                    // Check bottom status bar buttons [AI] [tmux]
+                    if let Some(btn) = crate::renderer::navigation::status_button_at_position(
+                        lx as f32, ly as f32, win_h,
+                    ) {
+                        use crate::renderer::navigation::NavButton;
+                        match btn {
+                            NavButton::AiAssistant => {
+                                if crate::ai_assistant::is_claude_available() {
+                                    route.window.screen.split_right();
+                                    let bytes = b"claude\r".to_vec();
+                                    route.window.screen.ctx_mut().current_mut().messenger.send_write(bytes);
+                                }
+                            }
+                            NavButton::TmuxConnect => {
+                                use crate::tmux_cc::TmuxController;
+                                let sessions = TmuxController::list_sessions();
+                                let cmd = if let Some((_, name, _)) = sessions.first() {
+                                    format!("tmux -CC attach -t {}\r", name)
+                                } else {
+                                    "tmux -CC new-session\r".to_string()
+                                };
+                                route.window.screen.ctx_mut().current_mut().messenger.send_write(cmd.into_bytes());
+                            }
+                            _ => {}
+                        }
+                        route.request_redraw();
+                        return;
                     }
 
                     // Check tab clicks

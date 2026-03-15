@@ -689,10 +689,12 @@ impl Screen<'_> {
             // Only applies in the primary screen (not alt screen, e.g. vim/less).
             if bytes.contains(&b'\r') && !mode.contains(Mode::ALT_SCREEN) {
                 let command_text = self.extract_current_command_line();
+                tracing::debug!("Command intercepted: '{}'", command_text);
                 if !command_text.is_empty() {
                     if let Some(preview) =
                         crate::consequences::analyze_command(&command_text)
                     {
+                        tracing::info!("Destructive command detected: {}", preview.description);
                         if !self.confirm_destructive_command(&preview) {
                             return;
                         }
