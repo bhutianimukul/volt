@@ -1,16 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
-  <defs>
-    <linearGradient id="bolt" x1="30%" y1="0%" x2="70%" y2="100%">
-      <stop offset="0%" style="stop-color:#ffe14d"/>
-      <stop offset="50%" style="stop-color:#f5c211"/>
-      <stop offset="100%" style="stop-color:#e09500"/>
-    </linearGradient>
-    <clipPath id="rounded">
-      <rect x="0" y="0" width="1024" height="1024" rx="230" ry="230"/>
-    </clipPath>
-  </defs>
-  <g clip-path="url(#rounded)">
-    <rect x="0" y="0" width="1024" height="1024" fill="#000000"/>
-    <polygon points="590,105 295,510 475,510 420,920 725,440 535,440 620,105" fill="url(#bolt)"/>
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <rect width="1024" height="1024" fill="#000"/>
+  <polygon points="590,105 295,510 475,510 420,920 725,440 535,440 620,105" fill="#f5c211"/>
 </svg>
