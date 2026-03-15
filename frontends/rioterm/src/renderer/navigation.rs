@@ -423,10 +423,10 @@ pub fn nav_button_at_position(x: f32, visible_width: f32) -> Option<NavButton> {
     let text_start = visible_width - 110.0;
     let relative_x = x - text_start;
 
-    if relative_x >= 0.0 && relative_x < 30.0 {
+    if relative_x >= -5.0 && relative_x < 35.0 {
         return Some(NavButton::Help);
     }
-    if relative_x >= 38.0 && relative_x < 100.0 {
+    if relative_x >= 33.0 && relative_x < 115.0 {
         return Some(NavButton::Settings);
     }
     None

@@ -168,47 +168,6 @@ impl Application<'_> {
     }
 
     #[cfg(target_os = "macos")]
-    fn set_dock_icon() {
-        use objc::runtime::{Class, Object};
-        use objc::{msg_send, sel, sel_impl};
-        use std::ffi::CString;
-
-        // Write icon to a temp file and load from path (most reliable method)
-        let icon_data: &[u8] = include_bytes!("../../../misc/volt-icon.png");
-        let icon_path = std::env::temp_dir().join("volt-dock-icon.png");
-        if std::fs::write(&icon_path, icon_data).is_err() {
-            tracing::warn!("Failed to write dock icon to temp file");
-            return;
-        }
-
-        unsafe {
-            let ns_string_class = match Class::get("NSString") {
-                Some(c) => c,
-                None => return,
-            };
-            let ns_image_class = match Class::get("NSImage") {
-                Some(c) => c,
-                None => return,
-            };
-
-            let path_str = CString::new(icon_path.to_string_lossy().as_bytes()).unwrap();
-            let ns_path: *mut Object = msg_send![ns_string_class,
-                stringWithUTF8String: path_str.as_ptr()];
-
-            let ns_image: *mut Object = msg_send![ns_image_class, alloc];
-            let ns_image: *mut Object = msg_send![ns_image, initWithContentsOfFile: ns_path];
-
-            if ns_image.is_null() {
-                tracing::warn!("Failed to create NSImage from icon file");
-                return;
-            }
-
-            let ns_app_class = Class::get("NSApplication").unwrap();
-            let ns_app: *mut Object = msg_send![ns_app_class, sharedApplication];
-            let _: () = msg_send![ns_app, setApplicationIconImage: ns_image];
-            tracing::info!("Dock icon set from {}", icon_path.display());
-        }
-    }
 
     pub fn run(
         &mut self,
