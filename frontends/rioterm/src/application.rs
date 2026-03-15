@@ -1211,8 +1211,8 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                     }
 
                     // Check bottom status bar buttons
-                    // Only when the tab bar is visible (status bar renders with it)
                     {
+                        tracing::debug!("CLICK lx={:.0} ly={:.0} win_h={:.0}", lx, ly, win_h);
                         let num_tabs = route.window.screen.context_manager.len();
                         let hide_single = route.window.screen.renderer.navigation.navigation.hide_if_single;
                         let is_tab_mode = nav_mode == rio_backend::config::navigation::NavigationMode::TopTab
@@ -1221,6 +1221,7 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
 
                         // Status bar clicks — ALWAYS check, even with hidden tab bar
                         if is_tab_mode {
+                            tracing::info!("STATUS CLICK: lx={}, ly={}, win_h={}, status_y={}", lx, ly, win_h, win_h - 22.0);
                             if let Some(btn) = crate::renderer::navigation::status_button_at_position(
                                 lx as f32, ly as f32, win_h, visible_w,
                             ) {
@@ -1285,6 +1286,46 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                                     NavButton::Layouts => {
                                         route.window.screen.context_manager.toggle_layouts();
                                     }
+                                    _ => {}
+                                }
+                                route.request_redraw();
+                                return;
+                            }
+                        }
+                    }
+
+                    // Check status bar BEFORE tab clicks (status bar is at bottom)
+                    {
+                        let sb_y = win_h - 22.0; // STATUS_BAR_HEIGHT
+                        if ly as f32 >= sb_y {
+                            if let Some(btn) = crate::renderer::navigation::status_button_at_position(
+                                lx as f32, ly as f32, win_h, visible_w,
+                            ) {
+                                use crate::renderer::navigation::NavButton;
+                                match btn {
+                                    NavButton::TmuxConnect => { route.window.screen.context_manager.toggle_tmux_picker(); }
+                                    NavButton::AiAssistant => {
+                                        if crate::ai_assistant::is_claude_available() {
+                                            route.window.screen.split_right();
+                                            route.window.screen.ctx_mut().current_mut().messenger.send_write(b"claude\r".to_vec());
+                                        }
+                                    }
+                                    NavButton::History => { route.window.screen.context_manager.toggle_history(); }
+                                    NavButton::EnvViewer => { route.window.screen.context_manager.toggle_env_viewer(); }
+                                    NavButton::Bookmarks => { route.window.screen.context_manager.toggle_bookmarks(); }
+                                    NavButton::Connections => {
+                                        match crate::connections::load_connections() {
+                                            Ok(config) => {
+                                                route.connections_list = config.connections.iter()
+                                                    .map(|(n, c)| (n.clone(), c.type_name().to_string(), c.to_command(), c.to_command()))
+                                                    .collect();
+                                            }
+                                            Err(_) => { route.connections_list = Vec::new(); }
+                                        }
+                                        route.path = RoutePath::Connections;
+                                    }
+                                    NavButton::SlashCommands => { route.window.screen.context_manager.toggle_slash_commands(); }
+                                    NavButton::Layouts => { route.window.screen.context_manager.toggle_layouts(); }
                                     _ => {}
                                 }
                                 route.request_redraw();
