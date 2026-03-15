@@ -8,7 +8,7 @@ pub fn screen(
     scroll_offset: usize,
     selected_index: usize,
 ) {
-    let bg = [0.06, 0.06, 0.08, 1.0];
+    let bg = [0.07, 0.07, 0.07, 1.0];
     let accent = [0.3, 0.8, 0.9, 1.0]; // cyan
     let dim = [0.45, 0.45, 0.5, 1.0];
     let black = [0.0, 0.0, 0.0, 1.0];
@@ -214,7 +214,7 @@ pub fn screen(
     let footer_y = full_h - 28.0;
     objects.push(Object::Quad(Quad {
         position: [0., footer_y - 4.0],
-        color: [0.08, 0.08, 0.11, 1.0],
+        color: [0.09, 0.09, 0.09, 1.0],
         size: [full_w, 28.0],
         ..Quad::default()
     }));

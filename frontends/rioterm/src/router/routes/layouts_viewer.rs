@@ -7,7 +7,7 @@ pub fn screen(
     context_dimension: &ContextDimension,
     selected_index: usize,
 ) {
-    let bg = [0.06, 0.06, 0.08, 1.0];
+    let bg = [0.07, 0.07, 0.07, 1.0];
     let dim = [0.45, 0.45, 0.5, 1.0];
     let white = [1.0, 1.0, 1.0, 1.0];
     let highlight = [0.98, 0.73, 0.16, 1.0];
@@ -18,7 +18,7 @@ pub fn screen(
     let pane_selected_bg = [0.12, 0.16, 0.25, 1.0];
     let pane_inner = [0.06, 0.06, 0.09, 1.0];
     let pane_inner_border = [0.2, 0.2, 0.28, 0.6];
-    let sidebar_bg = [0.08, 0.08, 0.11, 1.0];
+    let sidebar_bg = [0.09, 0.09, 0.09, 1.0];
 
     let layout = sugarloaf.window_size();
     let scale = context_dimension.dimension.scale;

@@ -44,16 +44,16 @@ pub fn screen(
     selected_item: usize,
     in_sidebar: bool,
 ) {
-    let bg = [0.06, 0.06, 0.08, 1.0];
-    let accent = [0.2, 0.5, 1.0, 1.0];
-    let dim = [0.45, 0.45, 0.5, 1.0];
+    let bg = [0.07, 0.07, 0.07, 1.0];
+    let accent = [0.98, 0.73, 0.16, 1.0]; // gold
+    let dim = [0.45, 0.45, 0.48, 1.0];
     let highlight = [0.98, 0.73, 0.16, 1.0];
     let black = [0.0, 0.0, 0.0, 1.0];
     let white = [1.0, 1.0, 1.0, 1.0];
-    let sidebar_bg = [0.08, 0.08, 0.11, 1.0];
-    let sidebar_selected = [0.14, 0.14, 0.16, 1.0];
-    let sidebar_hover = [0.10, 0.10, 0.14, 1.0];
-    let divider_color = [0.15, 0.15, 0.2, 1.0];
+    let sidebar_bg = [0.09, 0.09, 0.09, 1.0];
+    let sidebar_selected = [0.14, 0.14, 0.14, 1.0];
+    let sidebar_hover = [0.11, 0.11, 0.11, 1.0];
+    let divider_color = [0.15, 0.15, 0.15, 1.0];
     let key_color = [0.4, 0.8, 1.0, 1.0];
     let green = [0.3, 0.85, 0.4, 1.0];
 
