@@ -409,6 +409,7 @@ pub fn screen(
     fc.add_text(" n ", key_bg).add_text(" new  ", dim_s);
     fc.add_text(" d ", key_bg).add_text(" detach  ", dim_s);
     fc.add_text(" x ", key_bg).add_text(" kill  ", dim_s);
+    fc.add_text(" r ", key_bg).add_text(" rename  ", dim_s);
     fc.add_text(" Esc ", key_bg).add_text(" close", dim_s);
     fc.build();
 

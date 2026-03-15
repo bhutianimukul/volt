@@ -1509,19 +1509,19 @@ impl Route<'_> {
                         }
                     }
                 }
-                // 'r' to rename selected session
+                // 'r' to rename selected session — pastes command without \r so user types new name
                 Key::Character(c) if c.as_str() == "r" || c.as_str() == "R" => {
                     if let Some((_id, name, _attached)) =
                         self.tmux_sessions.get(self.tmux_selected)
                     {
-                        // Use tmux rename — for now just send the command
-                        let cmd = format!("tmux rename-session -t {} \r", name);
+                        let cmd = format!("tmux rename-session -t {} ", name);
                         self.window
                             .screen
                             .ctx_mut()
                             .current_mut()
                             .messenger
                             .send_write(cmd.into_bytes());
+                        self.tmux_selected = 0;
                         self.path = RoutePath::Terminal;
                     }
                 }
