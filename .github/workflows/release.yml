@@ -12,24 +12,27 @@ jobs:
   build-macos:
     name: macOS (universal)
     runs-on: macos-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
       - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: x86_64-apple-darwin,aarch64-apple-darwin
+
+      - name: Add cross-compile target
+        run: rustup target add x86_64-apple-darwin
 
       - uses: Swatinem/rust-cache@v2
-
-      - name: Build x86_64
-        run: |
-          RUSTFLAGS='-C link-arg=-s' MACOSX_DEPLOYMENT_TARGET="10.15" \
-            cargo build --release --target=x86_64-apple-darwin -p volt
 
       - name: Build aarch64
         run: |
           RUSTFLAGS='-C link-arg=-s' MACOSX_DEPLOYMENT_TARGET="11.0" \
             cargo build --release --target=aarch64-apple-darwin -p volt
+
+      - name: Build x86_64
+        run: |
+          RUSTFLAGS='-C link-arg=-s' MACOSX_DEPLOYMENT_TARGET="10.15" \
+            cargo build --release --target=x86_64-apple-darwin -p volt
 
       - name: Create universal binary
         run: |
@@ -57,95 +60,16 @@ jobs:
           cd target/release/osx
           zip -r ../../../Volt-macos-universal.zip Volt.app
 
-      - uses: actions/upload-artifact@v4
-        with:
-          name: macos-universal
-          path: Volt-macos-universal.zip
-
-  build-linux:
-    name: Linux (x86_64)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: dtolnay/rust-toolchain@stable
-
-      - uses: Swatinem/rust-cache@v2
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y cmake pkg-config libfreetype6-dev \
-            libfontconfig1-dev libxcb-xfixes0-dev libxkbcommon-dev \
-            libwayland-dev
-
-      - name: Build
-        run: |
-          RUSTFLAGS='-C link-arg=-s' cargo build --release -p volt
-
-      - name: Package tarball
-        run: |
-          VERSION=${GITHUB_REF_NAME#v}
-          mkdir -p volt-${VERSION}-linux-x86_64
-          cp target/release/volt volt-${VERSION}-linux-x86_64/
-          cp LICENSE README.md volt-${VERSION}-linux-x86_64/
-          cp misc/rio.desktop volt-${VERSION}-linux-x86_64/volt.desktop
-          cp misc/logo.svg volt-${VERSION}-linux-x86_64/volt.svg
-          tar czf volt-${VERSION}-linux-x86_64.tar.gz volt-${VERSION}-linux-x86_64
-
-      - name: Build .deb
-        run: |
-          cargo install cargo-deb --locked
-          cargo deb -p volt --no-build
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: linux-x86_64
-          path: |
-            volt-*-linux-x86_64.tar.gz
-            target/debian/*.deb
-
-  release:
-    name: Publish Release
-    needs: [build-macos, build-linux]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-
-      - name: Collect release files
-        run: |
-          mkdir release-files
-          cp artifacts/macos-universal/Volt-macos-universal.zip release-files/
-          cp artifacts/linux-x86_64/volt-*-linux-x86_64.tar.gz release-files/
-          cp artifacts/linux-x86_64/target/debian/*.deb release-files/
-          ls -la release-files/
-
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
-          files: release-files/*
+          files: Volt-macos-universal.zip
           body: |
-            ## Installation
+            ## Installation (macOS)
 
-            ### macOS (Intel + Apple Silicon)
-            Download `Volt-macos-universal.zip`, unzip, and drag `Volt.app` to `/Applications`.
+            1. Download `Volt-macos-universal.zip`
+            2. Unzip and drag `Volt.app` to `/Applications`
+            3. First launch: right-click → Open (bypasses Gatekeeper for unsigned apps)
 
-            > First launch: right-click → Open (bypasses Gatekeeper for unsigned apps).
-
-            ### Linux (x86_64)
-            **Debian/Ubuntu:**
-            ```bash
-            sudo dpkg -i volt_*_amd64.deb
-            ```
-            **Other distros:**
-            ```bash
-            tar xzf volt-*-linux-x86_64.tar.gz
-            sudo cp volt-*/volt /usr/local/bin/
-            ```
+            Works on both Intel and Apple Silicon Macs.
