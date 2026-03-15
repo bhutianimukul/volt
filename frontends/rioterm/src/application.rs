@@ -798,6 +798,16 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                     route.request_redraw();
                 }
             }
+            RioEventType::Rio(RioEvent::ToggleHistory) => {
+                if let Some(route) = self.router.routes.get_mut(&window_id) {
+                    if route.path == RoutePath::History {
+                        route.path = RoutePath::Terminal;
+                    } else {
+                        route.path = RoutePath::History;
+                    }
+                    route.request_redraw();
+                }
+            }
             RioEventType::Rio(RioEvent::ToggleTmuxPicker) => {
                 if let Some(route) = self.router.routes.get_mut(&window_id) {
                     if route.path == RoutePath::TmuxPicker {
@@ -807,6 +817,26 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                         route.tmux_sessions = TmuxController::list_sessions();
                         route.tmux_selected = 0;
                         route.path = RoutePath::TmuxPicker;
+                    }
+                    route.request_redraw();
+                }
+            }
+            RioEventType::Rio(RioEvent::ToggleEnvViewer) => {
+                if let Some(route) = self.router.routes.get_mut(&window_id) {
+                    if route.path == RoutePath::EnvViewer {
+                        route.path = RoutePath::Terminal;
+                    } else {
+                        route.path = RoutePath::EnvViewer;
+                    }
+                    route.request_redraw();
+                }
+            }
+            RioEventType::Rio(RioEvent::ToggleBookmarks) => {
+                if let Some(route) = self.router.routes.get_mut(&window_id) {
+                    if route.path == RoutePath::Bookmarks {
+                        route.path = RoutePath::Terminal;
+                    } else {
+                        route.path = RoutePath::Bookmarks;
                     }
                     route.request_redraw();
                 }
@@ -926,6 +956,12 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                         .context_manager
                         .audit_logger
                         .log_command("", "");
+                    route
+                        .window
+                        .screen
+                        .context_manager
+                        .session_recorder
+                        .record(String::new(), std::path::PathBuf::from("."));
                 }
             }
             RioEventType::Rio(RioEvent::ShellCommandFinish { row, exit_code }) => {
@@ -957,6 +993,9 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                                 duration_ms: 0,
                             }
                         );
+                    if let Some(last_id) = route.window.screen.context_manager.session_recorder.all().back().map(|e| e.id) {
+                        route.window.screen.context_manager.session_recorder.complete(last_id, exit_code, 0, String::new());
+                    }
                 }
             }
             _ => {}
@@ -1601,7 +1640,7 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
             }
 
             WindowEvent::Ime(ime) => {
-                if route.path == RoutePath::Assistant || route.path == RoutePath::Settings || route.path == RoutePath::Help
+                if route.path == RoutePath::Assistant || route.path == RoutePath::Settings || route.path == RoutePath::Help || route.path == RoutePath::EnvViewer || route.path == RoutePath::Bookmarks
                 {
                     return;
                 }
@@ -1696,7 +1735,7 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
             }
 
             WindowEvent::DroppedFile(path) => {
-                if route.path == RoutePath::Assistant || route.path == RoutePath::Settings || route.path == RoutePath::Help
+                if route.path == RoutePath::Assistant || route.path == RoutePath::Settings || route.path == RoutePath::Help || route.path == RoutePath::EnvViewer || route.path == RoutePath::Bookmarks
                 {
                     return;
                 }
@@ -1803,6 +1842,15 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                             &route.tmux_sessions,
                             route.tmux_selected,
                         );
+                    }
+                    RoutePath::EnvViewer => {
+                        route.window.screen.render_env_viewer();
+                    }
+                    RoutePath::Bookmarks => {
+                        route.window.screen.render_bookmarks();
+                    }
+                    RoutePath::History => {
+                        route.window.screen.render_history();
                     }
                 }
 

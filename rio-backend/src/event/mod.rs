@@ -88,7 +88,10 @@ pub enum RioEvent {
     CreateConfigEditor,
     ToggleSettings,
     ToggleHelp,
+    ToggleHistory,
     ToggleTmuxPicker,
+    ToggleEnvViewer,
+    ToggleBookmarks,
     SelectNativeTabByIndex(usize),
     SelectNativeTabLast,
     SelectNativeTabNext,
@@ -257,7 +260,10 @@ impl Debug for RioEvent {
             }
             RioEvent::ToggleSettings => write!(f, "ToggleSettings"),
             RioEvent::ToggleHelp => write!(f, "ToggleHelp"),
+            RioEvent::ToggleHistory => write!(f, "ToggleHistory"),
             RioEvent::ToggleTmuxPicker => write!(f, "ToggleTmuxPicker"),
+            RioEvent::ToggleEnvViewer => write!(f, "ToggleEnvViewer"),
+            RioEvent::ToggleBookmarks => write!(f, "ToggleBookmarks"),
         }
     }
 }

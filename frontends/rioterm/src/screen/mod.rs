@@ -1007,6 +1007,15 @@ impl Screen<'_> {
                     Act::ShowHelp => {
                         self.context_manager.toggle_help();
                     }
+                    Act::ShowHistory => {
+                        self.context_manager.toggle_history();
+                    }
+                    Act::ShowEnvViewer => {
+                        self.context_manager.toggle_env_viewer();
+                    }
+                    Act::ShowBookmarks => {
+                        self.context_manager.toggle_bookmarks();
+                    }
                     Act::OpenAiAssistant => {
                         if crate::ai_assistant::is_claude_available() {
                             self.split_right();
@@ -2869,6 +2878,34 @@ impl Screen<'_> {
             &self.context_manager.current().dimension,
             sessions,
             selected_index,
+        );
+        self.sugarloaf.render();
+    }
+
+    pub fn render_env_viewer(&mut self) {
+        self.sugarloaf.clear();
+        crate::router::routes::env_viewer::screen(
+            &mut self.sugarloaf,
+            &self.context_manager.current().dimension,
+        );
+        self.sugarloaf.render();
+    }
+
+    pub fn render_bookmarks(&mut self) {
+        self.sugarloaf.clear();
+        crate::router::routes::bookmarks_viewer::screen(
+            &mut self.sugarloaf,
+            &self.context_manager.current().dimension,
+        );
+        self.sugarloaf.render();
+    }
+
+    pub fn render_history(&mut self) {
+        self.sugarloaf.clear();
+        crate::router::routes::history::screen(
+            &mut self.sugarloaf,
+            &self.context_manager.current().dimension,
+            &self.context_manager.session_recorder,
         );
         self.sugarloaf.render();
     }

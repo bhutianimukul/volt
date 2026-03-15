@@ -245,6 +245,9 @@ impl From<String> for Action {
             "openconfigeditor" => Some(Action::ConfigEditor),
             "opensettings" => Some(Action::OpenSettings),
             "showhelp" => Some(Action::ShowHelp),
+            "showhistory" => Some(Action::ShowHistory),
+            "showenvviewer" => Some(Action::ShowEnvViewer),
+            "showbookmarks" => Some(Action::ShowBookmarks),
             "selectprevtab" => Some(Action::SelectPrevTab),
             "selectnexttab" => Some(Action::SelectNextTab),
             "selectlasttab" => Some(Action::SelectLastTab),
@@ -523,6 +526,15 @@ pub enum Action {
 
     /// Show the keyboard shortcut help overlay.
     ShowHelp,
+
+    /// Show the session history viewer overlay.
+    ShowHistory,
+
+    /// Show the environment variable inspector overlay.
+    ShowEnvViewer,
+
+    /// Show the bookmarks viewer overlay.
+    ShowBookmarks,
 
     /// Open the AI assistant (Claude Code) in a split pane.
     OpenAiAssistant,
@@ -1042,6 +1054,9 @@ pub fn platform_key_bindings(
         ",", ModifiersState::SUPER; Action::OpenSettings;
         "/", ModifiersState::SUPER | ModifiersState::SHIFT; Action::ShowHelp;
         Key::Named(F1); Action::ShowHelp;
+        "h", ModifiersState::SUPER | ModifiersState::SHIFT; Action::ShowHistory;
+        "e", ModifiersState::SUPER | ModifiersState::SHIFT; Action::ShowEnvViewer;
+        "k", ModifiersState::SUPER | ModifiersState::SHIFT; Action::ShowBookmarks;
 
         // AI assistant
         "i", ModifiersState::SUPER | ModifiersState::SHIFT; Action::OpenAiAssistant;
@@ -1142,6 +1157,8 @@ pub fn platform_key_bindings(
         ",", ModifiersState::CONTROL | ModifiersState::SHIFT; Action::OpenSettings;
         "/", ModifiersState::CONTROL | ModifiersState::SHIFT; Action::ShowHelp;
         Key::Named(F1); Action::ShowHelp;
+        "e", ModifiersState::CONTROL | ModifiersState::SHIFT; Action::ShowEnvViewer;
+        "k", ModifiersState::CONTROL | ModifiersState::SHIFT; Action::ShowBookmarks;
 
         // Search
         "f", ModifiersState::CONTROL | ModifiersState::SHIFT, ~BindingMode::SEARCH; Action::SearchForward;
@@ -1209,6 +1226,8 @@ pub fn platform_key_bindings(
         ",", ModifiersState::CONTROL | ModifiersState::SHIFT; Action::OpenSettings;
         "/", ModifiersState::CONTROL | ModifiersState::SHIFT; Action::ShowHelp;
         Key::Named(F1); Action::ShowHelp;
+        "e", ModifiersState::CONTROL | ModifiersState::SHIFT; Action::ShowEnvViewer;
+        "k", ModifiersState::CONTROL | ModifiersState::SHIFT; Action::ShowBookmarks;
         // This is actually a Windows Powershell shortcut
         // https://github.com/alacritty/alacritty/issues/2930
         // https://github.com/raphamorim/rio/issues/220#issuecomment-1761651339

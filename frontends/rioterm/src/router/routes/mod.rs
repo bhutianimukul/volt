@@ -3,6 +3,7 @@ pub mod bookmarks_viewer;
 pub mod dialog;
 pub mod env_viewer;
 pub mod help;
+pub mod history;
 pub mod settings;
 pub mod tmux_picker;
 pub mod welcome;
@@ -15,6 +16,7 @@ pub enum RoutePath {
     ConfirmQuit,
     Settings,
     Help,
+    History,
     TmuxPicker,
     EnvViewer,
     Bookmarks,
