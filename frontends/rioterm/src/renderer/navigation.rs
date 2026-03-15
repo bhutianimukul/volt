@@ -382,8 +382,6 @@ impl ScreenNavigation {
         sb.add_text("|", sb_sep);
         sb.add_text(" Connect ", sb_accent);
         sb.add_text("|", sb_sep);
-        sb.add_text(" Cmds ", sb_gold);
-        sb.add_text("|", sb_sep);
         sb.add_text(" Layout ", sb_text);
 
         sb.build();
@@ -471,7 +469,7 @@ pub fn status_button_at_position(x: f32, y: f32, win_height: f32, visible_width:
     if x < 150.0 { return Some(NavButton::EnvViewer); }
     if x < 240.0 { return Some(NavButton::Bookmarks); }
     if x < 310.0 { return Some(NavButton::Connections); }
-    if x < 358.0 { return Some(NavButton::SlashCommands); }
+    
     if x < 420.0 { return Some(NavButton::Layouts); }
 
     // tmux text on right (~40px from right edge)
