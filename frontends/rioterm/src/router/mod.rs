@@ -653,6 +653,35 @@ impl Route<'_> {
                             }
                             _ => {}
                         }
+                    } else if self.help_category == 3 {
+                        // Commands category — insert selected slash command
+                        let all_cmds = crate::slash_commands::all_commands();
+                        let categories = [
+                            crate::slash_commands::CommandCategory::Navigation,
+                            crate::slash_commands::CommandCategory::Appearance,
+                            crate::slash_commands::CommandCategory::Tools,
+                            crate::slash_commands::CommandCategory::Session,
+                            crate::slash_commands::CommandCategory::Debug,
+                        ];
+                        let grouped: Vec<_> = categories
+                            .iter()
+                            .flat_map(|cat| {
+                                all_cmds.iter().filter(move |c| c.category == *cat)
+                            })
+                            .collect();
+                        if let Some(cmd) = grouped.get(self.help_selected) {
+                            let text = format!("/{}", cmd.name);
+                            self.window
+                                .screen
+                                .ctx_mut()
+                                .current_mut()
+                                .messenger
+                                .send_write(text.into_bytes());
+                            self.help_selected = 0;
+                            self.help_category = 0;
+                            self.help_in_sidebar = true;
+                            self.path = RoutePath::Terminal;
+                        }
                     }
                 }
                 _ => {}
