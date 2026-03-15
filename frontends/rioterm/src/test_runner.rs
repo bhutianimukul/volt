@@ -133,24 +133,18 @@ pub fn parse_test_output(runner: &TestRunner, output: &str) -> TestResult {
                     if let Some(rest) = line.strip_prefix("test result: ") {
                         for part in rest.split(';') {
                             let part = part.trim();
+                            // Find the number immediately before the keyword
+                            let extract_num = || -> usize {
+                                part.split_whitespace()
+                                    .find_map(|w| w.parse::<usize>().ok())
+                                    .unwrap_or(0)
+                            };
                             if part.ends_with("passed") {
-                                result.passed = part
-                                    .split_whitespace()
-                                    .next()
-                                    .and_then(|n| n.parse().ok())
-                                    .unwrap_or(0);
+                                result.passed = extract_num();
                             } else if part.ends_with("failed") {
-                                result.failed = part
-                                    .split_whitespace()
-                                    .next()
-                                    .and_then(|n| n.parse().ok())
-                                    .unwrap_or(0);
+                                result.failed = extract_num();
                             } else if part.ends_with("ignored") {
-                                result.skipped = part
-                                    .split_whitespace()
-                                    .next()
-                                    .and_then(|n| n.parse().ok())
-                                    .unwrap_or(0);
+                                result.skipped = extract_num();
                             }
                         }
                     }
@@ -174,24 +168,17 @@ pub fn parse_test_output(runner: &TestRunner, output: &str) -> TestResult {
                 {
                     for part in line.split(',') {
                         let part = part.trim();
+                        // Extract the first numeric token from the part
+                        let num = part
+                            .split_whitespace()
+                            .find_map(|w| w.parse::<usize>().ok())
+                            .unwrap_or(0);
                         if part.contains("passed") {
-                            result.passed = part
-                                .split_whitespace()
-                                .next()
-                                .and_then(|n| n.parse().ok())
-                                .unwrap_or(0);
+                            result.passed = num;
                         } else if part.contains("failed") {
-                            result.failed = part
-                                .split_whitespace()
-                                .next()
-                                .and_then(|n| n.parse().ok())
-                                .unwrap_or(0);
+                            result.failed = num;
                         } else if part.contains("skipped") {
-                            result.skipped = part
-                                .split_whitespace()
-                                .next()
-                                .and_then(|n| n.parse().ok())
-                                .unwrap_or(0);
+                            result.skipped = num;
                         }
                     }
                     break;

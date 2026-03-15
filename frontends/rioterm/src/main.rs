@@ -7,13 +7,17 @@
 mod application;
 mod bindings;
 mod cli;
+mod connections;
 mod consequences;
 mod constants;
 mod context;
+mod env_inspector;
 mod hints;
 mod ime;
+mod layouts;
 mod messenger;
 mod mouse;
+mod notifications;
 #[cfg(windows)]
 mod panic;
 mod platform;
@@ -22,6 +26,7 @@ mod retroactive_pipe;
 mod router;
 mod scheduler;
 mod screen;
+mod session_export;
 mod shell_intelligence;
 mod slash_commands;
 mod structured_output;
