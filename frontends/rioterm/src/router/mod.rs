@@ -1082,6 +1082,28 @@ impl Route<'_> {
                             }
                         }
                     }
+                    // Non-macOS: open the config file in editor as fallback
+                    #[cfg(not(target_os = "macos"))]
+                    {
+                        let path = crate::connections::connection_config_path();
+                        if !path.exists() {
+                            let _ = std::fs::write(
+                                &path,
+                                crate::connections::default_template(),
+                            );
+                        }
+                        let editor =
+                            std::env::var("EDITOR").unwrap_or_else(|_| "vi".to_string());
+                        let cmd = format!("{} {}\r", editor, path.display());
+                        self.window
+                            .screen
+                            .ctx_mut()
+                            .current_mut()
+                            .messenger
+                            .send_write(cmd.into_bytes());
+                        self.connections_selected = 0;
+                        self.path = RoutePath::Terminal;
+                    }
                 }
                 Key::Character(c) if c.as_str() == "d" || c.as_str() == "D" => {
                     if let Some((name, _, _, _)) =
