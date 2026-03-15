@@ -575,21 +575,82 @@ impl Route<'_> {
                         self.help_in_sidebar = false;
                         self.help_selected = 0;
                     } else if self.help_category == 2 {
-                        // Actions category — open the feature
+                        // Actions category — open the feature with proper initialization
                         match crate::router::routes::help::action_route(
                             self.help_selected,
                         ) {
                             Some("ai") => self.path = RoutePath::Assistant,
-                            Some("history") => self.path = RoutePath::History,
-                            Some("env") => self.path = RoutePath::EnvViewer,
-                            Some("bookmarks") => self.path = RoutePath::Bookmarks,
-                            Some("connections") => self.path = RoutePath::Connections,
-                            Some("tmux") => self.path = RoutePath::TmuxPicker,
-                            Some("slash") => self.path = RoutePath::SlashCommands,
-                            Some("layouts") => self.path = RoutePath::Layouts,
-                            Some("sharing") => self.path = RoutePath::SessionSharing,
-                            Some("export") => self.path = RoutePath::SessionExport,
-                            Some("timetravel") => self.path = RoutePath::TimeTravel,
+                            Some("history") => {
+                                self.history_selected = 0;
+                                self.history_scroll = 0;
+                                self.path = RoutePath::History;
+                            }
+                            Some("env") => {
+                                self.env_selected = 0;
+                                self.env_scroll = 0;
+                                self.path = RoutePath::EnvViewer;
+                            }
+                            Some("bookmarks") => {
+                                let store = crate::bookmarks::BookmarkStore::load();
+                                self.bookmarks_cache =
+                                    store.list().into_iter().cloned().collect();
+                                self.bookmarks_scroll = 0;
+                                self.bookmarks_selected = 0;
+                                self.path = RoutePath::Bookmarks;
+                            }
+                            Some("connections") => {
+                                match crate::connections::load_connections() {
+                                    Ok(config) => {
+                                        self.connections_list = config
+                                            .connections
+                                            .iter()
+                                            .map(|(n, c)| {
+                                                (
+                                                    n.clone(),
+                                                    c.type_name().to_string(),
+                                                    c.to_command(),
+                                                    c.to_command(),
+                                                )
+                                            })
+                                            .collect();
+                                    }
+                                    Err(_) => {
+                                        self.connections_list = Vec::new();
+                                    }
+                                }
+                                self.connections_selected = 0;
+                                self.path = RoutePath::Connections;
+                            }
+                            Some("tmux") => {
+                                self.tmux_sessions =
+                                    crate::tmux_cc::TmuxController::list_sessions();
+                                self.tmux_selected = 0;
+                                self.path = RoutePath::TmuxPicker;
+                            }
+                            Some("slash") => {
+                                self.slash_commands_scroll = 0;
+                                self.slash_selected = 0;
+                                self.path = RoutePath::SlashCommands;
+                            }
+                            Some("layouts") => {
+                                self.layouts_selected = 0;
+                                self.path = RoutePath::Layouts;
+                            }
+                            Some("sharing") => {
+                                self.sharing_selected = 0;
+                                self.sharing_state = crate::router::routes::session_sharing::SharingState::Idle;
+                                self.path = RoutePath::SessionSharing;
+                            }
+                            Some("export") => {
+                                self.export_selected = 0;
+                                self.export_result = None;
+                                self.path = RoutePath::SessionExport;
+                            }
+                            Some("timetravel") => {
+                                self.time_travel_selected = 0;
+                                self.time_travel_scroll = 0;
+                                self.path = RoutePath::TimeTravel;
+                            }
                             _ => {}
                         }
                     }
