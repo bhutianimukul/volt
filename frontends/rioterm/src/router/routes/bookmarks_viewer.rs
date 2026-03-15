@@ -6,6 +6,7 @@ pub fn screen(
     sugarloaf: &mut Sugarloaf,
     context_dimension: &ContextDimension,
     scroll_offset: usize,
+    bookmarks: &[crate::bookmarks::Bookmark],
 ) {
     let bg = [0.06, 0.06, 0.08, 1.0];
     let accent = [0.9, 0.5, 0.3, 1.0]; // orange
@@ -64,8 +65,6 @@ pub fn screen(
     // Subtitle
     let subtitle_rt = sugarloaf.create_temp_rich_text();
     sugarloaf.set_rich_text_font_size(&subtitle_rt, 13.0);
-    let store = crate::bookmarks::BookmarkStore::load();
-    let bookmarks = store.list();
     let subtitle_text = if bookmarks.is_empty() {
         "No bookmarks saved yet".to_string()
     } else {
@@ -151,7 +150,7 @@ pub fn screen(
         body.add_text("SAVED COMMANDS", header_style).new_line();
 
         let mut line_idx: usize = 0;
-        for bm in &bookmarks {
+        for bm in bookmarks {
             line_idx += 1;
             if line_idx <= scroll_offset {
                 continue;

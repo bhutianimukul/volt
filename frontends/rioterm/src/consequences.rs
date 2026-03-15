@@ -1,5 +1,3 @@
-use std::process::Command;
-
 #[derive(Debug)]
 pub struct ConsequencePreview {
     pub command: String,
@@ -102,29 +100,10 @@ fn check_rm(input: &str, parts: &[&str]) -> Option<ConsequencePreview> {
         Severity::Warning
     };
 
-    // Try to count affected files
     let mut details = Vec::new();
     for file in &files {
         if has_recursive {
-            // Count files recursively
-            if let Ok(output) = Command::new("find")
-                .arg(file)
-                .arg("-type")
-                .arg("f")
-                .output()
-            {
-                let count = String::from_utf8_lossy(&output.stdout).lines().count();
-                if let Ok(du_output) = Command::new("du").arg("-sh").arg(file).output() {
-                    let size = String::from_utf8_lossy(&du_output.stdout)
-                        .split_whitespace()
-                        .next()
-                        .unwrap_or("?")
-                        .to_string();
-                    details.push(format!("{}: {} files, {}", file, count, size));
-                } else {
-                    details.push(format!("{}: {} files", file, count));
-                }
-            }
+            details.push(format!("{}: recursive delete", file));
         } else {
             details.push(format!("Delete: {}", file));
         }

@@ -2913,12 +2913,13 @@ impl Screen<'_> {
         self.sugarloaf.render();
     }
 
-    pub fn render_bookmarks(&mut self, scroll_offset: usize) {
+    pub fn render_bookmarks(&mut self, scroll_offset: usize, bookmarks: &[crate::bookmarks::Bookmark]) {
         self.sugarloaf.clear();
         crate::router::routes::bookmarks_viewer::screen(
             &mut self.sugarloaf,
             &self.context_manager.current().dimension,
             scroll_offset,
+            bookmarks,
         );
         self.sugarloaf.render();
     }

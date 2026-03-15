@@ -33,7 +33,9 @@ impl UndoManager {
             .join("checkpoints");
 
         // Create storage directory
-        let _ = fs::create_dir_all(&storage_dir);
+        if let Err(e) = fs::create_dir_all(&storage_dir) {
+            tracing::error!("Failed to create undo storage directory: {}", e);
+        }
 
         Self {
             checkpoints: VecDeque::new(),
@@ -77,7 +79,9 @@ impl UndoManager {
             let dest = snapshot_dir.join(relative);
 
             if let Some(parent) = dest.parent() {
-                let _ = fs::create_dir_all(parent);
+                if let Err(e) = fs::create_dir_all(parent) {
+                    tracing::error!("Failed to create snapshot parent dir: {}", e);
+                }
             }
 
             if clone_or_copy(&abs_path, &dest) {
@@ -86,7 +90,9 @@ impl UndoManager {
         }
 
         if snapshotted_files.is_empty() {
-            let _ = fs::remove_dir_all(&snapshot_dir);
+            if let Err(e) = fs::remove_dir_all(&snapshot_dir) {
+                tracing::warn!("Failed to clean up empty snapshot dir: {}", e);
+            }
             return None;
         }
 
@@ -105,7 +111,9 @@ impl UndoManager {
         // Enforce max checkpoints
         while self.checkpoints.len() > MAX_CHECKPOINTS {
             if let Some(old) = self.checkpoints.pop_front() {
-                let _ = fs::remove_dir_all(&old.snapshot_dir);
+                if let Err(e) = fs::remove_dir_all(&old.snapshot_dir) {
+                    tracing::warn!("Failed to clean up old checkpoint: {}", e);
+                }
             }
         }
 
@@ -124,16 +132,22 @@ impl UndoManager {
             if snapshot_path.exists() {
                 // Restore the file
                 if let Some(parent) = file.parent() {
-                    let _ = fs::create_dir_all(parent);
+                    if let Err(e) = fs::create_dir_all(parent) {
+                        tracing::error!("Failed to create restore parent dir {}: {}", parent.display(), e);
+                        continue;
+                    }
                 }
-                if fs::copy(&snapshot_path, file).is_ok() {
-                    restored.push(file.display().to_string());
+                match fs::copy(&snapshot_path, file) {
+                    Ok(_) => restored.push(file.display().to_string()),
+                    Err(e) => tracing::error!("Failed to restore {}: {}", file.display(), e),
                 }
             }
         }
 
         // Clean up snapshot
-        let _ = fs::remove_dir_all(&checkpoint.snapshot_dir);
+        if let Err(e) = fs::remove_dir_all(&checkpoint.snapshot_dir) {
+            tracing::warn!("Failed to clean up snapshot dir: {}", e);
+        }
 
         if restored.is_empty() {
             None

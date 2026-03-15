@@ -41,7 +41,7 @@ pub struct CompiledTrigger {
 /// Trigger engine — watches output and fires actions
 pub struct TriggerEngine {
     triggers: Vec<CompiledTrigger>,
-    matches: Vec<TriggerMatch>,
+    matches: std::collections::VecDeque<TriggerMatch>,
     max_matches: usize,
 }
 
@@ -57,7 +57,7 @@ impl TriggerEngine {
     pub fn new() -> Self {
         Self {
             triggers: Vec::new(),
-            matches: Vec::new(),
+            matches: std::collections::VecDeque::new(),
             max_matches: 1000,
         }
     }
@@ -101,21 +101,21 @@ impl TriggerEngine {
                     line_number,
                 };
                 fired.push(matched.clone());
-                self.matches.push(matched);
+                self.matches.push_back(matched);
             }
         }
 
-        // Trim old matches
+        // Trim old matches (O(1) with VecDeque)
         while self.matches.len() > self.max_matches {
-            self.matches.remove(0);
+            self.matches.pop_front();
         }
 
         fired
     }
 
     /// Get all matches
-    pub fn all_matches(&self) -> &[TriggerMatch] {
-        &self.matches
+    pub fn all_matches(&self) -> Vec<&TriggerMatch> {
+        self.matches.iter().collect()
     }
 
     /// Get recent matches

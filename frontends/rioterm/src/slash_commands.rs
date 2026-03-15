@@ -174,11 +174,11 @@ pub fn fuzzy_match(query: &str) -> Vec<&'static SlashCommand> {
 
             // Exact prefix match scores highest
             if name.starts_with(&q) {
-                return Some((100 - name.len(), cmd));
+                return Some((100usize.saturating_sub(name.len()), cmd));
             }
             // Contains match
             if name.contains(&q) || desc.contains(&q) {
-                return Some((50 - name.len(), cmd));
+                return Some((50usize.saturating_sub(name.len()), cmd));
             }
             // Fuzzy: all query chars appear in order
             let mut qi = q.chars().peekable();
@@ -188,7 +188,7 @@ pub fn fuzzy_match(query: &str) -> Vec<&'static SlashCommand> {
                 }
             }
             if qi.peek().is_none() {
-                return Some((25 - name.len(), cmd));
+                return Some((25usize.saturating_sub(name.len()), cmd));
             }
             None
         })

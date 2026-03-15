@@ -59,7 +59,7 @@ impl SessionRecorder {
         duration_ms: u64,
         output_preview: String,
     ) {
-        if let Some(entry) = self.entries.iter_mut().find(|e| e.id == id) {
+        if let Some(entry) = self.entries.iter_mut().rev().find(|e| e.id == id) {
             entry.exit_code = Some(exit_code);
             entry.duration_ms = Some(duration_ms);
             entry.output_preview = if output_preview.len() > 500 {

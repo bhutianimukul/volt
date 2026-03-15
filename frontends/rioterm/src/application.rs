@@ -836,6 +836,10 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                     if route.path == RoutePath::Bookmarks {
                         route.path = RoutePath::Terminal;
                     } else {
+                        // Load bookmarks once when opening the viewer
+                        let store = crate::bookmarks::BookmarkStore::load();
+                        route.bookmarks_cache = store.list().into_iter().cloned().collect();
+                        route.bookmarks_scroll = 0;
                         route.path = RoutePath::Bookmarks;
                     }
                     route.request_redraw();
@@ -1219,24 +1223,33 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                                             route.path = RoutePath::Terminal;
                                         } else {
                                             // Load connections
-                                            let config = crate::connections::load_connections();
-                                            let mut list: Vec<(String, String, String, String)> = config
-                                                .connections
-                                                .iter()
-                                                .map(|(name, conn)| {
-                                                    let host_info = conn.to_command();
-                                                    (
-                                                        name.clone(),
-                                                        conn.type_name().to_string(),
-                                                        host_info.clone(),
-                                                        host_info,
-                                                    )
-                                                })
-                                                .collect();
-                                            list.sort_by(|a, b| a.0.cmp(&b.0));
-                                            route.connections_list = list;
-                                            route.connections_selected = 0;
-                                            route.path = RoutePath::Connections;
+                                            match crate::connections::load_connections() {
+                                                Ok(config) => {
+                                                    let mut list: Vec<(String, String, String, String)> = config
+                                                        .connections
+                                                        .iter()
+                                                        .map(|(name, conn)| {
+                                                            let host_info = conn.to_command();
+                                                            (
+                                                                name.clone(),
+                                                                conn.type_name().to_string(),
+                                                                host_info.clone(),
+                                                                host_info,
+                                                            )
+                                                        })
+                                                        .collect();
+                                                    list.sort_by(|a, b| a.0.cmp(&b.0));
+                                                    route.connections_list = list;
+                                                    route.connections_selected = 0;
+                                                    route.path = RoutePath::Connections;
+                                                }
+                                                Err(e) => {
+                                                    tracing::error!("Failed to load connections: {}", e);
+                                                    route.connections_list = Vec::new();
+                                                    route.connections_selected = 0;
+                                                    route.path = RoutePath::Connections;
+                                                }
+                                            }
                                         }
                                     }
                                     NavButton::SlashCommands => {
@@ -1948,7 +1961,7 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                         route.window.screen.render_env_viewer(route.env_scroll, route.env_selected);
                     }
                     RoutePath::Bookmarks => {
-                        route.window.screen.render_bookmarks(route.bookmarks_scroll);
+                        route.window.screen.render_bookmarks(route.bookmarks_scroll, &route.bookmarks_cache);
                     }
                     RoutePath::History => {
                         route.window.screen.render_history(

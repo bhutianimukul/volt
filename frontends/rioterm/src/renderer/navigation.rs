@@ -288,8 +288,6 @@ impl ScreenNavigation {
                 }));
             }
 
-            let label = label;
-
             // White text on colored background for all tabs
             let fg = [1.0, 1.0, 1.0, if is_current { 1.0 } else { 0.85 }];
 
@@ -323,9 +321,6 @@ impl ScreenNavigation {
         let btn_h = PADDING_Y_BOTTOM_TABS;
         let btn_bg = [0.2, 0.2, 0.25, 1.0];
         let btn_fg = [0.85, 0.85, 0.85, 1.0];
-
-        // Helper: render a text button at x with given width and label
-        struct Btn { x: f32, w: f32 }
 
         // Layout right to left: [Settings] [Help]
         let settings_w = 58.0_f32;

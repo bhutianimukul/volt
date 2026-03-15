@@ -48,6 +48,8 @@ pub struct Route<'a> {
     pub history_selected: usize,
     /// Scroll offset for the bookmarks viewer
     pub bookmarks_scroll: usize,
+    /// Cached bookmarks for the viewer (loaded once when opening)
+    pub bookmarks_cache: Vec<crate::bookmarks::Bookmark>,
     /// Currently selected index in the connections viewer
     pub connections_selected: usize,
     /// Cached connections list: (name, type_name, host_info, command)
@@ -78,6 +80,7 @@ impl Route<'_> {
             history_scroll: 0,
             history_selected: 0,
             bookmarks_scroll: 0,
+            bookmarks_cache: Vec::new(),
             connections_selected: 0,
             connections_list: Vec::new(),
             slash_commands_scroll: 0,
@@ -643,25 +646,38 @@ impl Route<'_> {
                                     if let Some(host) = ask("Host", "Hostname or IP:") {
                                         let user = ask("User (optional)", "Username (leave empty to skip):");
 
-                                        // Build TOML entry and append to connections.toml
+                                        // Build TOML entry using proper serialization
                                         let conn_path = crate::connections::connection_config_path();
-                                        let mut content = std::fs::read_to_string(&conn_path).unwrap_or_default();
+                                        let file_content = std::fs::read_to_string(&conn_path).unwrap_or_default();
+                                        let mut doc: toml::Table = file_content.parse().unwrap_or_default();
 
-                                        content.push_str(&format!("\n[connections.{}]\n", name));
-                                        content.push_str(&format!("type = \"{}\"\n", conn_type));
-                                        content.push_str(&format!("host = \"{}\"\n", host));
-                                        if let Some(u) = user {
-                                            content.push_str(&format!("user = \"{}\"\n", u));
+                                        let connections_table = doc
+                                            .entry("connections")
+                                            .or_insert_with(|| toml::Value::Table(toml::Table::new()));
+                                        if let toml::Value::Table(conns) = connections_table {
+                                            let mut entry = toml::Table::new();
+                                            entry.insert("type".to_string(), toml::Value::String(conn_type.clone()));
+                                            entry.insert("host".to_string(), toml::Value::String(host.clone()));
+                                            if let Some(u) = user {
+                                                entry.insert("user".to_string(), toml::Value::String(u));
+                                            }
+                                            conns.insert(name.clone(), toml::Value::Table(entry));
                                         }
 
-                                        let _ = std::fs::write(&conn_path, content);
+                                        if let Ok(output) = toml::to_string_pretty(&doc) {
+                                            let _ = std::fs::write(&conn_path, output);
+                                        }
                                         tracing::info!("Connection '{}' created", name);
 
                                         // Refresh the list
-                                        let config = crate::connections::load_connections();
-                                        self.connections_list = config.connections.iter()
-                                            .map(|(cname, conn)| (cname.clone(), conn.type_name().to_string(), conn.to_command(), conn.icon().to_string()))
-                                            .collect();
+                                        match crate::connections::load_connections() {
+                                            Ok(config) => {
+                                                self.connections_list = config.connections.iter()
+                                                    .map(|(cname, conn)| (cname.clone(), conn.type_name().to_string(), conn.to_command(), conn.icon().to_string()))
+                                                    .collect();
+                                            }
+                                            Err(e) => tracing::error!("Failed to reload connections: {}", e),
+                                        }
                                     }
                                 }
                             }
@@ -694,10 +710,14 @@ impl Route<'_> {
                             }
                         }
                         // Refresh
-                        let config = crate::connections::load_connections();
-                        self.connections_list = config.connections.iter()
-                            .map(|(cname, conn)| (cname.clone(), conn.type_name().to_string(), conn.to_command(), conn.icon().to_string()))
-                            .collect();
+                        match crate::connections::load_connections() {
+                            Ok(config) => {
+                                self.connections_list = config.connections.iter()
+                                    .map(|(cname, conn)| (cname.clone(), conn.type_name().to_string(), conn.to_command(), conn.icon().to_string()))
+                                    .collect();
+                            }
+                            Err(e) => tracing::error!("Failed to reload connections: {}", e),
+                        }
                         if self.connections_selected >= self.connections_list.len() && self.connections_selected > 0 {
                             self.connections_selected -= 1;
                         }
@@ -710,9 +730,11 @@ impl Route<'_> {
                     if !path.exists() {
                         let _ = std::fs::write(&path, crate::connections::default_template());
                     }
-                    // Open in editor via $EDITOR or fallback
+                    // Open in editor via $EDITOR or fallback (shell-quoted for safety)
                     let editor = std::env::var("EDITOR").unwrap_or_else(|_| "nano".to_string());
-                    let cmd = format!("{} {}\r", editor, path.display());
+                    let quoted_editor = format!("'{}'", editor.replace('\'', "'\\''"));
+                    let quoted_path = format!("'{}'", path.display().to_string().replace('\'', "'\\''"));
+                    let cmd = format!("{} {}\r", quoted_editor, quoted_path);
                     self.window
                         .screen
                         .ctx_mut()
@@ -1079,6 +1101,7 @@ impl Router<'_> {
             history_scroll: 0,
             history_selected: 0,
             bookmarks_scroll: 0,
+            bookmarks_cache: Vec::new(),
             connections_selected: 0,
             connections_list: Vec::new(),
             slash_commands_scroll: 0,
@@ -1128,6 +1151,7 @@ impl Router<'_> {
                 history_scroll: 0,
                 history_selected: 0,
                 bookmarks_scroll: 0,
+                bookmarks_cache: Vec::new(),
                 connections_selected: 0,
                 connections_list: Vec::new(),
                 slash_commands_scroll: 0,

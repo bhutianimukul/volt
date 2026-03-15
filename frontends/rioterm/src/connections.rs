@@ -79,6 +79,11 @@ pub struct DockerConnection {
     pub context: Option<String>,
 }
 
+/// Shell-quote a string using single quotes, escaping embedded single quotes.
+fn shell_quote(s: &str) -> String {
+    format!("'{}'", s.replace('\'', "'\\''"))
+}
+
 impl Connection {
     /// Generate the shell command to establish this connection
     pub fn to_command(&self) -> String {
@@ -86,18 +91,18 @@ impl Connection {
             Connection::Ssh(ssh) => {
                 let mut cmd = String::from("ssh");
                 if let Some(user) = &ssh.user {
-                    cmd.push_str(&format!(" {}@{}", user, ssh.host));
+                    cmd.push_str(&format!(" {}@{}", shell_quote(user), shell_quote(&ssh.host)));
                 } else {
-                    cmd.push_str(&format!(" {}", ssh.host));
+                    cmd.push_str(&format!(" {}", shell_quote(&ssh.host)));
                 }
                 if let Some(port) = ssh.port {
                     cmd.push_str(&format!(" -p {}", port));
                 }
                 if let Some(identity) = &ssh.identity_file {
-                    cmd.push_str(&format!(" -i {}", identity));
+                    cmd.push_str(&format!(" -i {}", shell_quote(identity)));
                 }
                 if let Some(jump) = &ssh.proxy_jump {
-                    cmd.push_str(&format!(" -J {}", jump));
+                    cmd.push_str(&format!(" -J {}", shell_quote(jump)));
                 }
                 if ssh.forward_agent {
                     cmd.push_str(" -A");
@@ -105,12 +110,12 @@ impl Connection {
                 cmd
             }
             Connection::Mysql(mysql) => {
-                let mut cmd = format!("mysql -h {} -u {}", mysql.host, mysql.user);
+                let mut cmd = format!("mysql -h {} -u {}", shell_quote(&mysql.host), shell_quote(&mysql.user));
                 if let Some(port) = mysql.port {
                     cmd.push_str(&format!(" -P {}", port));
                 }
                 if let Some(db) = &mysql.database {
-                    cmd.push_str(&format!(" {}", db));
+                    cmd.push_str(&format!(" {}", shell_quote(db)));
                 }
                 if mysql.use_keychain {
                     cmd.push_str(" --login-path=client");
@@ -120,17 +125,17 @@ impl Connection {
                 cmd
             }
             Connection::Postgres(pg) => {
-                let mut cmd = format!("psql -h {} -U {}", pg.host, pg.user);
+                let mut cmd = format!("psql -h {} -U {}", shell_quote(&pg.host), shell_quote(&pg.user));
                 if let Some(port) = pg.port {
                     cmd.push_str(&format!(" -p {}", port));
                 }
                 if let Some(db) = &pg.database {
-                    cmd.push_str(&format!(" -d {}", db));
+                    cmd.push_str(&format!(" -d {}", shell_quote(db)));
                 }
                 cmd
             }
             Connection::Redis(redis) => {
-                let mut cmd = format!("redis-cli -h {}", redis.host);
+                let mut cmd = format!("redis-cli -h {}", shell_quote(&redis.host));
                 if let Some(port) = redis.port {
                     cmd.push_str(&format!(" -p {}", port));
                 }
@@ -143,9 +148,9 @@ impl Connection {
                 cmd
             }
             Connection::Kubectl(k8s) => {
-                let mut cmd = format!("kubectl --context={}", k8s.context);
+                let mut cmd = format!("kubectl --context={}", shell_quote(&k8s.context));
                 if let Some(ns) = &k8s.namespace {
-                    cmd.push_str(&format!(" -n {}", ns));
+                    cmd.push_str(&format!(" -n {}", shell_quote(ns)));
                 }
                 cmd.push_str(" get pods");
                 cmd
@@ -153,10 +158,10 @@ impl Connection {
             Connection::Docker(docker) => {
                 let mut cmd = String::from("docker");
                 if let Some(host) = &docker.host {
-                    cmd.push_str(&format!(" -H {}", host));
+                    cmd.push_str(&format!(" -H {}", shell_quote(host)));
                 }
                 if let Some(ctx) = &docker.context {
-                    cmd.push_str(&format!(" --context {}", ctx));
+                    cmd.push_str(&format!(" --context {}", shell_quote(ctx)));
                 }
                 cmd.push_str(" ps");
                 cmd
@@ -190,28 +195,18 @@ impl Connection {
 }
 
 /// Load connections from ~/.config/volt/connections.toml
-pub fn load_connections() -> ConnectionConfig {
+pub fn load_connections() -> Result<ConnectionConfig, String> {
     let config_path = connection_config_path();
     if !config_path.exists() {
-        return ConnectionConfig {
+        return Ok(ConnectionConfig {
             connections: HashMap::new(),
-        };
+        });
     }
 
-    match std::fs::read_to_string(&config_path) {
-        Ok(content) => toml::from_str(&content).unwrap_or_else(|e| {
-            tracing::warn!("Failed to parse connections.toml: {}", e);
-            ConnectionConfig {
-                connections: HashMap::new(),
-            }
-        }),
-        Err(e) => {
-            tracing::warn!("Failed to read connections.toml: {}", e);
-            ConnectionConfig {
-                connections: HashMap::new(),
-            }
-        }
-    }
+    let content = std::fs::read_to_string(&config_path)
+        .map_err(|e| format!("Failed to read connections.toml: {}", e))?;
+    toml::from_str(&content)
+        .map_err(|e| format!("Failed to parse connections.toml: {}", e))
 }
 
 /// Get the path to connections.toml
@@ -275,9 +270,9 @@ mod tests {
             forward_agent: true,
         });
         let cmd = conn.to_command();
-        assert!(cmd.contains("ssh deploy@example.com"));
+        assert!(cmd.contains("ssh 'deploy'@'example.com'"));
         assert!(cmd.contains("-p 2222"));
-        assert!(cmd.contains("-i ~/.ssh/key"));
+        assert!(cmd.contains("-i '~/.ssh/key'"));
         assert!(cmd.contains("-A"));
     }
 
@@ -291,8 +286,8 @@ mod tests {
             use_keychain: false,
         });
         let cmd = conn.to_command();
-        assert!(cmd.contains("mysql -h db.example.com -u root"));
-        assert!(cmd.contains("mydb"));
+        assert!(cmd.contains("mysql -h 'db.example.com' -u 'root'"));
+        assert!(cmd.contains("'mydb'"));
     }
 
     #[test]
@@ -302,8 +297,31 @@ mod tests {
             namespace: Some("web".to_string()),
         });
         let cmd = conn.to_command();
-        assert!(cmd.contains("--context=production"));
-        assert!(cmd.contains("-n web"));
+        assert!(cmd.contains("--context='production'"));
+        assert!(cmd.contains("-n 'web'"));
+    }
+
+    #[test]
+    fn test_shell_quote_injection() {
+        // Verify that shell metacharacters are safely wrapped in single quotes
+        let conn = Connection::Ssh(SshConnection {
+            host: "host$(whoami)".to_string(),
+            user: None,
+            port: None,
+            identity_file: None,
+            proxy_jump: None,
+            forward_agent: false,
+        });
+        let cmd = conn.to_command();
+        // The host must be single-quoted, preventing command substitution
+        assert!(cmd.contains("'host$(whoami)'"));
+    }
+
+    #[test]
+    fn test_shell_quote_function() {
+        assert_eq!(shell_quote("hello"), "'hello'");
+        assert_eq!(shell_quote("it's"), "'it'\\''s'");
+        assert_eq!(shell_quote("a b"), "'a b'");
     }
 
     #[test]

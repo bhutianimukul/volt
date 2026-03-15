@@ -200,8 +200,20 @@ impl SettingsEditor {
         let item = &self.items[idx];
         let config_path = rio_backend::config::config_file_path();
 
-        let content = std::fs::read_to_string(&config_path).unwrap_or_default();
-        let mut doc: toml::Table = content.parse().unwrap_or_default();
+        let content = match std::fs::read_to_string(&config_path) {
+            Ok(c) => c,
+            Err(e) => {
+                tracing::error!("Cannot read config: {}", e);
+                return;
+            }
+        };
+        let mut doc: toml::Table = match content.parse() {
+            Ok(d) => d,
+            Err(e) => {
+                tracing::error!("Invalid TOML: {}", e);
+                return;
+            }
+        };
 
         let parts: Vec<&str> = item.key.splitn(2, '.').collect();
         match parts.len() {
@@ -219,9 +231,14 @@ impl SettingsEditor {
             _ => {}
         }
 
-        if let Ok(output) = toml::to_string_pretty(&doc) {
-            let _ = std::fs::write(&config_path, output);
-            tracing::info!("Setting saved: {} = {}", item.key, item.value.display());
+        match toml::to_string_pretty(&doc) {
+            Ok(output) => {
+                match std::fs::write(&config_path, &output) {
+                    Ok(_) => tracing::info!("Setting saved: {} = {}", item.key, item.value.display()),
+                    Err(e) => tracing::error!("Failed to write config: {}", e),
+                }
+            }
+            Err(e) => tracing::error!("Failed to serialize config: {}", e),
         }
     }
 
