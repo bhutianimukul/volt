@@ -21,7 +21,7 @@ pub fn screen(sugarloaf: &mut Sugarloaf, context_dimension: &ContextDimension, s
         color: bg,
         size: [
             layout.width / context_dimension.dimension.scale,
-            layout.height,
+            layout.height / context_dimension.dimension.scale,
         ],
         ..Quad::default()
     }));
@@ -30,7 +30,7 @@ pub fn screen(sugarloaf: &mut Sugarloaf, context_dimension: &ContextDimension, s
     objects.push(Object::Quad(Quad {
         position: [0., 30.0],
         color: accent,
-        size: [4., layout.height],
+        size: [4., layout.height / context_dimension.dimension.scale],
         ..Quad::default()
     }));
 

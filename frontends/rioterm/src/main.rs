@@ -266,6 +266,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Install shell integration scripts for OSC 133 block tracking
     crate::shell_integration::install_integration_scripts();
 
+    // Create default connections.toml if it doesn't exist
+    {
+        let conn_path = crate::connections::connection_config_path();
+        if !conn_path.exists() {
+            let _ = std::fs::write(&conn_path, crate::connections::default_template());
+        }
+    }
+
     let window_event_loop =
         rio_window::event_loop::EventLoop::<EventPayload>::with_user_event().build()?;
 

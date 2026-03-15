@@ -27,7 +27,7 @@ pub fn screen(
         color: bg,
         size: [
             layout.width / context_dimension.dimension.scale,
-            layout.height,
+            layout.height / context_dimension.dimension.scale,
         ],
         ..Quad::default()
     }));
@@ -36,7 +36,7 @@ pub fn screen(
     objects.push(Object::Quad(Quad {
         position: [0., 30.0],
         color: accent,
-        size: [4., layout.height],
+        size: [4., layout.height / context_dimension.dimension.scale],
         ..Quad::default()
     }));
 

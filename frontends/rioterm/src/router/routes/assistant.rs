@@ -53,26 +53,26 @@ pub fn screen(
         color: black,
         size: [
             layout.width / context_dimension.dimension.scale,
-            layout.height,
+            layout.height / context_dimension.dimension.scale,
         ],
         ..Quad::default()
     }));
     objects.push(Object::Quad(Quad {
         position: [0., 30.0],
         color: blue,
-        size: [15., layout.height],
+        size: [15., layout.height / context_dimension.dimension.scale],
         ..Quad::default()
     }));
     objects.push(Object::Quad(Quad {
         position: [15., context_dimension.margin.top_y + 60.],
         color: yellow,
-        size: [15., layout.height],
+        size: [15., layout.height / context_dimension.dimension.scale],
         ..Quad::default()
     }));
     objects.push(Object::Quad(Quad {
         position: [30., context_dimension.margin.top_y + 120.],
         color: red,
-        size: [15., layout.height],
+        size: [15., layout.height / context_dimension.dimension.scale],
         ..Quad::default()
     }));
 

@@ -21,25 +21,25 @@ pub fn screen(
     objects.push(Object::Quad(Quad {
         position: [0., 0.0],
         color: black,
-        size: [layout.width, layout.height],
+        size: [layout.width / context_dimension.dimension.scale, layout.height / context_dimension.dimension.scale],
         ..Quad::default()
     }));
     objects.push(Object::Quad(Quad {
         position: [0., 30.0],
         color: blue,
-        size: [30., layout.height],
+        size: [30., layout.height / context_dimension.dimension.scale],
         ..Quad::default()
     }));
     objects.push(Object::Quad(Quad {
         position: [15., context_dimension.margin.top_y + 60.],
         color: yellow,
-        size: [30., layout.height],
+        size: [30., layout.height / context_dimension.dimension.scale],
         ..Quad::default()
     }));
     objects.push(Object::Quad(Quad {
         position: [30., context_dimension.margin.top_y + 120.],
         color: red,
-        size: [30., layout.height],
+        size: [30., layout.height / context_dimension.dimension.scale],
         ..Quad::default()
     }));
 

@@ -27,7 +27,7 @@ pub fn screen(
         color: bg,
         size: [
             layout.width / context_dimension.dimension.scale,
-            layout.height,
+            layout.height / context_dimension.dimension.scale,
         ],
         ..Quad::default()
     }));
@@ -36,7 +36,7 @@ pub fn screen(
     objects.push(Object::Quad(Quad {
         position: [0., 30.0],
         color: accent,
-        size: [4., layout.height],
+        size: [4., layout.height / context_dimension.dimension.scale],
         ..Quad::default()
     }));
 
@@ -107,7 +107,7 @@ pub fn screen(
 
     if connections.is_empty() {
         body.add_text(
-            "No connections found.",
+            "No connections configured yet.",
             FragmentStyle {
                 color: dim,
                 ..FragmentStyle::default()
@@ -116,21 +116,29 @@ pub fn screen(
         .new_line()
         .new_line();
         body.add_text(
-            "Create ~/.config/volt/connections.toml to add connections.",
+            "Config file: ",
             FragmentStyle {
                 color: dim,
                 ..FragmentStyle::default()
             },
-        )
-        .new_line()
-        .new_line();
+        );
         body.add_text(
-            "Example:",
+            "~/.config/volt/connections.toml",
             FragmentStyle {
                 color: accent,
                 ..FragmentStyle::default()
             },
         )
+        .new_line()
+        .new_line();
+        body.add_text(
+            "Add a connection by putting this in the file:",
+            FragmentStyle {
+                color: dim,
+                ..FragmentStyle::default()
+            },
+        )
+        .new_line()
         .new_line();
         body.add_text(
             "  [connections.my-server]",
@@ -160,6 +168,39 @@ pub fn screen(
             "  user = \"deploy\"",
             FragmentStyle {
                 color: white,
+                ..FragmentStyle::default()
+            },
+        )
+        .new_line()
+        .new_line();
+        body.add_text(
+            "Supported types: ssh, mysql, postgres, redis, kubectl, docker",
+            FragmentStyle {
+                color: dim,
+                ..FragmentStyle::default()
+            },
+        )
+        .new_line()
+        .new_line();
+        body.add_text(
+            "Press ",
+            FragmentStyle {
+                color: dim,
+                ..FragmentStyle::default()
+            },
+        );
+        body.add_text(
+            " e ",
+            FragmentStyle {
+                background_color: Some(highlight),
+                color: black,
+                ..FragmentStyle::default()
+            },
+        );
+        body.add_text(
+            " to open the config file in your editor.",
+            FragmentStyle {
+                color: dim,
                 ..FragmentStyle::default()
             },
         );
