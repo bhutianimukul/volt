@@ -315,39 +315,26 @@ impl ScreenNavigation {
         }
 
         // --- Top bar: right-side buttons with clear text labels ---
-        let btn_gap = 3.0_f32;
-        let btn_y = position_y;
-        let btn_h = PADDING_Y_BOTTOM_TABS;
-        let btn_bg = [0.2, 0.2, 0.25, 1.0];
-        let btn_fg = [0.85, 0.85, 0.85, 1.0];
+        // Top bar right-side items — rendered as single text line, no rectangles
+        let top_rt = sugarloaf.create_temp_rich_text();
+        sugarloaf.set_rich_text_font_size(&top_rt, 11.);
+        let top_dim = FragmentStyle { color: [0.5, 0.5, 0.55, 0.8], ..FragmentStyle::default() };
+        let top_link = FragmentStyle { color: [0.6, 0.75, 0.9, 1.0], ..FragmentStyle::default() };
 
-        // Layout right to left: [Settings] [Help]
-        let settings_w = 58.0_f32;
-        let help_w = 38.0_f32;
-        let settings_x = visible_width - settings_w - btn_gap;
-        let help_x = settings_x - help_w - btn_gap;
+        sugarloaf.content().sel(top_rt).clear().new_line()
+            .add_text("Help", top_link)
+            .add_text("  ", top_dim)
+            .add_text("Settings", top_link)
+            .add_text("  ", top_dim)
+            .build();
 
-        // [Settings] button
-        objects.push(Object::Quad(Quad {
-            position: [settings_x, btn_y], color: btn_bg,
-            size: [settings_w, btn_h], border_radius: [3.0; 4], ..Quad::default()
+        // Right-align: estimate ~70px for "Help  Settings  "
+        let top_text_w = 110.0_f32;
+        objects.push(Object::RichText(RichText {
+            id: top_rt,
+            position: [visible_width - top_text_w, position_y + 1.0],
+            lines: None,
         }));
-        let rt = sugarloaf.create_temp_rich_text();
-        sugarloaf.set_rich_text_font_size(&rt, 11.);
-        sugarloaf.content().sel(rt).clear().new_line()
-            .add_text("Settings", FragmentStyle { color: btn_fg, ..FragmentStyle::default() }).build();
-        objects.push(Object::RichText(RichText { id: rt, position: [settings_x + 4.0, btn_y + 1.0], lines: None }));
-
-        // [Help] button
-        objects.push(Object::Quad(Quad {
-            position: [help_x, btn_y], color: btn_bg,
-            size: [help_w, btn_h], border_radius: [3.0; 4], ..Quad::default()
-        }));
-        let rt = sugarloaf.create_temp_rich_text();
-        sugarloaf.set_rich_text_font_size(&rt, 11.);
-        sugarloaf.content().sel(rt).clear().new_line()
-            .add_text("Help", FragmentStyle { color: btn_fg, ..FragmentStyle::default() }).build();
-        objects.push(Object::RichText(RichText { id: rt, position: [help_x + 6.0, btn_y + 1.0], lines: None }));
 
         } // end if !tabs_hidden
 
@@ -401,21 +388,16 @@ impl ScreenNavigation {
             lines: None,
         }));
 
-        // tmux button — right side, subtle green pill
-        let tmux_w = 46.0_f32;
-        let tmux_x = visible_width - tmux_w - 6.0;
-        objects.push(Object::Quad(Quad {
-            position: [tmux_x, sb_y + 3.0],
-            color: [0.1, 0.3, 0.2, 1.0],
-            size: [tmux_w, sb_h - 6.0],
-            border_radius: [3.0; 4],
-            ..Quad::default()
+        // tmux — right side, styled text (no pill)
+        let tmux_rt = sugarloaf.create_temp_rich_text();
+        sugarloaf.set_rich_text_font_size(&tmux_rt, 11.);
+        sugarloaf.content().sel(tmux_rt).clear().new_line()
+            .add_text("tmux", FragmentStyle { color: [0.4, 0.85, 0.55, 1.0], ..FragmentStyle::default() }).build();
+        objects.push(Object::RichText(RichText {
+            id: tmux_rt,
+            position: [visible_width - 40.0, sb_y + 1.0],
+            lines: None,
         }));
-        let rt = sugarloaf.create_temp_rich_text();
-        sugarloaf.set_rich_text_font_size(&rt, 10.);
-        sugarloaf.content().sel(rt).clear().new_line()
-            .add_text("tmux", FragmentStyle { color: [0.4, 0.9, 0.5, 0.9], ..FragmentStyle::default() }).build();
-        objects.push(Object::RichText(RichText { id: rt, position: [tmux_x + 8.0, sb_y + 3.0], lines: None }));
     }
 }
 
@@ -439,17 +421,16 @@ pub enum NavButton {
 
 /// Check if a click (in logical pixels) hit a top bar button.
 pub fn nav_button_at_position(x: f32, visible_width: f32) -> Option<NavButton> {
-    let btn_gap = 3.0_f32;
-    let settings_w = 58.0_f32;
-    let help_w = 38.0_f32;
-    let settings_x = visible_width - settings_w - btn_gap;
-    let help_x = settings_x - help_w - btn_gap;
+    // Text layout: "Help  Settings  " right-aligned, ~110px wide
+    // "Help" at offset 0..28, "Settings" at offset 42..96 from text start
+    let text_start = visible_width - 110.0;
+    let relative_x = x - text_start;
 
-    if x >= settings_x && x <= settings_x + settings_w {
-        return Some(NavButton::Settings);
-    }
-    if x >= help_x && x <= help_x + help_w {
+    if relative_x >= 0.0 && relative_x < 30.0 {
         return Some(NavButton::Help);
+    }
+    if relative_x >= 38.0 && relative_x < 100.0 {
+        return Some(NavButton::Settings);
     }
     None
 }
@@ -485,10 +466,9 @@ pub fn status_button_at_position(x: f32, y: f32, win_height: f32, visible_width:
     if x < 50.0 * cw { return Some(NavButton::SlashCommands); }   // 279..325
     if x < 59.0 * cw { return Some(NavButton::Layouts); }         // 325..383
 
-    // tmux pill on right
-    let tmux_w = 46.0_f32;
-    let tmux_x = visible_width - tmux_w - 6.0;
-    if x >= tmux_x && x <= tmux_x + tmux_w {
+    // tmux text on right (~40px from right edge)
+    let tmux_x = visible_width - 40.0;
+    if x >= tmux_x {
         return Some(NavButton::TmuxConnect);
     }
 
