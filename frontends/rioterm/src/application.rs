@@ -1122,8 +1122,25 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                     let win_h = route.window.screen.sugarloaf.window_size().height
                         / route.window.screen.sugarloaf.scale_factor();
 
-                    // Check top bar nav buttons [?] [⚙]
-                    if ly < 22.0 {
+                    // Check nav buttons [Help] [Settings] — in tab bar region
+                    // For TopTab: tab bar is at y=[0, 22]
+                    // For BottomTab: tab bar is at y=[h-22-20, h-20]
+                    let nav_mode = route.window.screen.renderer.navigation.navigation.mode;
+                    let hide_single = route.window.screen.renderer.navigation.navigation.hide_if_single;
+                    let num_tabs = route.window.screen.context_manager.len();
+                    let tabs_hidden = hide_single && num_tabs <= 1;
+                    let in_tab_bar = if tabs_hidden {
+                        false
+                    } else if nav_mode == rio_backend::config::navigation::NavigationMode::TopTab {
+                        ly < 22.0
+                    } else if nav_mode == rio_backend::config::navigation::NavigationMode::BottomTab {
+                        let tab_bar_top = (win_h - 22.0 - 20.0) as f64;
+                        let tab_bar_bottom = (win_h - 20.0) as f64;
+                        ly >= tab_bar_top && ly <= tab_bar_bottom
+                    } else {
+                        false
+                    };
+                    if in_tab_bar {
                         if let Some(btn) = crate::renderer::navigation::nav_button_at_position(
                             lx as f32, visible_w,
                         ) {
@@ -1143,34 +1160,44 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                     }
 
                     // Check bottom status bar buttons
-                    if let Some(btn) = crate::renderer::navigation::status_button_at_position(
-                        lx as f32, ly as f32, win_h, visible_w,
-                    ) {
-                        use crate::renderer::navigation::NavButton;
-                        match btn {
-                            NavButton::TmuxConnect => {
-                                route.window.screen.context_manager.toggle_tmux_picker();
-                            }
-                            NavButton::AiAssistant => {
-                                if crate::ai_assistant::is_claude_available() {
-                                    route.window.screen.split_right();
-                                    let bytes = b"claude\r".to_vec();
-                                    route.window.screen.ctx_mut().current_mut().messenger.send_write(bytes);
+                    // Only when the tab bar is visible (status bar renders with it)
+                    {
+                        let num_tabs = route.window.screen.context_manager.len();
+                        let hide_single = route.window.screen.renderer.navigation.navigation.hide_if_single;
+                        let is_tab_mode = nav_mode == rio_backend::config::navigation::NavigationMode::TopTab
+                            || nav_mode == rio_backend::config::navigation::NavigationMode::BottomTab;
+                        let tab_bar_visible = is_tab_mode && !(hide_single && num_tabs <= 1);
+                        if tab_bar_visible {
+                            if let Some(btn) = crate::renderer::navigation::status_button_at_position(
+                                lx as f32, ly as f32, win_h, visible_w,
+                            ) {
+                                use crate::renderer::navigation::NavButton;
+                                match btn {
+                                    NavButton::TmuxConnect => {
+                                        route.window.screen.context_manager.toggle_tmux_picker();
+                                    }
+                                    NavButton::AiAssistant => {
+                                        if crate::ai_assistant::is_claude_available() {
+                                            route.window.screen.split_right();
+                                            let bytes = b"claude\r".to_vec();
+                                            route.window.screen.ctx_mut().current_mut().messenger.send_write(bytes);
+                                        }
+                                    }
+                                    NavButton::History => {
+                                        route.window.screen.context_manager.toggle_history();
+                                    }
+                                    NavButton::EnvViewer => {
+                                        route.window.screen.context_manager.toggle_env_viewer();
+                                    }
+                                    NavButton::Bookmarks => {
+                                        route.window.screen.context_manager.toggle_bookmarks();
+                                    }
+                                    _ => {}
                                 }
+                                route.request_redraw();
+                                return;
                             }
-                            NavButton::History => {
-                                route.window.screen.context_manager.toggle_history();
-                            }
-                            NavButton::EnvViewer => {
-                                route.window.screen.context_manager.toggle_env_viewer();
-                            }
-                            NavButton::Bookmarks => {
-                                route.window.screen.context_manager.toggle_bookmarks();
-                            }
-                            _ => {}
                         }
-                        route.request_redraw();
-                        return;
                     }
 
                     // Check tab clicks
@@ -1181,7 +1208,10 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                         let now = std::time::Instant::now();
                         let elapsed =
                             now - route.window.screen.mouse.last_click_timestamp;
-                        let is_double_click = elapsed < Duration::from_millis(400);
+                        let same_tab = route.window.screen.mouse.last_click_tab
+                            == Some(tab_idx);
+                        let is_double_click =
+                            same_tab && elapsed < Duration::from_millis(400);
 
                         if tab_idx == current && is_double_click {
                             route.window.screen.prompt_rename_tab();
@@ -1190,6 +1220,7 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                             route.window.screen.render();
                         }
                         route.window.screen.mouse.last_click_timestamp = now;
+                        route.window.screen.mouse.last_click_tab = Some(tab_idx);
                         route.request_redraw();
                         return;
                     }
@@ -1642,6 +1673,9 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                             route.window.screen.ctx().current_route(),
                         ));
                     }
+                    // Overlay routes (Settings, Help, History, etc.) need a
+                    // redraw after handling key input so the UI updates.
+                    route.request_redraw();
                     return;
                 }
 

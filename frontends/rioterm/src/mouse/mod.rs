@@ -34,6 +34,8 @@ pub struct Mouse {
     pub right_button_state: ElementState,
     pub last_click_timestamp: Instant,
     pub last_click_button: MouseButton,
+    /// Tab index of last click (for double-click-to-rename detection)
+    pub last_click_tab: Option<usize>,
     pub click_state: ClickState,
     pub accumulated_scroll: AccumulatedScroll,
     pub square_side: Side,
@@ -50,6 +52,7 @@ impl Default for Mouse {
             divider: 1.0,
             last_click_timestamp: Instant::now(),
             last_click_button: MouseButton::Left,
+            last_click_tab: None,
             left_button_state: ElementState::Released,
             middle_button_state: ElementState::Released,
             right_button_state: ElementState::Released,

@@ -48,16 +48,40 @@ pub fn padding_bottom_from_config(
 ) -> f32 {
     let default_padding = 0.0 + padding_y_bottom;
 
+    // Status bar (20px) is rendered together with the tab bar for
+    // TopTab and BottomTab modes (hidden when hide_if_single with 1 tab).
+    let is_tab_mode = navigation.mode == NavigationMode::TopTab
+        || navigation.mode == NavigationMode::BottomTab;
+    let tabs_hidden = navigation.hide_if_single && num_tabs == 1;
+    let status_bar_h: f32 = if is_tab_mode && !tabs_hidden {
+        20.0
+    } else {
+        0.0
+    };
+
     if is_search_active {
-        return padding_y_bottom + constants::PADDING_Y_BOTTOM_TABS;
+        // For BottomTab: search bar replaces the tab bar + status bar entirely
+        // For TopTab: search bar at bottom + status bar still visible above it
+        let search_h = constants::PADDING_Y_BOTTOM_TABS;
+        if navigation.mode == NavigationMode::BottomTab {
+            // Tab bar and status bar are hidden; only search bar remains
+            return padding_y_bottom + search_h;
+        }
+        return padding_y_bottom + search_h + status_bar_h;
     }
 
-    if navigation.hide_if_single && num_tabs == 1 {
+    if tabs_hidden {
         return default_padding;
     }
 
     if navigation.mode == NavigationMode::BottomTab {
-        return padding_y_bottom + constants::PADDING_Y_BOTTOM_TABS;
+        // Tab bar (22px) + status bar (20px) both at the bottom
+        return padding_y_bottom + constants::PADDING_Y_BOTTOM_TABS + status_bar_h;
+    }
+
+    if navigation.mode == NavigationMode::TopTab {
+        // Tab bar is at the top; status bar alone at the bottom
+        return default_padding + status_bar_h;
     }
 
     default_padding

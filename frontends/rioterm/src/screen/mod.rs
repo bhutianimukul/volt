@@ -1416,7 +1416,12 @@ impl Screen<'_> {
             (0.0, tab_bar_height)
         } else {
             let win_height = self.sugarloaf.window_size().height as f64 / scale;
-            (win_height - tab_bar_height, win_height)
+            let status_bar_h = 20.0_f64; // Must match STATUS_BAR_HEIGHT
+            // Tab bar sits above the status bar at the bottom
+            (
+                win_height - tab_bar_height - status_bar_h,
+                win_height - status_bar_h,
+            )
         };
 
         if y < bar_y_start || y > bar_y_end {

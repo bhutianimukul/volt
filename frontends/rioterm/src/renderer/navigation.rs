@@ -101,7 +101,9 @@ impl ScreenNavigation {
             }
             NavigationMode::BottomTab => {
                 let (_, height, scale) = dimensions;
-                let position_y = (height / scale) - PADDING_Y_BOTTOM_TABS;
+                // Stack above the status bar (20px) at the bottom
+                let position_y =
+                    (height / scale) - PADDING_Y_BOTTOM_TABS - STATUS_BAR_HEIGHT;
                 self.tab(
                     sugarloaf,
                     objects,
