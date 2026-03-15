@@ -137,7 +137,7 @@ impl Application<'_> {
         use objc::sel;
         use objc::sel_impl;
 
-        let icon_data: &[u8] = include_bytes!("router/resources/images/volt-logo.ico");
+        let icon_data: &[u8] = include_bytes!("router/resources/images/volt-logo.icns");
 
         unsafe {
             let ns_data: *mut Object = msg_send![class!(NSData),
