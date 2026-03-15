@@ -1,0 +1,126 @@
+use crate::context::grid::ContextDimension;
+use rio_backend::sugarloaf::{FragmentStyle, Object, Quad, RichText, Sugarloaf};
+
+#[inline]
+pub fn screen(sugarloaf: &mut Sugarloaf, context_dimension: &ContextDimension) {
+    let accent = [0.9882353, 0.7294118, 0.15686275, 1.0]; // yellow (Volt brand)
+    let dim = [0.5, 0.5, 0.5, 1.0];
+    let black = [0.0, 0.0, 0.0, 1.0];
+    let white = [1.0, 1.0, 1.0, 1.0];
+    let key_color = [0.4, 0.8, 1.0, 1.0]; // light blue for keys
+    let secret_color = [0.9, 0.3, 0.3, 1.0]; // red for masked secrets
+
+    let layout = sugarloaf.window_size();
+    let mut objects = Vec::with_capacity(16);
+
+    // Full-screen black background
+    objects.push(Object::Quad(Quad {
+        position: [0., 0.0],
+        color: black,
+        size: [
+            layout.width / context_dimension.dimension.scale,
+            layout.height,
+        ],
+        ..Quad::default()
+    }));
+
+    // Yellow accent bar on the left
+    objects.push(Object::Quad(Quad {
+        position: [0., 30.0],
+        color: accent,
+        size: [4., layout.height],
+        ..Quad::default()
+    }));
+
+    // Title
+    let title_rt = sugarloaf.create_temp_rich_text();
+    sugarloaf.set_rich_text_font_size(&title_rt, 24.0);
+    let content = sugarloaf.content();
+    content
+        .sel(title_rt)
+        .clear()
+        .add_text(
+            "Environment Variables",
+            FragmentStyle {
+                color: white,
+                ..FragmentStyle::default()
+            },
+        )
+        .build();
+    objects.push(Object::RichText(RichText {
+        id: title_rt,
+        position: [40., context_dimension.margin.top_y + 30.],
+        lines: None,
+    }));
+
+    // Body with grouped env vars
+    let body_rt = sugarloaf.create_temp_rich_text();
+    sugarloaf.set_rich_text_font_size(&body_rt, 13.0);
+
+    let key_style = FragmentStyle {
+        color: key_color,
+        ..FragmentStyle::default()
+    };
+    let val_style = FragmentStyle {
+        color: white,
+        ..FragmentStyle::default()
+    };
+    let header_style = FragmentStyle {
+        color: accent,
+        ..FragmentStyle::default()
+    };
+    let dim_style = FragmentStyle {
+        color: dim,
+        ..FragmentStyle::default()
+    };
+    let secret_style = FragmentStyle {
+        color: secret_color,
+        ..FragmentStyle::default()
+    };
+
+    let content = sugarloaf.content();
+    let body = content.sel(body_rt);
+    body.clear();
+
+    let grouped = crate::env_inspector::grouped_env_vars();
+    for (category, vars) in &grouped {
+        body.new_line()
+            .add_text(category.to_uppercase().as_str(), header_style)
+            .new_line();
+        for var in vars {
+            let display_value = if var.is_secret {
+                crate::env_inspector::mask_value(&var.value)
+            } else if var.value.len() > 80 {
+                format!("{}...", &var.value[..77])
+            } else {
+                var.value.clone()
+            };
+
+            body.add_text("  ", dim_style);
+            body.add_text(&var.key, key_style);
+            body.add_text("=", dim_style);
+            if var.is_secret {
+                body.add_text(&display_value, secret_style);
+            } else {
+                body.add_text(&display_value, val_style);
+            }
+            body.new_line();
+        }
+    }
+
+    // Footer
+    body.new_line().new_line();
+    body.add_text("  Press ", dim_style)
+        .add_text("Escape", key_style)
+        .add_text(" to close", dim_style);
+
+    body.build();
+
+    objects.push(Object::RichText(RichText {
+        id: body_rt,
+        position: [40., context_dimension.margin.top_y + 70.],
+        lines: None,
+    }));
+
+    sugarloaf.set_objects(objects);
+}

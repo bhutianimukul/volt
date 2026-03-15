@@ -143,6 +143,8 @@ pub struct ContextManager<T: EventListener> {
     pub notification_manager: crate::notifications::NotificationManager,
     pub dock_badge: crate::dock_badge::DockBadgeManager,
     pub trigger_engine: crate::triggers::TriggerEngine,
+    pub audit_logger: crate::audit_log::AuditLogger,
+    pub session_recorder: crate::time_travel::SessionRecorder,
 }
 
 pub fn create_dead_context<T: rio_backend::event::EventListener>(
@@ -407,6 +409,8 @@ impl<T: EventListener + Clone + std::marker::Send + 'static> ContextManager<T> {
             notification_manager: crate::notifications::NotificationManager::new(),
             dock_badge: crate::dock_badge::DockBadgeManager::new(),
             trigger_engine,
+            audit_logger: crate::audit_log::AuditLogger::new(false),
+            session_recorder: crate::time_travel::SessionRecorder::new(),
         })
     }
 
@@ -464,6 +468,8 @@ impl<T: EventListener + Clone + std::marker::Send + 'static> ContextManager<T> {
                 te.load_rules(crate::triggers::builtin_triggers());
                 te
             },
+            audit_logger: crate::audit_log::AuditLogger::new(false),
+            session_recorder: crate::time_travel::SessionRecorder::new(),
         })
     }
 
@@ -688,6 +694,12 @@ impl<T: EventListener + Clone + std::marker::Send + 'static> ContextManager<T> {
     pub fn minimize(&mut self) {
         self.event_proxy
             .send_event(RioEvent::Minimize(true), self.window_id);
+    }
+
+    #[inline]
+    pub fn restore(&mut self) {
+        self.event_proxy
+            .send_event(RioEvent::Minimize(false), self.window_id);
     }
 
     #[inline]

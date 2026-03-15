@@ -88,6 +88,8 @@ pub struct Screen<'screen> {
     pub clipboard: Rc<RefCell<Clipboard>>,
     last_ime_cursor_pos: Option<(f32, f32)>,
     hints_config: Vec<std::rc::Rc<rio_backend::config::hints::Hint>>,
+    /// Tracks whether quake-mode minimize toggle is active.
+    quake_minimized: bool,
 }
 
 pub struct ScreenWindowProperties {
@@ -273,6 +275,7 @@ impl Screen<'_> {
             bindings,
             clipboard,
             last_ime_cursor_pos: None,
+            quake_minimized: false,
         })
     }
 
@@ -696,6 +699,10 @@ impl Screen<'_> {
                     {
                         tracing::info!("Destructive command detected: {}", preview.description);
                         if !self.confirm_destructive_command(&preview) {
+                            self.context_manager.audit_logger.log_blocked(
+                                &command_text,
+                                &preview.description,
+                            );
                             return;
                         }
                     }
@@ -1209,6 +1216,15 @@ impl Screen<'_> {
                     }
                     Act::ToggleBroadcast => {
                         self.context_manager.toggle_broadcast();
+                    }
+                    Act::ToggleQuakeMode => {
+                        if self.quake_minimized {
+                            self.context_manager.restore();
+                            self.quake_minimized = false;
+                        } else {
+                            self.context_manager.minimize();
+                            self.quake_minimized = true;
+                        }
                     }
                     Act::SelectNextSplit => {
                         self.cancel_search();

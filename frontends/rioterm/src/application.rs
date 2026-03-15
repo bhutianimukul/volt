@@ -920,6 +920,12 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                         .context_manager
                         .notification_manager
                         .command_started(String::new());
+                    route
+                        .window
+                        .screen
+                        .context_manager
+                        .audit_logger
+                        .log_command("", "");
                 }
             }
             RioEventType::Rio(RioEvent::ShellCommandFinish { row, exit_code }) => {
@@ -939,6 +945,18 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                             .notification_manager
                             .command_finished(exit_code);
                     }
+                    route
+                        .window
+                        .screen
+                        .context_manager
+                        .audit_logger
+                        .log(
+                            crate::audit_log::AuditEvent::CommandCompleted {
+                                command: String::new(),
+                                exit_code,
+                                duration_ms: 0,
+                            }
+                        );
                 }
             }
             _ => {}
@@ -1869,6 +1887,25 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
     // This is irreversible - if this event is emitted, it is guaranteed to be the last event that gets emitted.
     // You generally want to treat this as an “do on quit” event.
     fn exiting(&mut self, _event_loop: &ActiveEventLoop) {
+        // Save window state before exiting
+        let mut state = crate::window_state::WindowState::new();
+        for route in self.router.routes.values() {
+            let win = &route.window.winit_window;
+            let pos = win.outer_position().unwrap_or_default();
+            let size = win.inner_size();
+            let is_fullscreen = win.fullscreen().is_some();
+            state.add_window(
+                pos.x as f64,
+                pos.y as f64,
+                size.width as f64,
+                size.height as f64,
+                is_fullscreen,
+            );
+        }
+        if let Err(e) = state.save() {
+            tracing::warn!("Failed to save window state: {e}");
+        }
+
         // Ensure that all the windows are dropped, so the destructors for
         // Renderer and contexts ran.
         self.router.routes.clear();

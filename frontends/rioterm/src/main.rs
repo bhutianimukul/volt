@@ -255,6 +255,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     setup_environment_variables(&config);
 
+    // Load saved window state (positions will be restored in a future update)
+    let _saved_window_state = crate::window_state::WindowState::load();
+    tracing::info!(
+        "Loaded window state: {} window(s), {} tab(s)",
+        _saved_window_state.window_count(),
+        _saved_window_state.total_tabs(),
+    );
+
     // Install shell integration scripts for OSC 133 block tracking
     crate::shell_integration::install_integration_scripts();
 
