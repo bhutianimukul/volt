@@ -1310,9 +1310,9 @@ impl Screen<'_> {
                         use crate::tmux_cc::TmuxController;
                         let sessions = TmuxController::list_sessions();
                         let cmd = if let Some((_, name, _)) = sessions.first() {
-                            format!("tmux -CC attach -t {}\r", name)
+                            format!("tmux attach -t {}\r", name)
                         } else {
-                            "tmux -CC new-session\r".to_string()
+                            "tmux new-session\r".to_string()
                         };
                         self.ctx_mut().current_mut().messenger.send_write(cmd.into_bytes());
                     }

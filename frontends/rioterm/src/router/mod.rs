@@ -831,7 +831,7 @@ impl Route<'_> {
                     if let Some((_id, name, _attached)) =
                         self.tmux_sessions.get(self.tmux_selected)
                     {
-                        let cmd = format!("tmux -CC attach -t {}\r", name);
+                        let cmd = format!("tmux attach -t {}\r", name);
                         self.window
                             .screen
                             .ctx_mut()
@@ -842,7 +842,7 @@ impl Route<'_> {
                     }
                 }
                 Key::Character(c) if c.as_str() == "n" || c.as_str() == "N" => {
-                    let cmd = "tmux -CC new-session\r".to_string();
+                    let cmd = "tmux new-session\r".to_string();
                     self.window
                         .screen
                         .ctx_mut()
