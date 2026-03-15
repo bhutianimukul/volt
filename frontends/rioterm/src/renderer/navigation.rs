@@ -205,14 +205,14 @@ impl ScreenNavigation {
         let brand_rt = sugarloaf.create_temp_rich_text();
         sugarloaf.set_rich_text_font_size(&brand_rt, 14.);
         sugarloaf.content().sel(brand_rt).clear().new_line()
-            .add_text("V", FragmentStyle { color: [0.95, 0.75, 0.2, 1.0], ..FragmentStyle::default() }).build();
+            .add_text("Volt", FragmentStyle { color: [0.95, 0.75, 0.2, 1.0], ..FragmentStyle::default() }).build();
         objects.push(Object::RichText(RichText { id: brand_rt, position: [6.0, position_y], lines: None }));
 
         // Tab pills only when not hidden
         if !tabs_hidden {
         self.ensure_tab_visible(current, visible_width);
 
-        let left_margin = 22.0; // shifted right for thunder icon
+        let left_margin = 38.0; // shifted right for thunder icon
 
         // First pass: compute labels and positions
         let mut tab_layouts: Vec<(f32, f32, String)> = Vec::with_capacity(len); // (x, width, label)
