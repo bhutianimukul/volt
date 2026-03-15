@@ -143,7 +143,7 @@ impl Default for Navigation {
             clickable: false,
             current_working_directory: true,
             use_terminal_title: false,
-            hide_if_single: true,
+            hide_if_single: false,
             use_split: true,
             unfocused_split_opacity: default_unfocused_split_opacity(),
             open_config_with_split: true,
