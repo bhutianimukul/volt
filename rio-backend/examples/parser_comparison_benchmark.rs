@@ -64,7 +64,7 @@ impl MockPerformer {
 }
 
 fn main() {
-    println!("Rio Terminal - Parser Performance Comparison");
+    println!("Volt - Parser Performance Comparison");
     println!("============================================");
 
     let test_cases = vec![

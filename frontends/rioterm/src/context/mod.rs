@@ -786,6 +786,24 @@ impl<T: EventListener + Clone + std::marker::Send + 'static> ContextManager<T> {
     }
 
     #[inline]
+    pub fn toggle_session_sharing(&mut self) {
+        self.event_proxy
+            .send_event(RioEvent::ToggleSessionSharing, self.window_id);
+    }
+
+    #[inline]
+    pub fn toggle_session_export(&mut self) {
+        self.event_proxy
+            .send_event(RioEvent::ToggleSessionExport, self.window_id);
+    }
+
+    #[inline]
+    pub fn toggle_time_travel(&mut self) {
+        self.event_proxy
+            .send_event(RioEvent::ToggleTimeTravel, self.window_id);
+    }
+
+    #[inline]
     pub fn toggle_tmux_picker(&mut self) {
         self.event_proxy
             .send_event(RioEvent::ToggleTmuxPicker, self.window_id);

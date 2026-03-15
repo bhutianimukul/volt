@@ -48,6 +48,8 @@ pub struct Route<'a> {
     pub history_selected: usize,
     /// Scroll offset for the bookmarks viewer
     pub bookmarks_scroll: usize,
+    /// Currently selected index in the bookmarks viewer
+    pub bookmarks_selected: usize,
     /// Cached bookmarks for the viewer (loaded once when opening)
     pub bookmarks_cache: Vec<crate::bookmarks::Bookmark>,
     /// Currently selected index in the connections viewer
@@ -68,6 +70,18 @@ pub struct Route<'a> {
     pub help_selected: usize,
     /// Whether focus is on the help sidebar (true) or help panel (false)
     pub help_in_sidebar: bool,
+    /// Session sharing state
+    pub sharing_state: crate::router::routes::session_sharing::SharingState,
+    /// Selected action in session sharing (0=Host, 1=Connect)
+    pub sharing_selected: usize,
+    /// Selected format in session export
+    pub export_selected: usize,
+    /// Last export result message
+    pub export_result: Option<crate::router::routes::session_export::ExportResult>,
+    /// Selected index in time travel view
+    pub time_travel_selected: usize,
+    /// Scroll offset in time travel view
+    pub time_travel_scroll: usize,
 }
 
 impl Route<'_> {
@@ -90,6 +104,7 @@ impl Route<'_> {
             history_scroll: 0,
             history_selected: 0,
             bookmarks_scroll: 0,
+            bookmarks_selected: 0,
             bookmarks_cache: Vec::new(),
             connections_selected: 0,
             connections_list: Vec::new(),
@@ -100,6 +115,13 @@ impl Route<'_> {
             help_category: 0,
             help_selected: 0,
             help_in_sidebar: true,
+            sharing_state: crate::router::routes::session_sharing::SharingState::default(
+            ),
+            sharing_selected: 0,
+            export_selected: 0,
+            export_result: None,
+            time_travel_selected: 0,
+            time_travel_scroll: 0,
         }
     }
 }
@@ -401,7 +423,9 @@ impl Route<'_> {
                         editor.toggle_search();
                     }
                     Key::Character(c) if c.as_str() == "i" => {
-                        if let Some((source, imported)) = crate::config_import::auto_import() {
+                        if let Some((source, imported)) =
+                            crate::config_import::auto_import()
+                        {
                             let toml = imported.to_volt_toml();
                             let config_path = rio_backend::config::config_file_path();
                             let _ = std::fs::write(&config_path, &toml);
@@ -413,7 +437,10 @@ impl Route<'_> {
             } else {
                 // Panel mode: navigate settings within category
                 let categories = editor.categories();
-                let current_cat = categories.get(self.settings_category).cloned().unwrap_or_default();
+                let current_cat = categories
+                    .get(self.settings_category)
+                    .cloned()
+                    .unwrap_or_default();
                 let cat_items = editor.items_for_category(&current_cat);
                 let item_count = cat_items.len();
                 match &key_event.logical_key {
@@ -439,11 +466,27 @@ impl Route<'_> {
                     Key::Named(NamedKey::Enter) => {
                         // Find the real index into editor.items for this category item
                         if let Some(real_item) = cat_items.get(editor.selected_index) {
-                            let real_idx = editor.items.iter().position(|it| it.key == real_item.key);
+                            let real_idx = editor
+                                .items
+                                .iter()
+                                .position(|it| it.key == real_item.key);
                             if let Some(ri) = real_idx {
-                                if editor.items[ri].value.is_bool() {
-                                    editor.items[ri].value = match &editor.items[ri].value {
-                                        crate::settings_editor::SettingValue::Bool(v) => crate::settings_editor::SettingValue::Bool(!v),
+                                if editor.items[ri].key == "window.background-image" {
+                                    // Open native image picker instead of text editor
+                                    if let Some(path) = crate::image_picker::pick_image()
+                                    {
+                                        editor.items[ri].value =
+                                            crate::settings_editor::SettingValue::String(
+                                                path.clone(),
+                                            );
+                                        editor.save_background_image(&path);
+                                    }
+                                } else if editor.items[ri].value.is_bool() {
+                                    editor.items[ri].value = match &editor.items[ri].value
+                                    {
+                                        crate::settings_editor::SettingValue::Bool(v) => {
+                                            crate::settings_editor::SettingValue::Bool(!v)
+                                        }
                                         other => other.clone(),
                                     };
                                     editor.save_setting_by_index(ri);
@@ -460,7 +503,9 @@ impl Route<'_> {
                         editor.toggle_search();
                     }
                     Key::Character(c) if c.as_str() == "i" => {
-                        if let Some((source, imported)) = crate::config_import::auto_import() {
+                        if let Some((source, imported)) =
+                            crate::config_import::auto_import()
+                        {
                             let toml = imported.to_volt_toml();
                             let config_path = rio_backend::config::config_file_path();
                             let _ = std::fs::write(&config_path, &toml);
@@ -501,12 +546,16 @@ impl Route<'_> {
                 }
                 Key::Named(NamedKey::ArrowDown) => {
                     if self.help_in_sidebar {
-                        if self.help_category + 1 < crate::router::routes::help::HELP_CATEGORIES.len() {
+                        if self.help_category + 1
+                            < crate::router::routes::help::HELP_CATEGORIES.len()
+                        {
                             self.help_category += 1;
                             self.help_selected = 0;
                         }
                     } else {
-                        let max = crate::router::routes::help::category_item_count(self.help_category);
+                        let max = crate::router::routes::help::category_item_count(
+                            self.help_category,
+                        );
                         if max > 0 && self.help_selected + 1 < max {
                             self.help_selected += 1;
                         }
@@ -518,7 +567,9 @@ impl Route<'_> {
                         self.help_selected = 0;
                     } else if self.help_category == 2 {
                         // Actions category — open the feature
-                        match crate::router::routes::help::action_route(self.help_selected) {
+                        match crate::router::routes::help::action_route(
+                            self.help_selected,
+                        ) {
                             Some("ai") => self.path = RoutePath::Assistant,
                             Some("history") => self.path = RoutePath::History,
                             Some("env") => self.path = RoutePath::EnvViewer,
@@ -527,6 +578,9 @@ impl Route<'_> {
                             Some("tmux") => self.path = RoutePath::TmuxPicker,
                             Some("slash") => self.path = RoutePath::SlashCommands,
                             Some("layouts") => self.path = RoutePath::Layouts,
+                            Some("sharing") => self.path = RoutePath::SessionSharing,
+                            Some("export") => self.path = RoutePath::SessionExport,
+                            Some("timetravel") => self.path = RoutePath::TimeTravel,
                             _ => {}
                         }
                     }
@@ -547,24 +601,52 @@ impl Route<'_> {
                     self.path = RoutePath::Terminal;
                 }
                 Key::Named(NamedKey::ArrowDown) => {
-                    self.history_selected = self.history_selected.saturating_add(1);
+                    let max = self
+                        .window
+                        .screen
+                        .context_manager
+                        .session_recorder
+                        .recent(50)
+                        .len();
+                    if max > 0 && self.history_selected + 1 < max {
+                        self.history_selected += 1;
+                    }
                 }
                 Key::Named(NamedKey::ArrowUp) => {
                     self.history_selected = self.history_selected.saturating_sub(1);
                 }
                 Key::Named(NamedKey::PageDown) => {
-                    self.history_selected = self.history_selected.saturating_add(20);
+                    let max = self
+                        .window
+                        .screen
+                        .context_manager
+                        .session_recorder
+                        .recent(50)
+                        .len();
+                    self.history_selected =
+                        (self.history_selected + 20).min(max.saturating_sub(1));
                 }
                 Key::Named(NamedKey::PageUp) => {
                     self.history_selected = self.history_selected.saturating_sub(20);
                 }
                 Key::Named(NamedKey::Enter) => {
-                    // Copy selected command to PTY (paste, don't execute)
-                    // Must match display order: recent(50) reversed = oldest first within last 50
-                    let recent = self.window.screen.context_manager.session_recorder.recent(50);
+                    // Paste selected command text into terminal (without executing)
+                    // and also copy to clipboard
+                    let recent = self
+                        .window
+                        .screen
+                        .context_manager
+                        .session_recorder
+                        .recent(50);
                     let display_order: Vec<_> = recent.into_iter().rev().collect();
                     if let Some(entry) = display_order.get(self.history_selected) {
                         if !entry.command.is_empty() {
+                            // Copy to clipboard
+                            self.window.screen.clipboard.borrow_mut().set(
+                                rio_backend::clipboard::ClipboardType::Clipboard,
+                                entry.command.clone(),
+                            );
+                            // Write to PTY without trailing \r so user can review before running
                             let cmd = entry.command.clone();
                             self.window
                                 .screen
@@ -580,8 +662,14 @@ impl Route<'_> {
                 }
                 Key::Character(c) if c.as_str() == "e" || c.as_str() == "E" => {
                     // Export session as .cast file to Desktop
-                    let entries = self.window.screen.context_manager.session_recorder.recent(500);
-                    let mut recording = crate::session_export::SessionRecording::new(80, 24);
+                    let entries = self
+                        .window
+                        .screen
+                        .context_manager
+                        .session_recorder
+                        .recent(500);
+                    let mut recording =
+                        crate::session_export::SessionRecording::new(80, 24);
                     let mut ts = 0.0_f64;
                     for entry in entries.iter().rev() {
                         recording.add_input(ts, format!("{}\r\n", entry.command));
@@ -592,8 +680,10 @@ impl Route<'_> {
                         }
                     }
                     let desktop = dirs::desktop_dir().unwrap_or_else(|| {
-                        std::path::PathBuf::from(std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string()))
-                            .join("Desktop")
+                        std::path::PathBuf::from(
+                            std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string()),
+                        )
+                        .join("Desktop")
                     });
                     let timestamp = std::time::SystemTime::now()
                         .duration_since(std::time::UNIX_EPOCH)
@@ -611,8 +701,14 @@ impl Route<'_> {
                     }
                 }
                 Key::Character(c) if c.as_str() == "b" || c.as_str() == "B" => {
-                    // Bookmark the selected command
-                    let entries: Vec<_> = self.window.screen.context_manager.session_recorder.all().iter().rev().collect();
+                    // Bookmark the selected command (use same source as display)
+                    let recent = self
+                        .window
+                        .screen
+                        .context_manager
+                        .session_recorder
+                        .recent(50);
+                    let entries: Vec<_> = recent.into_iter().rev().collect();
                     if let Some(entry) = entries.get(self.history_selected) {
                         let mut store = crate::bookmarks::BookmarkStore::load();
                         store.add(
@@ -641,13 +737,18 @@ impl Route<'_> {
                     self.path = RoutePath::Terminal;
                 }
                 Key::Named(NamedKey::ArrowDown) => {
-                    self.env_selected = self.env_selected.saturating_add(1);
+                    let max = crate::env_inspector::get_all_env_vars().len();
+                    if max > 0 && self.env_selected + 1 < max {
+                        self.env_selected += 1;
+                    }
                 }
                 Key::Named(NamedKey::ArrowUp) => {
                     self.env_selected = self.env_selected.saturating_sub(1);
                 }
                 Key::Named(NamedKey::PageDown) => {
-                    self.env_selected = self.env_selected.saturating_add(20);
+                    let max = crate::env_inspector::get_all_env_vars().len();
+                    self.env_selected =
+                        (self.env_selected + 20).min(max.saturating_sub(1));
                 }
                 Key::Named(NamedKey::PageUp) => {
                     self.env_selected = self.env_selected.saturating_sub(20);
@@ -680,19 +781,56 @@ impl Route<'_> {
             match &key_event.logical_key {
                 Key::Named(NamedKey::Escape) => {
                     self.bookmarks_scroll = 0;
+                    self.bookmarks_selected = 0;
                     self.path = RoutePath::Terminal;
                 }
                 Key::Named(NamedKey::ArrowDown) => {
-                    self.bookmarks_scroll = self.bookmarks_scroll.saturating_add(1);
+                    let max = self.bookmarks_cache.len();
+                    if max > 0 && self.bookmarks_selected + 1 < max {
+                        self.bookmarks_selected += 1;
+                    }
                 }
                 Key::Named(NamedKey::ArrowUp) => {
-                    self.bookmarks_scroll = self.bookmarks_scroll.saturating_sub(1);
+                    self.bookmarks_selected = self.bookmarks_selected.saturating_sub(1);
                 }
                 Key::Named(NamedKey::PageDown) => {
-                    self.bookmarks_scroll = self.bookmarks_scroll.saturating_add(20);
+                    let max = self.bookmarks_cache.len();
+                    self.bookmarks_selected =
+                        (self.bookmarks_selected + 20).min(max.saturating_sub(1));
                 }
                 Key::Named(NamedKey::PageUp) => {
-                    self.bookmarks_scroll = self.bookmarks_scroll.saturating_sub(20);
+                    self.bookmarks_selected = self.bookmarks_selected.saturating_sub(20);
+                }
+                Key::Named(NamedKey::Enter) => {
+                    // Paste selected bookmark command into terminal
+                    if let Some(bm) = self.bookmarks_cache.get(self.bookmarks_selected) {
+                        if !bm.command.is_empty() {
+                            let cmd = bm.command.clone();
+                            self.window
+                                .screen
+                                .ctx_mut()
+                                .current_mut()
+                                .messenger
+                                .send_write(cmd.into_bytes());
+                        }
+                    }
+                    self.bookmarks_scroll = 0;
+                    self.bookmarks_selected = 0;
+                    self.path = RoutePath::Terminal;
+                }
+                Key::Character(c) if c.as_str() == "d" || c.as_str() == "D" => {
+                    // Delete selected bookmark
+                    if self.bookmarks_selected < self.bookmarks_cache.len() {
+                        self.bookmarks_cache.remove(self.bookmarks_selected);
+                        let mut store = crate::bookmarks::BookmarkStore::load();
+                        store.remove(self.bookmarks_selected);
+                        let _ = store.save();
+                        if self.bookmarks_selected >= self.bookmarks_cache.len()
+                            && self.bookmarks_selected > 0
+                        {
+                            self.bookmarks_selected -= 1;
+                        }
+                    }
                 }
                 _ => {}
             }
@@ -761,28 +899,42 @@ impl Route<'_> {
                                 let _: () = msg_send![alert, addButtonWithTitle: ok_ns];
                                 let cancel_ns: *mut Object = msg_send![ns_string_class,
                                     stringWithUTF8String: CString::new("Cancel").unwrap().as_ptr()];
-                                let _: () = msg_send![alert, addButtonWithTitle: cancel_ns];
+                                let _: () =
+                                    msg_send![alert, addButtonWithTitle: cancel_ns];
 
-                                let frame: ((f64, f64), (f64, f64)) = ((0.0, 0.0), (300.0, 24.0));
-                                let input: *mut Object = msg_send![text_field_class, alloc];
-                                let input: *mut Object = msg_send![input, initWithFrame: frame];
+                                let frame: ((f64, f64), (f64, f64)) =
+                                    ((0.0, 0.0), (300.0, 24.0));
+                                let input: *mut Object =
+                                    msg_send![text_field_class, alloc];
+                                let input: *mut Object =
+                                    msg_send![input, initWithFrame: frame];
                                 let _: () = msg_send![alert, setAccessoryView: input];
                                 let window: *mut Object = msg_send![alert, window];
-                                let _: () = msg_send![window, setInitialFirstResponder: input];
+                                let _: () =
+                                    msg_send![window, setInitialFirstResponder: input];
 
                                 let response: i64 = msg_send![alert, runModal];
                                 if response == 1000 {
-                                    let value: *mut Object = msg_send![input, stringValue];
-                                    let utf8: *const std::ffi::c_char = msg_send![value, UTF8String];
-                                    let s = std::ffi::CStr::from_ptr(utf8).to_string_lossy().to_string();
-                                    if !s.is_empty() { Some(s) } else { None }
+                                    let value: *mut Object =
+                                        msg_send![input, stringValue];
+                                    let utf8: *const std::ffi::c_char =
+                                        msg_send![value, UTF8String];
+                                    let s = std::ffi::CStr::from_ptr(utf8)
+                                        .to_string_lossy()
+                                        .to_string();
+                                    if !s.is_empty() {
+                                        Some(s)
+                                    } else {
+                                        None
+                                    }
                                 } else {
                                     None
                                 }
                             };
 
                             // Collect connection details
-                            if let Some(name) = ask("New Connection", "Connection name:") {
+                            if let Some(name) = ask("New Connection", "Connection name:")
+                            {
                                 if let Some(conn_type) = ask("Connection Type", "Type (ssh, mysql, postgres, redis, kubectl, docker):") {
                                     if let Some(host) = ask("Host", "Hostname or IP:") {
                                         let user = ask("User (optional)", "Username (leave empty to skip):");
@@ -814,7 +966,7 @@ impl Route<'_> {
                                         match crate::connections::load_connections() {
                                             Ok(config) => {
                                                 self.connections_list = config.connections.iter()
-                                                    .map(|(cname, conn)| (cname.clone(), conn.type_name().to_string(), conn.to_command(), conn.icon().to_string()))
+                                                    .map(|(cname, conn)| (cname.clone(), conn.type_name().to_string(), conn.to_command(), conn.to_command()))
                                                     .collect();
                                             }
                                             Err(e) => tracing::error!("Failed to reload connections: {}", e),
@@ -826,7 +978,9 @@ impl Route<'_> {
                     }
                 }
                 Key::Character(c) if c.as_str() == "d" || c.as_str() == "D" => {
-                    if let Some((name, _, _, _)) = self.connections_list.get(self.connections_selected) {
+                    if let Some((name, _, _, _)) =
+                        self.connections_list.get(self.connections_selected)
+                    {
                         let conn_path = crate::connections::connection_config_path();
                         if let Ok(content) = std::fs::read_to_string(&conn_path) {
                             // Remove the [connections.NAME] section
@@ -838,7 +992,10 @@ impl Route<'_> {
                                 if line.trim() == section_header {
                                     remove_start = Some(i);
                                 }
-                                if remove_start.is_some() && i > remove_start.unwrap() && line.starts_with('[') {
+                                if remove_start.is_some()
+                                    && i > remove_start.unwrap()
+                                    && line.starts_with('[')
+                                {
                                     remove_end = Some(i);
                                     break;
                                 }
@@ -853,13 +1010,26 @@ impl Route<'_> {
                         // Refresh
                         match crate::connections::load_connections() {
                             Ok(config) => {
-                                self.connections_list = config.connections.iter()
-                                    .map(|(cname, conn)| (cname.clone(), conn.type_name().to_string(), conn.to_command(), conn.icon().to_string()))
+                                self.connections_list = config
+                                    .connections
+                                    .iter()
+                                    .map(|(cname, conn)| {
+                                        (
+                                            cname.clone(),
+                                            conn.type_name().to_string(),
+                                            conn.to_command(),
+                                            conn.to_command(),
+                                        )
+                                    })
                                     .collect();
                             }
-                            Err(e) => tracing::error!("Failed to reload connections: {}", e),
+                            Err(e) => {
+                                tracing::error!("Failed to reload connections: {}", e)
+                            }
                         }
-                        if self.connections_selected >= self.connections_list.len() && self.connections_selected > 0 {
+                        if self.connections_selected >= self.connections_list.len()
+                            && self.connections_selected > 0
+                        {
                             self.connections_selected -= 1;
                         }
                     }
@@ -869,12 +1039,17 @@ impl Route<'_> {
                     let path = crate::connections::connection_config_path();
                     // If file doesn't exist, create with template
                     if !path.exists() {
-                        let _ = std::fs::write(&path, crate::connections::default_template());
+                        let _ =
+                            std::fs::write(&path, crate::connections::default_template());
                     }
-                    // Open in editor via $EDITOR or fallback (shell-quoted for safety)
-                    let editor = std::env::var("EDITOR").unwrap_or_else(|_| "nano".to_string());
+                    // Open in editor via $EDITOR or fallback to vi
+                    let editor =
+                        std::env::var("EDITOR").unwrap_or_else(|_| "vi".to_string());
                     let quoted_editor = format!("'{}'", editor.replace('\'', "'\\''"));
-                    let quoted_path = format!("'{}'", path.display().to_string().replace('\'', "'\\''"));
+                    let quoted_path = format!(
+                        "'{}'",
+                        path.display().to_string().replace('\'', "'\\''")
+                    );
                     let cmd = format!("{} {}\r", quoted_editor, quoted_path);
                     self.window
                         .screen
@@ -900,16 +1075,20 @@ impl Route<'_> {
                     self.path = RoutePath::Terminal;
                 }
                 Key::Named(NamedKey::ArrowDown) => {
-                    self.slash_commands_scroll = self.slash_commands_scroll.saturating_add(1);
+                    self.slash_commands_scroll =
+                        self.slash_commands_scroll.saturating_add(1);
                 }
                 Key::Named(NamedKey::ArrowUp) => {
-                    self.slash_commands_scroll = self.slash_commands_scroll.saturating_sub(1);
+                    self.slash_commands_scroll =
+                        self.slash_commands_scroll.saturating_sub(1);
                 }
                 Key::Named(NamedKey::PageDown) => {
-                    self.slash_commands_scroll = self.slash_commands_scroll.saturating_add(20);
+                    self.slash_commands_scroll =
+                        self.slash_commands_scroll.saturating_add(20);
                 }
                 Key::Named(NamedKey::PageUp) => {
-                    self.slash_commands_scroll = self.slash_commands_scroll.saturating_sub(20);
+                    self.slash_commands_scroll =
+                        self.slash_commands_scroll.saturating_sub(20);
                 }
                 _ => {}
             }
@@ -926,16 +1105,24 @@ impl Route<'_> {
                     self.path = RoutePath::Terminal;
                 }
                 Key::Named(NamedKey::ArrowUp) => {
-                    if self.layouts_selected >= 2 { self.layouts_selected -= 2; }
+                    if self.layouts_selected >= 2 {
+                        self.layouts_selected -= 2;
+                    }
                 }
                 Key::Named(NamedKey::ArrowDown) => {
-                    if self.layouts_selected < 2 { self.layouts_selected += 2; }
+                    if self.layouts_selected < 2 {
+                        self.layouts_selected += 2;
+                    }
                 }
                 Key::Named(NamedKey::ArrowLeft) => {
-                    if self.layouts_selected % 2 == 1 { self.layouts_selected -= 1; }
+                    if self.layouts_selected % 2 == 1 {
+                        self.layouts_selected -= 1;
+                    }
                 }
                 Key::Named(NamedKey::ArrowRight) => {
-                    if self.layouts_selected % 2 == 0 && self.layouts_selected < 3 { self.layouts_selected += 1; }
+                    if self.layouts_selected % 2 == 0 && self.layouts_selected < 3 {
+                        self.layouts_selected += 1;
+                    }
                 }
                 Key::Named(NamedKey::Enter) => {
                     // Apply the selected layout preset
@@ -950,22 +1137,246 @@ impl Route<'_> {
                             self.window.screen.split_down();
                         }
                         2 => {
-                            // Quad: split right, then split both panes down
+                            // Quad: 4 equal panes in a 2x2 grid
+                            // 1. split_right → [A, *B*] focus on B
+                            // 2. split_down  → [A, B-top, *B-bot*] focus on B-bot
+                            // 3. prev_split  → [A, *B-top*, B-bot] focus on B-top
+                            // 4. prev_split  → [*A*, B-top, B-bot] focus on A
+                            // 5. split_down  → [A-top, *A-bot*, B-top, B-bot] focus on A-bot
                             self.window.screen.split_right();
                             self.window.screen.split_down();
-                            // Navigate to the left pane and split it down too
+                            self.window.screen.context_manager.select_prev_split();
                             self.window.screen.context_manager.select_prev_split();
                             self.window.screen.split_down();
                         }
                         3 => {
-                            // Monitoring: split right, then split right pane down
+                            // Monitoring: wide left + two stacked right
+                            // Split right first, then split the right pane down,
+                            // then go back to left pane (the wide main pane)
                             self.window.screen.split_right();
                             self.window.screen.split_down();
+                            self.window.screen.context_manager.select_prev_split();
+                            self.window.screen.context_manager.select_prev_split();
                         }
                         _ => {}
                     }
                     self.layouts_selected = 0;
                     self.path = RoutePath::Terminal;
+                }
+                _ => {}
+            }
+            return true;
+        }
+
+        if self.path == RoutePath::SessionSharing {
+            if key_event.state != rio_window::event::ElementState::Pressed {
+                return true;
+            }
+            match &key_event.logical_key {
+                Key::Named(NamedKey::Escape) => {
+                    self.sharing_selected = 0;
+                    self.path = RoutePath::Terminal;
+                }
+                Key::Named(NamedKey::ArrowLeft) => {
+                    if self.sharing_selected > 0 {
+                        self.sharing_selected -= 1;
+                    }
+                }
+                Key::Named(NamedKey::ArrowRight) => {
+                    if self.sharing_selected < 1 {
+                        self.sharing_selected += 1;
+                    }
+                }
+                Key::Named(NamedKey::Enter) => {
+                    use crate::router::routes::session_sharing::SharingState;
+                    match &self.sharing_state {
+                        SharingState::Idle => {
+                            if self.sharing_selected == 0 {
+                                // Host — placeholder, start hosting on port 9876
+                                self.sharing_state = SharingState::Hosting { port: 9876 };
+                            } else {
+                                // Connect — placeholder
+                                self.sharing_state = SharingState::Connecting {
+                                    host: "localhost:9876".to_string(),
+                                };
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+                Key::Character(c) if c.as_str() == "q" || c.as_str() == "Q" => {
+                    self.sharing_state =
+                        crate::router::routes::session_sharing::SharingState::Idle;
+                }
+                _ => {}
+            }
+            return true;
+        }
+
+        if self.path == RoutePath::SessionExport {
+            if key_event.state != rio_window::event::ElementState::Pressed {
+                return true;
+            }
+            match &key_event.logical_key {
+                Key::Named(NamedKey::Escape) => {
+                    self.export_selected = 0;
+                    self.export_result = None;
+                    self.path = RoutePath::Terminal;
+                }
+                Key::Named(NamedKey::ArrowUp) => {
+                    if self.export_selected > 0 {
+                        self.export_selected -= 1;
+                    }
+                }
+                Key::Named(NamedKey::ArrowDown) => {
+                    if self.export_selected + 1
+                        < crate::router::routes::session_export::EXPORT_FORMATS.len()
+                    {
+                        self.export_selected += 1;
+                    }
+                }
+                Key::Named(NamedKey::Enter) => {
+                    // Perform the export
+                    let entries = self
+                        .window
+                        .screen
+                        .context_manager
+                        .session_recorder
+                        .recent(500);
+                    let mut recording =
+                        crate::session_export::SessionRecording::new(80, 24);
+                    let mut ts = 0.0_f64;
+                    for entry in entries.iter().rev() {
+                        recording.add_output(ts, format!("$ {}\r\n", entry.command));
+                        ts += entry.duration_ms.unwrap_or(100) as f64 / 1000.0;
+                        if !entry.output_preview.is_empty() {
+                            recording.add_output(ts, entry.output_preview.clone());
+                            ts += 0.1;
+                        }
+                    }
+
+                    let now = std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .unwrap_or_default();
+                    let timestamp = now.as_secs();
+                    let (ext, content) = match self.export_selected {
+                        0 => (".cast", recording.to_asciinema()),
+                        1 => (
+                            ".txt",
+                            self.window
+                                .screen
+                                .context_manager
+                                .session_recorder
+                                .export_text(),
+                        ),
+                        2 => (".html", recording.to_html()),
+                        3 => (".json", recording.to_json()),
+                        _ => (".txt", String::new()),
+                    };
+
+                    let filename = format!("volt-session-{}{}", timestamp, ext);
+                    let desktop = dirs::desktop_dir()
+                        .unwrap_or_else(|| std::path::PathBuf::from("."));
+                    let path = desktop.join(&filename);
+                    match std::fs::write(&path, &content) {
+                        Ok(_) => {
+                            self.export_result = Some(
+                                crate::router::routes::session_export::ExportResult {
+                                    message: format!("Saved to {}", path.display()),
+                                    success: true,
+                                },
+                            );
+                            tracing::info!("Exported session to {}", path.display());
+                        }
+                        Err(e) => {
+                            self.export_result = Some(
+                                crate::router::routes::session_export::ExportResult {
+                                    message: format!("Failed: {}", e),
+                                    success: false,
+                                },
+                            );
+                        }
+                    }
+                }
+                _ => {}
+            }
+            return true;
+        }
+
+        if self.path == RoutePath::TimeTravel {
+            if key_event.state != rio_window::event::ElementState::Pressed {
+                return true;
+            }
+            match &key_event.logical_key {
+                Key::Named(NamedKey::Escape) => {
+                    self.time_travel_selected = 0;
+                    self.time_travel_scroll = 0;
+                    self.path = RoutePath::Terminal;
+                }
+                Key::Named(NamedKey::ArrowDown) => {
+                    let max = self
+                        .window
+                        .screen
+                        .context_manager
+                        .session_recorder
+                        .recent(100)
+                        .len();
+                    if max > 0 && self.time_travel_selected + 1 < max {
+                        self.time_travel_selected += 1;
+                    }
+                    // Auto-scroll to keep selection visible
+                    if self.time_travel_selected >= self.time_travel_scroll + 30 {
+                        self.time_travel_scroll =
+                            self.time_travel_selected.saturating_sub(29);
+                    }
+                }
+                Key::Named(NamedKey::ArrowUp) if self.time_travel_selected > 0 => {
+                    self.time_travel_selected -= 1;
+                    if self.time_travel_selected < self.time_travel_scroll {
+                        self.time_travel_scroll = self.time_travel_selected;
+                    }
+                }
+                Key::Named(NamedKey::Enter) => {
+                    // Replay: paste the selected command into the terminal
+                    let entries = self
+                        .window
+                        .screen
+                        .context_manager
+                        .session_recorder
+                        .recent(100);
+                    let display_order: Vec<_> = entries.into_iter().rev().collect();
+                    if let Some(entry) = display_order.get(self.time_travel_selected) {
+                        if !entry.command.is_empty() {
+                            let cmd = entry.command.clone();
+                            self.window
+                                .screen
+                                .ctx_mut()
+                                .current_mut()
+                                .messenger
+                                .send_write(cmd.into_bytes());
+                        }
+                    }
+                    self.time_travel_selected = 0;
+                    self.time_travel_scroll = 0;
+                    self.path = RoutePath::Terminal;
+                }
+                Key::Character(c) if c.as_str() == "c" || c.as_str() == "C" => {
+                    // Copy selected command to clipboard
+                    let entries = self
+                        .window
+                        .screen
+                        .context_manager
+                        .session_recorder
+                        .recent(100);
+                    let display_order: Vec<_> = entries.into_iter().rev().collect();
+                    if let Some(entry) = display_order.get(self.time_travel_selected) {
+                        if !entry.command.is_empty() {
+                            self.window.screen.clipboard.borrow_mut().set(
+                                rio_backend::clipboard::ClipboardType::Clipboard,
+                                entry.command.clone(),
+                            );
+                        }
+                    }
                 }
                 _ => {}
             }
@@ -979,21 +1390,19 @@ impl Route<'_> {
 
             match &key_event.logical_key {
                 Key::Named(NamedKey::Escape) => {
+                    self.tmux_selected = 0;
                     self.path = RoutePath::Terminal;
                 }
                 Key::Named(NamedKey::ArrowUp) => {
-                    if self.tmux_selected >= 2 { self.tmux_selected -= 2; }
+                    if self.tmux_selected > 0 {
+                        self.tmux_selected -= 1;
+                    }
                 }
                 Key::Named(NamedKey::ArrowDown) => {
                     let max = self.tmux_sessions.len();
-                    if self.tmux_selected + 2 < max { self.tmux_selected += 2; }
-                }
-                Key::Named(NamedKey::ArrowLeft) => {
-                    if self.tmux_selected % 2 == 1 { self.tmux_selected -= 1; }
-                }
-                Key::Named(NamedKey::ArrowRight) => {
-                    let max = self.tmux_sessions.len();
-                    if self.tmux_selected % 2 == 0 && self.tmux_selected + 1 < max { self.tmux_selected += 1; }
+                    if max > 0 && self.tmux_selected + 1 < max {
+                        self.tmux_selected += 1;
+                    }
                 }
                 Key::Named(NamedKey::Enter) => {
                     if let Some((_id, name, _attached)) =
@@ -1025,7 +1434,12 @@ impl Route<'_> {
                         self.tmux_sessions.get(self.tmux_selected)
                     {
                         let cmd = format!("tmux detach-client -s {}\r", name);
-                        self.window.screen.ctx_mut().current_mut().messenger.send_write(cmd.into_bytes());
+                        self.window
+                            .screen
+                            .ctx_mut()
+                            .current_mut()
+                            .messenger
+                            .send_write(cmd.into_bytes());
                     }
                 }
                 // 'x' to kill selected session
@@ -1033,11 +1447,19 @@ impl Route<'_> {
                     if let Some((_id, name, _attached)) =
                         self.tmux_sessions.get(self.tmux_selected)
                     {
-                        let cmd = format!("tmux detach-client -s {}\r", name);
-                        self.window.screen.ctx_mut().current_mut().messenger.send_write(cmd.into_bytes());
+                        let cmd = format!("tmux kill-session -t {}\r", name);
+                        self.window
+                            .screen
+                            .ctx_mut()
+                            .current_mut()
+                            .messenger
+                            .send_write(cmd.into_bytes());
                         // Refresh session list
-                        self.tmux_sessions = crate::tmux_cc::TmuxController::list_sessions();
-                        if self.tmux_selected >= self.tmux_sessions.len() && self.tmux_selected > 0 {
+                        self.tmux_sessions =
+                            crate::tmux_cc::TmuxController::list_sessions();
+                        if self.tmux_selected >= self.tmux_sessions.len()
+                            && self.tmux_selected > 0
+                        {
                             self.tmux_selected -= 1;
                         }
                     }
@@ -1049,7 +1471,12 @@ impl Route<'_> {
                     {
                         // Use tmux rename — for now just send the command
                         let cmd = format!("tmux rename-session -t {} \r", name);
-                        self.window.screen.ctx_mut().current_mut().messenger.send_write(cmd.into_bytes());
+                        self.window
+                            .screen
+                            .ctx_mut()
+                            .current_mut()
+                            .messenger
+                            .send_write(cmd.into_bytes());
                         self.path = RoutePath::Terminal;
                     }
                 }
@@ -1247,6 +1674,7 @@ impl Router<'_> {
             history_scroll: 0,
             history_selected: 0,
             bookmarks_scroll: 0,
+            bookmarks_selected: 0,
             bookmarks_cache: Vec::new(),
             connections_selected: 0,
             connections_list: Vec::new(),
@@ -1257,6 +1685,13 @@ impl Router<'_> {
             help_category: 0,
             help_selected: 0,
             help_in_sidebar: true,
+            sharing_state: crate::router::routes::session_sharing::SharingState::default(
+            ),
+            sharing_selected: 0,
+            export_selected: 0,
+            export_result: None,
+            time_travel_selected: 0,
+            time_travel_scroll: 0,
         };
 
         if let Some(err) = &self.propagated_report {
@@ -1302,6 +1737,7 @@ impl Router<'_> {
                 history_scroll: 0,
                 history_selected: 0,
                 bookmarks_scroll: 0,
+                bookmarks_selected: 0,
                 bookmarks_cache: Vec::new(),
                 connections_selected: 0,
                 connections_list: Vec::new(),
@@ -1312,6 +1748,13 @@ impl Router<'_> {
                 help_category: 0,
                 help_selected: 0,
                 help_in_sidebar: true,
+                sharing_state:
+                    crate::router::routes::session_sharing::SharingState::default(),
+                sharing_selected: 0,
+                export_selected: 0,
+                export_result: None,
+                time_travel_selected: 0,
+                time_travel_scroll: 0,
             },
         );
     }

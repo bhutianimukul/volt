@@ -129,6 +129,33 @@ impl Application<'_> {
         }
     }
 
+    #[cfg(target_os = "macos")]
+    fn set_dock_icon() {
+        use objc::class;
+        use objc::msg_send;
+        use objc::runtime::Object;
+        use objc::sel;
+        use objc::sel_impl;
+
+        let icon_data: &[u8] = include_bytes!("router/resources/images/volt-logo.ico");
+
+        unsafe {
+            let ns_data: *mut Object = msg_send![class!(NSData),
+                dataWithBytes:icon_data.as_ptr()
+                length:icon_data.len()];
+            if ns_data.is_null() {
+                return;
+            }
+            let ns_image: *mut Object = msg_send![class!(NSImage), alloc];
+            let ns_image: *mut Object = msg_send![ns_image, initWithData: ns_data];
+            if ns_image.is_null() {
+                return;
+            }
+            let app: *mut Object = msg_send![class!(NSApplication), sharedApplication];
+            let _: () = msg_send![app, setApplicationIconImage: ns_image];
+        }
+    }
+
     fn handle_audio_bell(&mut self) {
         #[cfg(target_os = "macos")]
         {
@@ -193,9 +220,11 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
             return;
         }
 
-        // Dock icon: only works in .app bundle, disabled for cargo run
-        // #[cfg(target_os = "macos")]
-        // { Self::set_dock_icon(); }
+        // Set macOS dock icon from the Volt ICO
+        #[cfg(target_os = "macos")]
+        {
+            Self::set_dock_icon();
+        }
 
         update_colors_based_on_theme(&mut self.config, event_loop.system_theme());
 
@@ -524,12 +553,7 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                 // Handle dock badge for unfocused windows
                 if let Some(route) = self.router.routes.get_mut(&window_id) {
                     let is_focused = route.window.is_focused;
-                    route
-                        .window
-                        .screen
-                        .ctx_mut()
-                        .dock_badge
-                        .on_bell(is_focused);
+                    route.window.screen.ctx_mut().dock_badge.on_bell(is_focused);
                 }
             }
             RioEventType::Rio(RioEvent::PrepareRender(millis)) => {
@@ -776,6 +800,8 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                     if route.path == RoutePath::History {
                         route.path = RoutePath::Terminal;
                     } else {
+                        route.history_selected = 0;
+                        route.history_scroll = 0;
                         route.path = RoutePath::History;
                     }
                     route.request_redraw();
@@ -799,6 +825,8 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                     if route.path == RoutePath::EnvViewer {
                         route.path = RoutePath::Terminal;
                     } else {
+                        route.env_selected = 0;
+                        route.env_scroll = 0;
                         route.path = RoutePath::EnvViewer;
                     }
                     route.request_redraw();
@@ -811,8 +839,10 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                     } else {
                         // Load bookmarks once when opening the viewer
                         let store = crate::bookmarks::BookmarkStore::load();
-                        route.bookmarks_cache = store.list().into_iter().cloned().collect();
+                        route.bookmarks_cache =
+                            store.list().into_iter().cloned().collect();
                         route.bookmarks_scroll = 0;
+                        route.bookmarks_selected = 0;
                         route.path = RoutePath::Bookmarks;
                     }
                     route.request_redraw();
@@ -836,6 +866,43 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                     } else {
                         route.layouts_selected = 0;
                         route.path = RoutePath::Layouts;
+                    }
+                    route.request_redraw();
+                }
+            }
+            RioEventType::Rio(RioEvent::ToggleSessionSharing) => {
+                if let Some(route) = self.router.routes.get_mut(&window_id) {
+                    if route.path == RoutePath::SessionSharing {
+                        route.path = RoutePath::Terminal;
+                    } else {
+                        route.sharing_selected = 0;
+                        route.sharing_state =
+                            crate::router::routes::session_sharing::SharingState::Idle;
+                        route.path = RoutePath::SessionSharing;
+                    }
+                    route.request_redraw();
+                }
+            }
+            RioEventType::Rio(RioEvent::ToggleSessionExport) => {
+                if let Some(route) = self.router.routes.get_mut(&window_id) {
+                    if route.path == RoutePath::SessionExport {
+                        route.path = RoutePath::Terminal;
+                    } else {
+                        route.export_selected = 0;
+                        route.export_result = None;
+                        route.path = RoutePath::SessionExport;
+                    }
+                    route.request_redraw();
+                }
+            }
+            RioEventType::Rio(RioEvent::ToggleTimeTravel) => {
+                if let Some(route) = self.router.routes.get_mut(&window_id) {
+                    if route.path == RoutePath::TimeTravel {
+                        route.path = RoutePath::Terminal;
+                    } else {
+                        route.time_travel_selected = 0;
+                        route.time_travel_scroll = 0;
+                        route.path = RoutePath::TimeTravel;
                     }
                     route.request_redraw();
                 }
@@ -986,20 +1053,28 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                             .notification_manager
                             .command_finished(exit_code);
                     }
-                    route
+                    route.window.screen.context_manager.audit_logger.log(
+                        crate::audit_log::AuditEvent::CommandCompleted {
+                            command: String::new(),
+                            exit_code,
+                            duration_ms: 0,
+                        },
+                    );
+                    if let Some(last_id) = route
                         .window
                         .screen
                         .context_manager
-                        .audit_logger
-                        .log(
-                            crate::audit_log::AuditEvent::CommandCompleted {
-                                command: String::new(),
-                                exit_code,
-                                duration_ms: 0,
-                            }
-                        );
-                    if let Some(last_id) = route.window.screen.context_manager.session_recorder.all().back().map(|e| e.id) {
-                        route.window.screen.context_manager.session_recorder.complete(last_id, exit_code, 0, String::new());
+                        .session_recorder
+                        .all()
+                        .back()
+                        .map(|e| e.id)
+                    {
+                        route
+                            .window
+                            .screen
+                            .context_manager
+                            .session_recorder
+                            .complete(last_id, exit_code, 0, String::new());
                     }
                 }
             }
@@ -1094,6 +1169,22 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
 
             WindowEvent::MouseInput { state, button, .. } => {
                 if route.path != RoutePath::Terminal {
+                    // Still track button releases so state isn't stale
+                    // when returning to Terminal
+                    if state == ElementState::Released {
+                        match button {
+                            MouseButton::Left => {
+                                route.window.screen.mouse.left_button_state = state;
+                            }
+                            MouseButton::Right => {
+                                route.window.screen.mouse.right_button_state = state;
+                            }
+                            MouseButton::Middle => {
+                                route.window.screen.mouse.middle_button_state = state;
+                            }
+                            _ => {}
+                        }
+                    }
                     return;
                 }
 
@@ -1130,14 +1221,25 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                     // Check nav buttons [Help] [Settings] — in tab bar region
                     // For TopTab: tab bar is at y=[0, 22]
                     // For BottomTab: tab bar is at y=[h-22-20, h-20]
-                    let nav_mode = route.window.screen.renderer.navigation.navigation.mode;
-                    let hide_single = route.window.screen.renderer.navigation.navigation.hide_if_single;
+                    let nav_mode =
+                        route.window.screen.renderer.navigation.navigation.mode;
+                    let hide_single = route
+                        .window
+                        .screen
+                        .renderer
+                        .navigation
+                        .navigation
+                        .hide_if_single;
                     let num_tabs = route.window.screen.context_manager.len();
                     let tabs_hidden = hide_single && num_tabs <= 1;
                     // Top bar is ALWAYS rendered — check Help/Settings clicks regardless of tabs
-                    let in_top_bar = if nav_mode == rio_backend::config::navigation::NavigationMode::TopTab {
+                    let in_top_bar = if nav_mode
+                        == rio_backend::config::navigation::NavigationMode::TopTab
+                    {
                         ly < 22.0
-                    } else if nav_mode == rio_backend::config::navigation::NavigationMode::BottomTab {
+                    } else if nav_mode
+                        == rio_backend::config::navigation::NavigationMode::BottomTab
+                    {
                         let tab_bar_top = (win_h - 22.0 - 22.0) as f64;
                         let tab_bar_bottom = (win_h - 22.0) as f64;
                         ly >= tab_bar_top && ly <= tab_bar_bottom
@@ -1145,9 +1247,11 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                         false
                     };
                     if in_top_bar {
-                        if let Some(btn) = crate::renderer::navigation::nav_button_at_position(
-                            lx as f32, visible_w,
-                        ) {
+                        if let Some(btn) =
+                            crate::renderer::navigation::nav_button_at_position(
+                                lx as f32, visible_w,
+                            )
+                        {
                             use crate::renderer::navigation::NavButton;
                             match btn {
                                 NavButton::Help => {
@@ -1167,34 +1271,104 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                     {
                         let sb_y = win_h - 22.0; // STATUS_BAR_HEIGHT
                         if ly as f32 >= sb_y {
-                            if let Some(btn) = crate::renderer::navigation::status_button_at_position(
-                                lx as f32, ly as f32, win_h, visible_w,
-                            ) {
+                            if let Some(btn) =
+                                crate::renderer::navigation::status_button_at_position(
+                                    lx as f32, ly as f32, win_h, visible_w,
+                                )
+                            {
                                 use crate::renderer::navigation::NavButton;
                                 match btn {
-                                    NavButton::TmuxConnect => { route.window.screen.context_manager.toggle_tmux_picker(); }
+                                    NavButton::TmuxConnect => {
+                                        route
+                                            .window
+                                            .screen
+                                            .context_manager
+                                            .toggle_tmux_picker();
+                                    }
                                     NavButton::AiAssistant => {
                                         if crate::ai_assistant::is_claude_available() {
                                             route.window.screen.split_right();
-                                            route.window.screen.ctx_mut().current_mut().messenger.send_write(b"claude\r".to_vec());
+                                            route
+                                                .window
+                                                .screen
+                                                .ctx_mut()
+                                                .current_mut()
+                                                .messenger
+                                                .send_write(b"claude\r".to_vec());
                                         }
                                     }
-                                    NavButton::History => { route.window.screen.context_manager.toggle_history(); }
-                                    NavButton::EnvViewer => { route.window.screen.context_manager.toggle_env_viewer(); }
-                                    NavButton::Bookmarks => { route.window.screen.context_manager.toggle_bookmarks(); }
+                                    NavButton::History => {
+                                        route
+                                            .window
+                                            .screen
+                                            .context_manager
+                                            .toggle_history();
+                                    }
+                                    NavButton::EnvViewer => {
+                                        route
+                                            .window
+                                            .screen
+                                            .context_manager
+                                            .toggle_env_viewer();
+                                    }
+                                    NavButton::Bookmarks => {
+                                        route
+                                            .window
+                                            .screen
+                                            .context_manager
+                                            .toggle_bookmarks();
+                                    }
                                     NavButton::Connections => {
                                         match crate::connections::load_connections() {
                                             Ok(config) => {
-                                                route.connections_list = config.connections.iter()
-                                                    .map(|(n, c)| (n.clone(), c.type_name().to_string(), c.to_command(), c.to_command()))
+                                                route.connections_list = config
+                                                    .connections
+                                                    .iter()
+                                                    .map(|(n, c)| {
+                                                        (
+                                                            n.clone(),
+                                                            c.type_name().to_string(),
+                                                            c.to_command(),
+                                                            c.to_command(),
+                                                        )
+                                                    })
                                                     .collect();
                                             }
-                                            Err(_) => { route.connections_list = Vec::new(); }
+                                            Err(_) => {
+                                                route.connections_list = Vec::new();
+                                            }
                                         }
+                                        route.connections_selected = 0;
                                         route.path = RoutePath::Connections;
                                     }
-                                    NavButton::SlashCommands => { route.window.screen.context_manager.toggle_slash_commands(); }
-                                    NavButton::Layouts => { route.window.screen.context_manager.toggle_layouts(); }
+                                    NavButton::SlashCommands => {
+                                        route
+                                            .window
+                                            .screen
+                                            .context_manager
+                                            .toggle_slash_commands();
+                                    }
+                                    NavButton::Layouts => {
+                                        route
+                                            .window
+                                            .screen
+                                            .context_manager
+                                            .toggle_layouts();
+                                    }
+                                    NavButton::SessionExport => {
+                                        route
+                                            .window
+                                            .screen
+                                            .context_manager
+                                            .toggle_session_export();
+                                    }
+                                    NavButton::SessionSharing => {
+                                        route
+                                            .window
+                                            .screen
+                                            .context_manager
+                                            .toggle_session_sharing();
+                                    }
                                     _ => {}
                                 }
                                 route.request_redraw();
@@ -1211,8 +1385,8 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                         let now = std::time::Instant::now();
                         let elapsed =
                             now - route.window.screen.mouse.last_click_timestamp;
-                        let same_tab = route.window.screen.mouse.last_click_tab
-                            == Some(tab_idx);
+                        let same_tab =
+                            route.window.screen.mouse.last_click_tab == Some(tab_idx);
                         let is_double_click =
                             same_tab && elapsed < Duration::from_millis(400);
 
@@ -1367,6 +1541,13 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                         // Trigger hints highlighted by the mouse
                         if button == MouseButton::Left
                             && route.window.screen.trigger_hint()
+                        {
+                            return;
+                        }
+
+                        // Cmd+Click on file paths opens in editor
+                        if button == MouseButton::Left
+                            && route.window.screen.try_open_file_at_cursor()
                         {
                             return;
                         }
@@ -1880,10 +2061,11 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                         );
                     }
                     RoutePath::Settings => {
-                        route
-                            .window
-                            .screen
-                            .render_settings(&route.settings_editor, route.settings_category, route.settings_in_sidebar);
+                        route.window.screen.render_settings(
+                            &route.settings_editor,
+                            route.settings_category,
+                            route.settings_in_sidebar,
+                        );
                     }
                     RoutePath::Help => {
                         route.window.screen.render_help(
@@ -1899,16 +2081,23 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                         );
                     }
                     RoutePath::EnvViewer => {
-                        route.window.screen.render_env_viewer(route.env_scroll, route.env_selected);
+                        route
+                            .window
+                            .screen
+                            .render_env_viewer(route.env_scroll, route.env_selected);
                     }
                     RoutePath::Bookmarks => {
-                        route.window.screen.render_bookmarks(route.bookmarks_scroll, &route.bookmarks_cache);
+                        route.window.screen.render_bookmarks(
+                            route.bookmarks_scroll,
+                            route.bookmarks_selected,
+                            &route.bookmarks_cache,
+                        );
                     }
                     RoutePath::History => {
-                        route.window.screen.render_history(
-                            route.history_scroll,
-                            route.history_selected,
-                        );
+                        route
+                            .window
+                            .screen
+                            .render_history(route.history_scroll, route.history_selected);
                     }
                     RoutePath::Connections => {
                         route.window.screen.render_connections(
@@ -1917,10 +2106,34 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                         );
                     }
                     RoutePath::SlashCommands => {
-                        route.window.screen.render_slash_commands(route.slash_commands_scroll);
+                        route
+                            .window
+                            .screen
+                            .render_slash_commands(route.slash_commands_scroll);
                     }
                     RoutePath::Layouts => {
                         route.window.screen.render_layouts(route.layouts_selected);
+                    }
+                    RoutePath::SessionExport => {
+                        let cmd_count =
+                            route.window.screen.context_manager.session_recorder.len();
+                        route.window.screen.render_session_export(
+                            route.export_selected,
+                            &route.export_result,
+                            cmd_count,
+                        );
+                    }
+                    RoutePath::SessionSharing => {
+                        route.window.screen.render_session_sharing(
+                            &route.sharing_state,
+                            route.sharing_selected,
+                        );
+                    }
+                    RoutePath::TimeTravel => {
+                        route.window.screen.render_time_travel(
+                            route.time_travel_selected,
+                            route.time_travel_scroll,
+                        );
                     }
                 }
 
@@ -2007,7 +2220,12 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
     fn exiting(&mut self, _event_loop: &ActiveEventLoop) {
         // Save session history to disk before exiting
         for route in self.router.routes.values() {
-            route.window.screen.context_manager.session_recorder.save_to_disk();
+            route
+                .window
+                .screen
+                .context_manager
+                .session_recorder
+                .save_to_disk();
         }
 
         // Save window state before exiting

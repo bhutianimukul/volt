@@ -2,14 +2,18 @@ use crate::context::grid::ContextDimension;
 use rio_backend::sugarloaf::{FragmentStyle, Object, Quad, RichText, Sugarloaf};
 
 /// Help categories
-pub const HELP_CATEGORIES: &[&str] = &["Shortcuts", "Features", "Actions"];
+pub const HELP_CATEGORIES: &[&str] = &["Shortcuts", "Features", "Actions", "Commands"];
 
 /// Number of items in each category (for navigation bounds)
 pub fn category_item_count(category: usize) -> usize {
     match category {
         0 => 5,  // Shortcut groups: Tabs, Splits, Navigation, Features, Safety
-        1 => 9,  // Features list
-        2 => 9,  // Actions list
+        1 => 11, // Features list
+        2 => 11, // Actions list
+        3 => {
+            // Slash commands count (one per command)
+            crate::slash_commands::all_commands().len()
+        }
         _ => 0,
     }
 }
@@ -25,7 +29,9 @@ pub fn action_route(index: usize) -> Option<&'static str> {
         5 => Some("tmux"),
         6 => Some("slash"),
         7 => Some("layouts"),
-        8 => Some("export"),
+        8 => Some("sharing"),
+        9 => Some("timetravel"),
+        10 => Some("export"),
         _ => None,
     }
 }
@@ -45,7 +51,7 @@ pub fn screen(
     let black = [0.0, 0.0, 0.0, 1.0];
     let white = [1.0, 1.0, 1.0, 1.0];
     let sidebar_bg = [0.08, 0.08, 0.11, 1.0];
-    let sidebar_selected = [0.0, 0.0, 0.0, 0.0];
+    let sidebar_selected = [0.15, 0.15, 0.22, 1.0];
     let sidebar_hover = [0.10, 0.10, 0.14, 1.0];
     let divider_color = [0.15, 0.15, 0.2, 1.0];
     let key_color = [0.4, 0.8, 1.0, 1.0];
@@ -118,6 +124,7 @@ pub fn screen(
                     0 => "Keyboard shortcuts and actions",
                     1 => "Feature overview and shortcuts",
                     2 => "Quick launch — press Enter to open",
+                    3 => "Type / at the prompt to use",
                     _ => "",
                 },
                 FragmentStyle {
@@ -160,7 +167,7 @@ pub fn screen(
     let cat_start_y = context_dimension.margin.top_y + 48.0;
     let cat_line_height = 22.0;
 
-    let icons = ["## ", "** ", "-> "];
+    let icons = ["## ", "** ", "-> ", "// "];
 
     for (i, _cat) in HELP_CATEGORIES.iter().enumerate() {
         let cat_y = cat_start_y + (i as f32 * cat_line_height);
@@ -178,15 +185,6 @@ pub fn screen(
                 size: [sidebar_width, cat_line_height],
                 ..Quad::default()
             }));
-
-            if in_sidebar {
-                objects.push(Object::Quad(Quad {
-                    position: [0., cat_y - 2.0],
-                    color: accent,
-                    size: [3., cat_line_height],
-                    ..Quad::default()
-                }));
-            }
         }
     }
 
@@ -300,9 +298,48 @@ pub fn screen(
         let body = content.sel(panel_rt).clear();
 
         match selected_category {
-            0 => render_shortcuts(body, selected_item, in_sidebar, key_style, desc_style, section_style, dim_style, white, accent),
-            1 => render_features(body, selected_item, in_sidebar, key_style, desc_style, dim_style, white, accent, green),
-            2 => render_actions(body, selected_item, in_sidebar, desc_style, dim_style, white, accent, green),
+            0 => render_shortcuts(
+                body,
+                selected_item,
+                in_sidebar,
+                key_style,
+                desc_style,
+                section_style,
+                dim_style,
+                white,
+                accent,
+            ),
+            1 => render_features(
+                body,
+                selected_item,
+                in_sidebar,
+                key_style,
+                desc_style,
+                dim_style,
+                white,
+                accent,
+                green,
+            ),
+            2 => render_actions(
+                body,
+                selected_item,
+                in_sidebar,
+                desc_style,
+                dim_style,
+                white,
+                accent,
+                green,
+            ),
+            3 => render_slash_commands(
+                body,
+                selected_item,
+                in_sidebar,
+                key_style,
+                desc_style,
+                dim_style,
+                white,
+                accent,
+            ),
             _ => {}
         }
 
@@ -320,8 +357,8 @@ pub fn screen(
     sugarloaf.set_rich_text_font_size(&footer_rt, 11.0);
 
     let key_bg_style = FragmentStyle {
-        
         color: black,
+        background_color: Some(highlight),
         ..FragmentStyle::default()
     };
 
@@ -429,7 +466,11 @@ fn render_shortcuts(
         (
             "SAFETY",
             &[
-                ("Auto-detect", ".......", "Warns on rm -rf, git push -f, etc."),
+                (
+                    "Auto-detect",
+                    ".......",
+                    "Warns on rm -rf, git push -f, etc.",
+                ),
                 ("!command", "..........", "Bypass safety check"),
             ],
         ),
@@ -452,10 +493,13 @@ fn render_shortcuts(
         };
 
         if is_group_selected {
-            body.add_text("> ", FragmentStyle {
-                color: accent,
-                ..FragmentStyle::default()
-            });
+            body.add_text(
+                "> ",
+                FragmentStyle {
+                    color: accent,
+                    ..FragmentStyle::default()
+                },
+            );
         } else {
             body.add_text("  ", dim_style);
         }
@@ -484,14 +528,52 @@ fn render_features(
     _green: [f32; 4],
 ) {
     let features: &[(&str, &str, &str)] = &[
-        ("AI Assistant", "Cmd+Shift+I", "Opens Claude Code in a split pane"),
-        ("Session History", "Cmd+Shift+H", "View and search recorded commands. Enter to paste."),
-        ("Environment", "Cmd+Shift+E", "Inspect environment variables grouped by category"),
-        ("Bookmarks", "Cmd+Shift+K", "Save and recall important commands"),
-        ("Connections", "", "Manage SSH, MySQL, Redis, Kubernetes connections"),
+        (
+            "AI Assistant",
+            "Cmd+Shift+I",
+            "Opens Claude Code in a split pane",
+        ),
+        (
+            "Session History",
+            "Cmd+Shift+H",
+            "View and search recorded commands. Enter to copy.",
+        ),
+        (
+            "Environment",
+            "Cmd+Shift+E",
+            "Inspect environment variables grouped by category",
+        ),
+        (
+            "Bookmarks",
+            "Cmd+Shift+K",
+            "Save and recall important commands",
+        ),
+        (
+            "Connections",
+            "",
+            "Manage SSH, MySQL, Redis, Kubernetes connections",
+        ),
         ("Tmux", "", "Attach, detach, create tmux sessions"),
-        ("Slash Commands", "Cmd+Shift+P", "20 built-in terminal commands"),
-        ("Layout Presets", "Cmd+Shift+L", "Predefined pane arrangements"),
+        (
+            "Slash Commands",
+            "Cmd+Shift+P",
+            "20 built-in terminal commands",
+        ),
+        (
+            "Layout Presets",
+            "Cmd+Shift+L",
+            "Predefined pane arrangements",
+        ),
+        (
+            "Session Sharing",
+            "Cmd+Shift+S",
+            "Share terminal over network (host or connect)",
+        ),
+        (
+            "Time Travel",
+            "Cmd+Shift+T",
+            "Browse command timeline with detail view",
+        ),
         ("Session Export", "", "Export terminal session to file"),
     ];
 
@@ -499,10 +581,13 @@ fn render_features(
         let is_selected = !in_sidebar && i == selected_item;
 
         if is_selected {
-            body.add_text("> ", FragmentStyle {
-                color: accent,
-                ..FragmentStyle::default()
-            });
+            body.add_text(
+                "> ",
+                FragmentStyle {
+                    color: accent,
+                    ..FragmentStyle::default()
+                },
+            );
         } else {
             body.add_text("  ", dim_style);
         }
@@ -555,6 +640,8 @@ fn render_actions(
         ("Tmux", "Open tmux session picker"),
         ("Slash Commands", "Open slash command palette"),
         ("Layout Presets", "Apply a layout preset"),
+        ("Session Sharing", "Share terminal over network"),
+        ("Time Travel", "Browse command timeline"),
         ("Session Export", "Export current session"),
     ];
 
@@ -562,10 +649,13 @@ fn render_actions(
         let is_selected = !in_sidebar && i == selected_item;
 
         if is_selected {
-            body.add_text("> ", FragmentStyle {
-                color: green,
-                ..FragmentStyle::default()
-            });
+            body.add_text(
+                "> ",
+                FragmentStyle {
+                    color: green,
+                    ..FragmentStyle::default()
+                },
+            );
         } else {
             body.add_text("  ", dim_style);
         }
@@ -587,11 +677,101 @@ fn render_actions(
         body.new_line();
 
         if is_selected {
-            body.add_text("    Press Enter to open", FragmentStyle {
-                color: green,
-                ..FragmentStyle::default()
-            });
+            body.add_text(
+                "    Press Enter to open",
+                FragmentStyle {
+                    color: green,
+                    ..FragmentStyle::default()
+                },
+            );
             body.new_line();
         }
+    }
+}
+
+fn render_slash_commands(
+    body: &mut rio_backend::sugarloaf::Content,
+    selected_item: usize,
+    in_sidebar: bool,
+    key_style: FragmentStyle,
+    desc_style: FragmentStyle,
+    dim_style: FragmentStyle,
+    white: [f32; 4],
+    accent: [f32; 4],
+) {
+    use crate::slash_commands::{all_commands, CommandCategory};
+
+    let commands = all_commands();
+    let categories = [
+        CommandCategory::Navigation,
+        CommandCategory::Appearance,
+        CommandCategory::Tools,
+        CommandCategory::Session,
+        CommandCategory::Debug,
+    ];
+
+    let mut flat_idx: usize = 0;
+    for category in &categories {
+        let cat_cmds: Vec<_> = commands
+            .iter()
+            .filter(|c| c.category == *category)
+            .collect();
+        if cat_cmds.is_empty() {
+            continue;
+        }
+
+        body.add_text(
+            &category.name().to_uppercase(),
+            FragmentStyle {
+                color: accent,
+                ..FragmentStyle::default()
+            },
+        );
+        body.new_line();
+
+        for cmd in &cat_cmds {
+            let is_selected = !in_sidebar && flat_idx == selected_item;
+
+            if is_selected {
+                body.add_text(
+                    "> ",
+                    FragmentStyle {
+                        color: accent,
+                        ..FragmentStyle::default()
+                    },
+                );
+            } else {
+                body.add_text("  ", dim_style);
+            }
+
+            let name_style = if is_selected {
+                FragmentStyle {
+                    color: white,
+                    ..FragmentStyle::default()
+                }
+            } else {
+                key_style
+            };
+
+            body.add_text(&format!("/{}", cmd.name), name_style);
+
+            // Padding dots
+            let pad_len = 16usize.saturating_sub(cmd.name.len() + 1);
+            let dots: String = " .".repeat(pad_len / 2);
+            body.add_text(&dots, dim_style);
+            body.add_text(" ", dim_style);
+
+            body.add_text(cmd.description, desc_style);
+            body.new_line();
+
+            if is_selected {
+                body.add_text(&format!("    {}", cmd.usage), dim_style);
+                body.new_line();
+            }
+
+            flat_idx += 1;
+        }
+
+        body.new_line();
     }
 }

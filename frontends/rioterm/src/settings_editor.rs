@@ -24,14 +24,7 @@ impl SettingValue {
             SettingValue::String(s) => s.clone(),
             SettingValue::Float(f) => format!("{:.1}", f),
             SettingValue::Integer(i) => i.to_string(),
-            SettingValue::Bool(b) => {
-                if *b {
-                    "true"
-                } else {
-                    "false"
-                }
-                .to_string()
-            }
+            SettingValue::Bool(b) => if *b { "true" } else { "false" }.to_string(),
         }
     }
 
@@ -243,12 +236,14 @@ impl SettingsEditor {
         }
 
         match toml::to_string_pretty(&doc) {
-            Ok(output) => {
-                match std::fs::write(&config_path, &output) {
-                    Ok(_) => tracing::info!("Setting saved: {} = {}", item.key, item.value.display()),
-                    Err(e) => tracing::error!("Failed to write config: {}", e),
-                }
-            }
+            Ok(output) => match std::fs::write(&config_path, &output) {
+                Ok(_) => tracing::info!(
+                    "Setting saved: {} = {}",
+                    item.key,
+                    item.value.display()
+                ),
+                Err(e) => tracing::error!("Failed to write config: {}", e),
+            },
             Err(e) => tracing::error!("Failed to serialize config: {}", e),
         }
     }
@@ -266,7 +261,10 @@ impl SettingsEditor {
 
     /// Returns items belonging to a specific category.
     pub fn items_for_category(&self, category: &str) -> Vec<&SettingItem> {
-        self.items.iter().filter(|it| it.category == category).collect()
+        self.items
+            .iter()
+            .filter(|it| it.category == category)
+            .collect()
     }
 
     /// Public wrapper for save_setting so the router can call it.
@@ -281,6 +279,46 @@ impl SettingsEditor {
             self.items[idx].value.is_bool()
         } else {
             false
+        }
+    }
+
+    /// Save background image path as a TOML sub-table: [window.background-image] path = "..."
+    pub fn save_background_image(&self, path: &str) {
+        let config_path = rio_backend::config::config_file_path();
+
+        let content = match std::fs::read_to_string(&config_path) {
+            Ok(c) => c,
+            Err(e) => {
+                tracing::error!("Cannot read config: {}", e);
+                return;
+            }
+        };
+        let mut doc: toml::Table = match content.parse() {
+            Ok(d) => d,
+            Err(e) => {
+                tracing::error!("Invalid TOML: {}", e);
+                return;
+            }
+        };
+
+        // Ensure [window] section exists
+        let window = doc
+            .entry("window")
+            .or_insert_with(|| toml::Value::Table(toml::Table::new()));
+        if let toml::Value::Table(window_table) = window {
+            // Create or replace the background-image sub-table
+            let mut bg_table = toml::Table::new();
+            bg_table.insert("path".to_string(), toml::Value::String(path.to_string()));
+            window_table
+                .insert("background-image".to_string(), toml::Value::Table(bg_table));
+        }
+
+        match toml::to_string_pretty(&doc) {
+            Ok(output) => match std::fs::write(&config_path, &output) {
+                Ok(_) => tracing::info!("Background image set to: {}", path),
+                Err(e) => tracing::error!("Failed to write config: {}", e),
+            },
+            Err(e) => tracing::error!("Failed to serialize config: {}", e),
         }
     }
 }
@@ -320,7 +358,9 @@ fn color_arr_to_hex(c: &[f32; 4]) -> String {
     format!("#{:02X}{:02X}{:02X}", r, g, b)
 }
 
-pub fn build_settings_from_config(config: &rio_backend::config::Config) -> Vec<SettingItem> {
+pub fn build_settings_from_config(
+    config: &rio_backend::config::Config,
+) -> Vec<SettingItem> {
     vec![
         // ── Font ──────────────────────────────────────────────
         SettingItem {
@@ -334,9 +374,7 @@ pub fn build_settings_from_config(config: &rio_backend::config::Config) -> Vec<S
             key: "fonts.family".into(),
             label: "Font Family".into(),
             category: "Font".into(),
-            value: SettingValue::String(
-                config.fonts.family.clone().unwrap_or_default(),
-            ),
+            value: SettingValue::String(config.fonts.family.clone().unwrap_or_default()),
             description: "Font family name (e.g. 'JetBrains Mono', 'Fira Code')".into(),
         },
         SettingItem {
@@ -372,7 +410,9 @@ pub fn build_settings_from_config(config: &rio_backend::config::Config) -> Vec<S
             key: "window.mode".into(),
             label: "Window Mode".into(),
             category: "Window".into(),
-            value: SettingValue::String(format!("{:?}", config.window.mode).to_lowercase()),
+            value: SettingValue::String(
+                format!("{:?}", config.window.mode).to_lowercase(),
+            ),
             description: "Window mode: windowed, maximized, fullscreen".into(),
         },
         SettingItem {
@@ -393,15 +433,21 @@ pub fn build_settings_from_config(config: &rio_backend::config::Config) -> Vec<S
             key: "window.decorations".into(),
             label: "Window Decorations".into(),
             category: "Window".into(),
-            value: SettingValue::String(format!("{:?}", config.window.decorations).to_lowercase()),
-            description: "Window chrome style: enabled, disabled, transparent, buttonless".into(),
+            value: SettingValue::String(
+                format!("{:?}", config.window.decorations).to_lowercase(),
+            ),
+            description:
+                "Window chrome style: enabled, disabled, transparent, buttonless".into(),
         },
         SettingItem {
             key: "window.background-image".into(),
             label: "Background Image".into(),
             category: "Window".into(),
             value: SettingValue::String(
-                config.window.background_image.as_ref()
+                config
+                    .window
+                    .background_image
+                    .as_ref()
                     .map(|img| img.path.clone())
                     .unwrap_or_default(),
             ),
@@ -434,7 +480,9 @@ pub fn build_settings_from_config(config: &rio_backend::config::Config) -> Vec<S
             key: "window.colorspace".into(),
             label: "Colorspace".into(),
             category: "Window".into(),
-            value: SettingValue::String(format!("{:?}", config.window.colorspace).to_lowercase()),
+            value: SettingValue::String(
+                format!("{:?}", config.window.colorspace).to_lowercase(),
+            ),
             description: "Display colorspace: srgb, display-p3, rec2020".into(),
         },
         SettingItem {
@@ -450,7 +498,8 @@ pub fn build_settings_from_config(config: &rio_backend::config::Config) -> Vec<S
             label: "Tab Mode".into(),
             category: "Navigation".into(),
             value: SettingValue::String(config.navigation.mode.to_string()),
-            description: "Tab bar style: TopTab, BottomTab, Bookmark, Plain, NativeTab".into(),
+            description: "Tab bar style: TopTab, BottomTab, Bookmark, Plain, NativeTab"
+                .into(),
         },
         SettingItem {
             key: "navigation.hide-if-single".into(),
@@ -535,14 +584,18 @@ pub fn build_settings_from_config(config: &rio_backend::config::Config) -> Vec<S
             key: "colors.selection-background".into(),
             label: "Selection Background".into(),
             category: "Colors".into(),
-            value: SettingValue::String(color_arr_to_hex(&config.colors.selection_background)),
+            value: SettingValue::String(color_arr_to_hex(
+                &config.colors.selection_background,
+            )),
             description: "Background color for selected text (hex)".into(),
         },
         SettingItem {
             key: "colors.selection-foreground".into(),
             label: "Selection Foreground".into(),
             category: "Colors".into(),
-            value: SettingValue::String(color_arr_to_hex(&config.colors.selection_foreground)),
+            value: SettingValue::String(color_arr_to_hex(
+                &config.colors.selection_foreground,
+            )),
             description: "Foreground color for selected text (hex)".into(),
         },
         // ── Colors — Tab Bar ────────────────────────────────
@@ -564,7 +617,9 @@ pub fn build_settings_from_config(config: &rio_backend::config::Config) -> Vec<S
             key: "colors.tabs-active-foreground".into(),
             label: "Active Tab Foreground".into(),
             category: "Colors".into(),
-            value: SettingValue::String(color_arr_to_hex(&config.colors.tabs_active_foreground)),
+            value: SettingValue::String(color_arr_to_hex(
+                &config.colors.tabs_active_foreground,
+            )),
             description: "Active tab text color (hex)".into(),
         },
         SettingItem {
@@ -578,7 +633,9 @@ pub fn build_settings_from_config(config: &rio_backend::config::Config) -> Vec<S
             key: "colors.tabs-active-highlight".into(),
             label: "Active Tab Highlight".into(),
             category: "Colors".into(),
-            value: SettingValue::String(color_arr_to_hex(&config.colors.tabs_active_highlight)),
+            value: SettingValue::String(color_arr_to_hex(
+                &config.colors.tabs_active_highlight,
+            )),
             description: "Highlight color on the active tab (hex)".into(),
         },
         SettingItem {
@@ -714,28 +771,36 @@ pub fn build_settings_from_config(config: &rio_backend::config::Config) -> Vec<S
             key: "colors.search-match-background".into(),
             label: "Search Match Background".into(),
             category: "Colors".into(),
-            value: SettingValue::String(color_arr_to_hex(&config.colors.search_match_background)),
+            value: SettingValue::String(color_arr_to_hex(
+                &config.colors.search_match_background,
+            )),
             description: "Background color for search matches (hex)".into(),
         },
         SettingItem {
             key: "colors.search-match-foreground".into(),
             label: "Search Match Foreground".into(),
             category: "Colors".into(),
-            value: SettingValue::String(color_arr_to_hex(&config.colors.search_match_foreground)),
+            value: SettingValue::String(color_arr_to_hex(
+                &config.colors.search_match_foreground,
+            )),
             description: "Foreground color for search matches (hex)".into(),
         },
         SettingItem {
             key: "colors.search-focused-match-background".into(),
             label: "Focused Match Background".into(),
             category: "Colors".into(),
-            value: SettingValue::String(color_arr_to_hex(&config.colors.search_focused_match_background)),
+            value: SettingValue::String(color_arr_to_hex(
+                &config.colors.search_focused_match_background,
+            )),
             description: "Background color for the focused search match (hex)".into(),
         },
         SettingItem {
             key: "colors.search-focused-match-foreground".into(),
             label: "Focused Match Foreground".into(),
             category: "Colors".into(),
-            value: SettingValue::String(color_arr_to_hex(&config.colors.search_focused_match_foreground)),
+            value: SettingValue::String(color_arr_to_hex(
+                &config.colors.search_focused_match_foreground,
+            )),
             description: "Foreground color for the focused search match (hex)".into(),
         },
         // ── Colors — Hints ──────────────────────────────────
@@ -765,9 +830,7 @@ pub fn build_settings_from_config(config: &rio_backend::config::Config) -> Vec<S
             key: "working-dir".into(),
             label: "Working Directory".into(),
             category: "Shell".into(),
-            value: SettingValue::String(
-                config.working_dir.clone().unwrap_or_default(),
-            ),
+            value: SettingValue::String(config.working_dir.clone().unwrap_or_default()),
             description: "Default working directory for new tabs".into(),
         },
         SettingItem {
@@ -775,14 +838,16 @@ pub fn build_settings_from_config(config: &rio_backend::config::Config) -> Vec<S
             label: "Environment Variables".into(),
             category: "Shell".into(),
             value: SettingValue::String(config.env_vars.join(", ")),
-            description: "Extra environment variables (comma-separated KEY=VALUE pairs)".into(),
+            description: "Extra environment variables (comma-separated KEY=VALUE pairs)"
+                .into(),
         },
         SettingItem {
             key: "editor.program".into(),
             label: "Editor Program".into(),
             category: "Shell".into(),
             value: SettingValue::String(config.editor.program.clone()),
-            description: "Editor to use when opening config files (e.g. vi, nano, code)".into(),
+            description: "Editor to use when opening config files (e.g. vi, nano, code)"
+                .into(),
         },
         // ── General ──────────────────────────────────────────
         SettingItem {
@@ -890,8 +955,12 @@ pub fn build_settings_from_config(config: &rio_backend::config::Config) -> Vec<S
             key: "renderer.strategy".into(),
             label: "Renderer Strategy".into(),
             category: "Renderer".into(),
-            value: SettingValue::String(format!("{:?}", config.renderer.strategy).to_lowercase()),
-            description: "Rendering strategy: events (redraw on change), game (continuous redraw)".into(),
+            value: SettingValue::String(
+                format!("{:?}", config.renderer.strategy).to_lowercase(),
+            ),
+            description:
+                "Rendering strategy: events (redraw on change), game (continuous redraw)"
+                    .into(),
         },
         SettingItem {
             key: "renderer.disable-unfocused-render".into(),
@@ -913,7 +982,8 @@ pub fn build_settings_from_config(config: &rio_backend::config::Config) -> Vec<S
             label: "Disable Ctrl Seqs Alt".into(),
             category: "Keyboard".into(),
             value: SettingValue::Bool(config.keyboard.disable_ctlseqs_alt),
-            description: "Disable control sequences triggered by Alt key combinations".into(),
+            description: "Disable control sequences triggered by Alt key combinations"
+                .into(),
         },
         SettingItem {
             key: "keyboard.ime-cursor-positioning".into(),
@@ -930,7 +1000,8 @@ pub fn build_settings_from_config(config: &rio_backend::config::Config) -> Vec<S
             value: SettingValue::String(
                 config.title.placeholder.clone().unwrap_or_default(),
             ),
-            description: "Placeholder text for the window title when no title is set".into(),
+            description: "Placeholder text for the window title when no title is set"
+                .into(),
         },
         SettingItem {
             key: "title.content".into(),

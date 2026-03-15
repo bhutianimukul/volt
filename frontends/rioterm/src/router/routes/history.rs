@@ -21,24 +21,16 @@ pub fn screen(
     let selected_bg = [0.15, 0.15, 0.25, 1.0];
 
     let layout = sugarloaf.window_size();
+    let scale = context_dimension.dimension.scale;
+    let full_w = layout.width / scale;
+    let full_h = layout.height / scale;
     let mut objects = Vec::with_capacity(16);
 
     // Background
     objects.push(Object::Quad(Quad {
         position: [0., 0.0],
         color: bg,
-        size: [
-            layout.width / context_dimension.dimension.scale,
-            layout.height / context_dimension.dimension.scale,
-        ],
-        ..Quad::default()
-    }));
-
-    // Accent bar on the left
-    objects.push(Object::Quad(Quad {
-        position: [0., 30.0],
-        color: accent,
-        size: [4., layout.height / context_dimension.dimension.scale],
+        size: [full_w, full_h],
         ..Quad::default()
     }));
 
@@ -146,11 +138,8 @@ pub fn screen(
             dim_style,
         )
         .new_line();
-        body.add_text(
-            "configured with Volt's shell integration hooks.",
-            dim_style,
-        )
-        .new_line();
+        body.add_text("configured with Volt's shell integration hooks.", dim_style)
+            .new_line();
     } else {
         body.add_text(
             &format!("RECENT COMMANDS ({})", entries.len()),
@@ -178,10 +167,13 @@ pub fn screen(
 
             // Selection indicator
             if is_selected {
-                body.add_text(" > ", FragmentStyle {
-                    color: highlight,
-                    ..FragmentStyle::default()
-                });
+                body.add_text(
+                    " > ",
+                    FragmentStyle {
+                        color: highlight,
+                        ..FragmentStyle::default()
+                    },
+                );
             } else {
                 body.add_text("   ", dim_style);
             }
@@ -226,10 +218,7 @@ pub fn screen(
                 if ms < 1000 {
                     body.add_text(&format!("  {}ms", ms), dim_style);
                 } else {
-                    body.add_text(
-                        &format!("  {:.1}s", ms as f64 / 1000.0),
-                        dim_style,
-                    );
+                    body.add_text(&format!("  {:.1}s", ms as f64 / 1000.0), dim_style);
                 }
             }
 
@@ -250,24 +239,42 @@ pub fn screen(
         }
     }
 
-    // Footer
-    body.new_line().new_line();
-    body.add_text(" \u{2191}\u{2193} ", key_bg_style)
+    body.build();
+
+    objects.push(Object::RichText(RichText {
+        id: body_rt,
+        position: [40., context_dimension.margin.top_y + 85.],
+        lines: None,
+    }));
+
+    // Footer — pinned to bottom
+    let footer_rt = sugarloaf.create_temp_rich_text();
+    sugarloaf.set_rich_text_font_size(&footer_rt, 11.0);
+    let footer_fc = sugarloaf.content().sel(footer_rt);
+    footer_fc.clear().new_line();
+    footer_fc
+        .add_text(" \u{2191}\u{2193} ", key_bg_style)
         .add_text(" navigate  ", footer_dim_style())
         .add_text(" Enter ", key_bg_style)
-        .add_text(" paste  ", footer_dim_style())
+        .add_text(" copy  ", footer_dim_style())
         .add_text(" b ", key_bg_style)
         .add_text(" bookmark  ", footer_dim_style())
         .add_text(" e ", key_bg_style)
         .add_text(" export  ", footer_dim_style())
         .add_text(" Escape ", key_bg_style)
         .add_text(" close", footer_dim_style());
+    footer_fc.build();
 
-    body.build();
-
+    let footer_y = full_h - 28.0;
+    objects.push(Object::Quad(Quad {
+        position: [0., footer_y - 4.0],
+        color: [0.08, 0.08, 0.11, 1.0],
+        size: [full_w, 28.0],
+        ..Quad::default()
+    }));
     objects.push(Object::RichText(RichText {
-        id: body_rt,
-        position: [40., context_dimension.margin.top_y + 85.],
+        id: footer_rt,
+        position: [40., footer_y + 4.0],
         lines: None,
     }));
 

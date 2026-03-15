@@ -81,7 +81,7 @@ fn simulate_rio_advance_batched(
 }
 
 fn main() {
-    println!("Rio Terminal - Real Usage Pattern Benchmark");
+    println!("Volt - Real Usage Pattern Benchmark");
     println!("===========================================");
 
     let test_scenarios = vec![

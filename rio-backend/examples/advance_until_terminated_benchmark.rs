@@ -58,7 +58,7 @@ impl MockPerformer {
 }
 
 fn main() {
-    println!("Rio Terminal - advance_until_terminated Performance Comparison");
+    println!("Volt - advance_until_terminated Performance Comparison");
     println!("=============================================================");
 
     let test_cases = vec![

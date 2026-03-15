@@ -201,200 +201,245 @@ impl ScreenNavigation {
             ..Quad::default()
         }));
 
-
         // Tab pills only when not hidden
         if !tabs_hidden {
-        self.ensure_tab_visible(current, visible_width);
+            self.ensure_tab_visible(current, visible_width);
 
-        let left_margin = 4.0; // after "Volt  |"
+            let left_margin = 4.0; // after "Volt  |"
 
-        // First pass: compute labels and positions
-        let mut tab_layouts: Vec<(f32, f32, String)> = Vec::with_capacity(len); // (x, width, label)
-        let mut x_cursor = left_margin;
-        for i in 0..len {
-            let label = if let Some(title) = titles.get(&i) {
-                if let Some(ref custom) = title.custom_name {
-                    let mut s = custom.clone();
-                    if s.len() > 20 {
-                        s.truncate(18);
-                        s.push_str("..");
+            // First pass: compute labels and positions
+            let mut tab_layouts: Vec<(f32, f32, String)> = Vec::with_capacity(len); // (x, width, label)
+            let mut x_cursor = left_margin;
+            for i in 0..len {
+                let label = if let Some(title) = titles.get(&i) {
+                    if let Some(ref custom) = title.custom_name {
+                        let mut s = custom.clone();
+                        if s.len() > 20 {
+                            s.truncate(18);
+                            s.push_str("..");
+                        }
+                        s
+                    } else {
+                        format!("{}", i + 1)
                     }
-                    s
                 } else {
                     format!("{}", i + 1)
+                };
+                let w = tab_width_for_label(&label);
+                tab_layouts.push((x_cursor, w, label));
+                x_cursor += w + TAB_GAP;
+            }
+
+            // Auto-scroll to keep current tab visible
+            if let Some((cur_x, cur_w, _)) = tab_layouts.get(current) {
+                let tab_end = cur_x + cur_w;
+                if *cur_x < self.tab_scroll_offset {
+                    self.tab_scroll_offset = *cur_x;
+                } else if tab_end > self.tab_scroll_offset + visible_width {
+                    self.tab_scroll_offset = tab_end - visible_width;
                 }
-            } else {
-                format!("{}", i + 1)
-            };
-            let w = tab_width_for_label(&label);
-            tab_layouts.push((x_cursor, w, label));
-            x_cursor += w + TAB_GAP;
-        }
-
-        // Auto-scroll to keep current tab visible
-        if let Some((cur_x, cur_w, _)) = tab_layouts.get(current) {
-            let tab_end = cur_x + cur_w;
-            if *cur_x < self.tab_scroll_offset {
-                self.tab_scroll_offset = *cur_x;
-            } else if tab_end > self.tab_scroll_offset + visible_width {
-                self.tab_scroll_offset = tab_end - visible_width;
-            }
-        }
-
-        // Second pass: render
-        for (i, (base_x, w, label)) in tab_layouts.iter().enumerate() {
-            let tab_x = base_x - self.tab_scroll_offset;
-
-            // Skip off-screen tabs
-            if tab_x + w < 0.0 || tab_x > visible_width {
-                continue;
             }
 
-            let is_current = i == current;
+            // Second pass: render
+            for (i, (base_x, w, label)) in tab_layouts.iter().enumerate() {
+                let tab_x = base_x - self.tab_scroll_offset;
 
-            let tab_accent = titles
-                .get(&i)
-                .map(|t| t.accent_color)
-                .unwrap_or(colors.tabs_active_highlight);
+                // Skip off-screen tabs
+                if tab_x + w < 0.0 || tab_x > visible_width {
+                    continue;
+                }
 
-            let tab_color = if is_current {
-                tab_accent
-            } else {
-                [
-                    tab_accent[0] * 0.65,
-                    tab_accent[1] * 0.65,
-                    tab_accent[2] * 0.65,
-                    1.0,
-                ]
+                let is_current = i == current;
+
+                let tab_accent = titles
+                    .get(&i)
+                    .map(|t| t.accent_color)
+                    .unwrap_or(colors.tabs_active_highlight);
+
+                let tab_color = if is_current {
+                    tab_accent
+                } else {
+                    [
+                        tab_accent[0] * 0.65,
+                        tab_accent[1] * 0.65,
+                        tab_accent[2] * 0.65,
+                        1.0,
+                    ]
+                };
+
+                objects.push(Object::Quad(Quad {
+                    position: [tab_x, position_y],
+                    color: tab_color,
+                    size: [*w, PADDING_Y_BOTTOM_TABS],
+                    ..Quad::default()
+                }));
+
+                if is_current {
+                    let indicator_y = position_y + PADDING_Y_BOTTOM_TABS - 2.5;
+                    objects.push(Object::Quad(Quad {
+                        position: [tab_x, indicator_y],
+                        color: [1.0, 1.0, 1.0, 0.9],
+                        size: [*w, 2.5],
+                        ..Quad::default()
+                    }));
+                }
+
+                // White text on colored background for all tabs
+                let fg = [1.0, 1.0, 1.0, if is_current { 1.0 } else { 0.85 }];
+
+                let tab_rt = sugarloaf.create_temp_rich_text();
+                sugarloaf.set_rich_text_font_size(&tab_rt, 12.);
+                let content = sugarloaf.content();
+
+                content
+                    .sel(tab_rt)
+                    .clear()
+                    .new_line()
+                    .add_text(
+                        &label,
+                        FragmentStyle {
+                            color: fg,
+                            ..FragmentStyle::default()
+                        },
+                    )
+                    .build();
+
+                objects.push(Object::RichText(RichText {
+                    id: tab_rt,
+                    position: [tab_x + 6.0, position_y],
+                    lines: None,
+                }));
+            } // end if !tabs_hidden — tab pills only
+
+            // Top bar buttons — ALWAYS rendered (even with single tab)
+            let top_rt = sugarloaf.create_temp_rich_text();
+            sugarloaf.set_rich_text_font_size(&top_rt, 11.);
+            let top_dim = FragmentStyle {
+                color: [0.5, 0.5, 0.55, 0.8],
+                ..FragmentStyle::default()
+            };
+            let top_link = FragmentStyle {
+                color: [0.6, 0.75, 0.9, 1.0],
+                ..FragmentStyle::default()
             };
 
+            sugarloaf
+                .content()
+                .sel(top_rt)
+                .clear()
+                .new_line()
+                .add_text("Help", top_link)
+                .add_text("  ", top_dim)
+                .add_text("Settings", top_link)
+                .add_text("  ", top_dim)
+                .build();
+
+            let top_text_w = 110.0_f32;
+            objects.push(Object::RichText(RichText {
+                id: top_rt,
+                position: [visible_width - top_text_w, position_y + 1.0],
+                lines: None,
+            }));
+
+            // --- Bottom status bar — ALWAYS rendered, even with single tab ---
+            let sb_h = 22.0_f32;
+            let sb_y = (height / scale) - sb_h;
+
+            // Status bar background — dark blue-tinted like VS Code
             objects.push(Object::Quad(Quad {
-                position: [tab_x, position_y],
-                color: tab_color,
-                size: [*w, PADDING_Y_BOTTOM_TABS],
+                position: [0.0, sb_y],
+                color: [0.0, 0.05, 0.15, 1.0],
+                size: [width, sb_h],
                 ..Quad::default()
             }));
 
-            if is_current {
-                let indicator_y = position_y + PADDING_Y_BOTTOM_TABS - 2.5;
-                objects.push(Object::Quad(Quad {
-                    position: [tab_x, indicator_y],
-                    color: [1.0, 1.0, 1.0, 0.9],
-                    size: [*w, 2.5],
-                    ..Quad::default()
-                }));
-            }
+            // All items rendered as a single rich text for clean spacing
+            let sb_rt = sugarloaf.create_temp_rich_text();
+            sugarloaf.set_rich_text_font_size(&sb_rt, 11.);
 
-            // White text on colored background for all tabs
-            let fg = [1.0, 1.0, 1.0, if is_current { 1.0 } else { 0.85 }];
+            let sb_text = FragmentStyle {
+                color: [0.75, 0.8, 0.85, 1.0],
+                ..FragmentStyle::default()
+            };
+            let sb_accent = FragmentStyle {
+                color: [0.4, 0.7, 1.0, 1.0],
+                ..FragmentStyle::default()
+            };
+            let sb_sep = FragmentStyle {
+                color: [0.3, 0.35, 0.4, 0.6],
+                ..FragmentStyle::default()
+            };
+            let sb_green = FragmentStyle {
+                color: [0.3, 0.85, 0.5, 1.0],
+                ..FragmentStyle::default()
+            };
+            let sb_gold = FragmentStyle {
+                color: [0.95, 0.75, 0.2, 1.0],
+                ..FragmentStyle::default()
+            };
+            let sb_purple = FragmentStyle {
+                color: [0.7, 0.5, 0.95, 1.0],
+                ..FragmentStyle::default()
+            };
 
-            let tab_rt = sugarloaf.create_temp_rich_text();
-            sugarloaf.set_rich_text_font_size(&tab_rt, 12.);
             let content = sugarloaf.content();
+            let sb = content.sel(sb_rt);
+            sb.clear().new_line();
 
-            content
-                .sel(tab_rt)
+            // Status bar with all features
+            let sb_brand = FragmentStyle {
+                color: [0.85, 0.65, 0.15, 0.9],
+                ..FragmentStyle::default()
+            };
+            sb.add_text(" Volt", sb_brand);
+            sb.add_text(" ", sb_sep);
+            sb.add_text("AI ", sb_purple);
+            sb.add_text("|", sb_sep);
+            sb.add_text(" History ", sb_text);
+            sb.add_text("|", sb_sep);
+            sb.add_text(" Env ", sb_text);
+            sb.add_text("|", sb_sep);
+            sb.add_text(" Bookmarks ", sb_text);
+            sb.add_text("|", sb_sep);
+            sb.add_text(" Connect ", sb_accent);
+            sb.add_text("|", sb_sep);
+            sb.add_text(" Layout ", sb_text);
+            sb.add_text("|", sb_sep);
+            sb.add_text(" Export ", sb_gold);
+            sb.add_text("|", sb_sep);
+            sb.add_text(" Share ", sb_green);
+
+            sb.build();
+
+            objects.push(Object::RichText(RichText {
+                id: sb_rt,
+                position: [0.0, sb_y + 1.0],
+                lines: None,
+            }));
+
+            // tmux — right side, styled text (no pill)
+            let tmux_rt = sugarloaf.create_temp_rich_text();
+            sugarloaf.set_rich_text_font_size(&tmux_rt, 11.);
+            sugarloaf
+                .content()
+                .sel(tmux_rt)
                 .clear()
                 .new_line()
                 .add_text(
-                    &label,
+                    "tmux",
                     FragmentStyle {
-                        color: fg,
+                        color: [0.4, 0.85, 0.55, 1.0],
                         ..FragmentStyle::default()
                     },
                 )
                 .build();
-
             objects.push(Object::RichText(RichText {
-                id: tab_rt,
-                position: [tab_x + 6.0, position_y],
+                id: tmux_rt,
+                position: [visible_width - 40.0, sb_y + 1.0],
                 lines: None,
             }));
-        } // end if !tabs_hidden — tab pills only
-
-        // Top bar buttons — ALWAYS rendered (even with single tab)
-        let top_rt = sugarloaf.create_temp_rich_text();
-        sugarloaf.set_rich_text_font_size(&top_rt, 11.);
-        let top_dim = FragmentStyle { color: [0.5, 0.5, 0.55, 0.8], ..FragmentStyle::default() };
-        let top_link = FragmentStyle { color: [0.6, 0.75, 0.9, 1.0], ..FragmentStyle::default() };
-
-        sugarloaf.content().sel(top_rt).clear().new_line()
-            .add_text("Help", top_link)
-            .add_text("  ", top_dim)
-            .add_text("Settings", top_link)
-            .add_text("  ", top_dim)
-            .build();
-
-        let top_text_w = 110.0_f32;
-        objects.push(Object::RichText(RichText {
-            id: top_rt,
-            position: [visible_width - top_text_w, position_y + 1.0],
-            lines: None,
-        }));
-
-        // --- Bottom status bar — ALWAYS rendered, even with single tab ---
-        let sb_h = 22.0_f32;
-        let sb_y = (height / scale) - sb_h;
-
-        // Status bar background — dark blue-tinted like VS Code
-        objects.push(Object::Quad(Quad {
-            position: [0.0, sb_y],
-            color: [0.0, 0.05, 0.15, 1.0],
-            size: [width, sb_h],
-            ..Quad::default()
-        }));
-
-        // All items rendered as a single rich text for clean spacing
-        let sb_rt = sugarloaf.create_temp_rich_text();
-        sugarloaf.set_rich_text_font_size(&sb_rt, 11.);
-
-        let sb_text = FragmentStyle { color: [0.75, 0.8, 0.85, 1.0], ..FragmentStyle::default() };
-        let sb_accent = FragmentStyle { color: [0.4, 0.7, 1.0, 1.0], ..FragmentStyle::default() };
-        let sb_sep = FragmentStyle { color: [0.3, 0.35, 0.4, 0.6], ..FragmentStyle::default() };
-        let sb_green = FragmentStyle { color: [0.3, 0.85, 0.5, 1.0], ..FragmentStyle::default() };
-        let sb_gold = FragmentStyle { color: [0.95, 0.75, 0.2, 1.0], ..FragmentStyle::default() };
-        let sb_purple = FragmentStyle { color: [0.7, 0.5, 0.95, 1.0], ..FragmentStyle::default() };
-
-        let content = sugarloaf.content();
-        let sb = content.sel(sb_rt);
-        sb.clear().new_line();
-
-        // Status bar with all features
-        let sb_brand = FragmentStyle { color: [0.85, 0.65, 0.15, 0.9], ..FragmentStyle::default() };
-        sb.add_text(" Volt", sb_brand);
-        sb.add_text(" ", sb_sep);
-        sb.add_text("AI ", sb_purple);
-        sb.add_text("|", sb_sep);
-        sb.add_text(" History ", sb_text);
-        sb.add_text("|", sb_sep);
-        sb.add_text(" Env ", sb_text);
-        sb.add_text("|", sb_sep);
-        sb.add_text(" Bookmarks ", sb_text);
-        sb.add_text("|", sb_sep);
-        sb.add_text(" Connect ", sb_accent);
-        sb.add_text("|", sb_sep);
-        sb.add_text(" Layout ", sb_text);
-
-        sb.build();
-
-        objects.push(Object::RichText(RichText {
-            id: sb_rt,
-            position: [0.0, sb_y + 1.0],
-            lines: None,
-        }));
-
-        // tmux — right side, styled text (no pill)
-        let tmux_rt = sugarloaf.create_temp_rich_text();
-        sugarloaf.set_rich_text_font_size(&tmux_rt, 11.);
-        sugarloaf.content().sel(tmux_rt).clear().new_line()
-            .add_text("tmux", FragmentStyle { color: [0.4, 0.85, 0.55, 1.0], ..FragmentStyle::default() }).build();
-        objects.push(Object::RichText(RichText {
-            id: tmux_rt,
-            position: [visible_width - 40.0, sb_y + 1.0],
-            lines: None,
-        }));
+        }
     }
-  }
 }
 
 /// Button positions for click detection (must match rendering)
@@ -413,6 +458,8 @@ pub enum NavButton {
     Connections,
     SlashCommands,
     Layouts,
+    SessionExport,
+    SessionSharing,
 }
 
 /// Check if a click (in logical pixels) hit a top bar button.
@@ -435,33 +482,78 @@ pub fn nav_button_at_position(x: f32, visible_width: f32) -> Option<NavButton> {
 pub const STATUS_BAR_HEIGHT: f32 = 22.0;
 
 /// Check if a click (in logical pixels) hit a bottom status bar item.
-/// Text: "  AI | History | Env | Bookmarks | Connect | Cmds | Layout"
-/// Uses char width ~6.5px at font size 11 (monospace estimate).
-pub fn status_button_at_position(x: f32, y: f32, win_height: f32, visible_width: f32) -> Option<NavButton> {
+/// Positions are derived from character counts to stay in sync with rendering.
+/// Text: " Volt AI | History | Env | Bookmarks | Connect | Layout"
+pub fn status_button_at_position(
+    x: f32,
+    y: f32,
+    win_height: f32,
+    visible_width: f32,
+) -> Option<NavButton> {
     let status_y = win_height - STATUS_BAR_HEIGHT;
     if y < status_y || y > win_height {
         return None;
     }
 
-    // Text: " ⚡ AI | History | Env | Bookmarks | Connect | Cmds | Layout"
-    // ⚡ is ~2 chars wide, total offset +3 chars from old layout
-    // " ⚡ " = 0..20px (brand, not clickable)
-    // "AI " = 20..42
-    // "| History " = 42..110
-    // "| Env " = 110..150
-    // "| Bookmarks " = 150..240
-    // "| Connect " = 240..310
-    // "| Cmds " = 310..358
-    // "| Layout " = 358..420
+    // Approximate char width at font size 11 (monospace)
+    let cw: f32 = 6.5;
 
-    if x < 20.0 { return None; } // thunder icon — not clickable
-    if x < 42.0 { return Some(NavButton::AiAssistant); }
-    if x < 110.0 { return Some(NavButton::History); }
-    if x < 150.0 { return Some(NavButton::EnvViewer); }
-    if x < 240.0 { return Some(NavButton::Bookmarks); }
-    if x < 310.0 { return Some(NavButton::Connections); }
-    
-    if x < 420.0 { return Some(NavButton::Layouts); }
+    // Rendered: " Volt AI | History | Env | Bookmarks | Connect | Layout | Export | Share"
+    // Char positions (0-indexed):
+    //   0-5   " Volt"  (brand, not clickable)
+    //   5-6   " "
+    //   6-9   "AI "           -> AiAssistant
+    //   9-10  "|"
+    //  10-19  " History "     -> History
+    //  19-20  "|"
+    //  20-25  " Env "         -> EnvViewer
+    //  25-26  "|"
+    //  26-37  " Bookmarks "   -> Bookmarks
+    //  37-38  "|"
+    //  38-47  " Connect "     -> Connections
+    //  47-48  "|"
+    //  48-56  " Layout "      -> Layouts
+    //  56-57  "|"
+    //  57-65  " Export "      -> SessionExport
+    //  65-66  "|"
+    //  66-73  " Share "       -> SessionSharing
+    let brand_end = 5.0 * cw;
+    let ai_end = 10.0 * cw;
+    let hist_end = 20.0 * cw;
+    let env_end = 26.0 * cw;
+    let bm_end = 38.0 * cw;
+    let conn_end = 48.0 * cw;
+    let layout_end = 57.0 * cw;
+    let export_end = 66.0 * cw;
+    let share_end = 73.0 * cw;
+
+    if x < brand_end {
+        return None;
+    }
+    if x < ai_end {
+        return Some(NavButton::AiAssistant);
+    }
+    if x < hist_end {
+        return Some(NavButton::History);
+    }
+    if x < env_end {
+        return Some(NavButton::EnvViewer);
+    }
+    if x < bm_end {
+        return Some(NavButton::Bookmarks);
+    }
+    if x < conn_end {
+        return Some(NavButton::Connections);
+    }
+    if x < layout_end {
+        return Some(NavButton::Layouts);
+    }
+    if x < export_end {
+        return Some(NavButton::SessionExport);
+    }
+    if x < share_end {
+        return Some(NavButton::SessionSharing);
+    }
 
     // tmux text on right (~40px from right edge)
     let tmux_x = visible_width - 40.0;

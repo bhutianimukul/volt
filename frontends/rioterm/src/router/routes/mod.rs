@@ -6,8 +6,11 @@ pub mod env_viewer;
 pub mod help;
 pub mod history;
 pub mod layouts_viewer;
+pub mod session_export;
+pub mod session_sharing;
 pub mod settings;
 pub mod slash_commands_viewer;
+pub mod time_travel;
 pub mod tmux_picker;
 pub mod welcome;
 
@@ -26,4 +29,7 @@ pub enum RoutePath {
     Connections,
     SlashCommands,
     Layouts,
+    SessionSharing,
+    SessionExport,
+    TimeTravel,
 }

@@ -21,7 +21,7 @@ pub fn screen(
     let green = [0.3, 0.85, 0.4, 1.0];
     let red = [0.85, 0.3, 0.3, 1.0];
     let sidebar_bg = [0.08, 0.08, 0.11, 1.0];
-    let sidebar_selected = [0.0, 0.0, 0.0, 0.0];
+    let sidebar_selected = [0.15, 0.15, 0.22, 1.0];
     let sidebar_hover = [0.10, 0.10, 0.14, 1.0];
     let divider_color = [0.15, 0.15, 0.2, 1.0];
 
@@ -188,16 +188,6 @@ pub fn screen(
                 size: [sidebar_width, cat_line_height],
                 ..Quad::default()
             }));
-
-            // Accent bar on selected category
-            if settings_in_sidebar {
-                objects.push(Object::Quad(Quad {
-                    position: [0., cat_y - 2.0],
-                    color: accent,
-                    size: [3., cat_line_height],
-                    ..Quad::default()
-                }));
-            }
         }
     }
 
@@ -243,10 +233,17 @@ pub fn screen(
                 _ => "   ",
             };
 
-            body.add_text(icon, FragmentStyle {
-                color: if is_selected && settings_in_sidebar { accent } else { dim },
-                ..FragmentStyle::default()
-            });
+            body.add_text(
+                icon,
+                FragmentStyle {
+                    color: if is_selected && settings_in_sidebar {
+                        accent
+                    } else {
+                        dim
+                    },
+                    ..FragmentStyle::default()
+                },
+            );
             body.add_text(cat, style);
             body.new_line();
         }
@@ -261,7 +258,10 @@ pub fn screen(
     }));
 
     // --- Settings Panel (right side) ---
-    let current_cat = categories.get(settings_category).cloned().unwrap_or_default();
+    let current_cat = categories
+        .get(settings_category)
+        .cloned()
+        .unwrap_or_default();
     let cat_items = editor.items_for_category(&current_cat);
 
     // Category header with accent underline
@@ -315,8 +315,14 @@ pub fn screen(
     if !settings_in_sidebar {
         for (i, _item) in cat_items.iter().enumerate() {
             if i == editor.selected_index {
-                let item_y = items_start_y + (i as f32 * (item_line_height + desc_extra_height)) - 3.0;
-                let bg_color = if editor.editing { editing_bg } else { selected_bg };
+                let item_y = items_start_y
+                    + (i as f32 * (item_line_height + desc_extra_height))
+                    - 3.0;
+                let bg_color = if editor.editing {
+                    editing_bg
+                } else {
+                    selected_bg
+                };
                 objects.push(Object::Quad(Quad {
                     position: [panel_x - 10.0, item_y],
                     color: bg_color,
@@ -339,15 +345,21 @@ pub fn screen(
 
             // Indicator
             if is_selected {
-                body.add_text("> ", FragmentStyle {
-                    color: highlight,
-                    ..FragmentStyle::default()
-                });
+                body.add_text(
+                    "> ",
+                    FragmentStyle {
+                        color: highlight,
+                        ..FragmentStyle::default()
+                    },
+                );
             } else {
-                body.add_text("  ", FragmentStyle {
-                    color: dim,
-                    ..FragmentStyle::default()
-                });
+                body.add_text(
+                    "  ",
+                    FragmentStyle {
+                        color: dim,
+                        ..FragmentStyle::default()
+                    },
+                );
             }
 
             // Label
@@ -367,62 +379,123 @@ pub fn screen(
 
             // Value
             if is_selected && editor.editing {
-                body.add_text(&editor.edit_buffer, FragmentStyle {
-                    color: highlight,
-                    background_color: Some(editing_bg),
-                    ..FragmentStyle::default()
-                });
-                body.add_text("_", FragmentStyle {
-                    color: highlight,
-                    ..FragmentStyle::default()
-                });
+                body.add_text(
+                    &editor.edit_buffer,
+                    FragmentStyle {
+                        color: highlight,
+                        background_color: Some(editing_bg),
+                        ..FragmentStyle::default()
+                    },
+                );
+                body.add_text(
+                    "_",
+                    FragmentStyle {
+                        color: highlight,
+                        ..FragmentStyle::default()
+                    },
+                );
             } else {
                 match &item.value {
                     SettingValue::Bool(val) => {
                         if *val {
-                            body.add_text("[ON]", FragmentStyle {
-                                color: green,
-                                ..FragmentStyle::default()
-                            });
+                            body.add_text(
+                                "[ON]",
+                                FragmentStyle {
+                                    color: green,
+                                    ..FragmentStyle::default()
+                                },
+                            );
                         } else {
-                            body.add_text("[OFF]", FragmentStyle {
-                                color: red,
-                                ..FragmentStyle::default()
-                            });
+                            body.add_text(
+                                "[OFF]",
+                                FragmentStyle {
+                                    color: red,
+                                    ..FragmentStyle::default()
+                                },
+                            );
+                        }
+                    }
+                    SettingValue::String(s) if item.key == "window.background-image" => {
+                        // Image path with picker hint
+                        if s.is_empty() {
+                            body.add_text(
+                                "[Choose Image...]",
+                                FragmentStyle {
+                                    color: if is_selected { accent } else { dim },
+                                    ..FragmentStyle::default()
+                                },
+                            );
+                        } else {
+                            // Show filename only (not full path) with image icon
+                            let filename = std::path::Path::new(s.as_str())
+                                .file_name()
+                                .and_then(|f| f.to_str())
+                                .unwrap_or(s);
+                            body.add_text(
+                                filename,
+                                FragmentStyle {
+                                    color: if is_selected { accent } else { white },
+                                    ..FragmentStyle::default()
+                                },
+                            );
+                        }
+                        if is_selected {
+                            body.add_text(
+                                "  [Enter to browse]",
+                                FragmentStyle {
+                                    color: dim,
+                                    ..FragmentStyle::default()
+                                },
+                            );
                         }
                     }
                     SettingValue::String(s) if looks_like_color(s) => {
                         // Show colored square next to hex code
                         if let Some(parsed) = parse_hex_color(s) {
-                            body.add_text("\u{25A0} ", FragmentStyle {
-                                color: parsed,
-                                ..FragmentStyle::default()
-                            });
+                            body.add_text(
+                                "\u{25A0} ",
+                                FragmentStyle {
+                                    color: parsed,
+                                    ..FragmentStyle::default()
+                                },
+                            );
                         }
-                        body.add_text(s, FragmentStyle {
-                            color: if is_selected { accent } else { white },
-                            ..FragmentStyle::default()
-                        });
+                        body.add_text(
+                            s,
+                            FragmentStyle {
+                                color: if is_selected { accent } else { white },
+                                ..FragmentStyle::default()
+                            },
+                        );
                     }
                     SettingValue::Float(_) | SettingValue::Integer(_) => {
                         let val_display = item.value.display();
-                        body.add_text(&val_display, FragmentStyle {
-                            color: if is_selected { accent } else { white },
-                            ..FragmentStyle::default()
-                        });
-                        if is_selected {
-                            body.add_text("  [+/-]", FragmentStyle {
-                                color: dim,
+                        body.add_text(
+                            &val_display,
+                            FragmentStyle {
+                                color: if is_selected { accent } else { white },
                                 ..FragmentStyle::default()
-                            });
+                            },
+                        );
+                        if is_selected {
+                            body.add_text(
+                                "  [+/-]",
+                                FragmentStyle {
+                                    color: dim,
+                                    ..FragmentStyle::default()
+                                },
+                            );
                         }
                     }
                     _ => {
                         let val_display = item.value.display();
-                        body.add_text(&val_display, FragmentStyle {
-                            color: if is_selected { accent } else { white },
-                            ..FragmentStyle::default()
-                        });
+                        body.add_text(
+                            &val_display,
+                            FragmentStyle {
+                                color: if is_selected { accent } else { white },
+                                ..FragmentStyle::default()
+                            },
+                        );
                     }
                 }
             }
@@ -431,10 +504,13 @@ pub fn screen(
 
             // Description below selected item (always shown in dim)
             if is_selected && !editor.editing {
-                body.add_text(&format!("    {}", item.description), FragmentStyle {
-                    color: dim,
-                    ..FragmentStyle::default()
-                });
+                body.add_text(
+                    &format!("    {}", item.description),
+                    FragmentStyle {
+                        color: dim,
+                        ..FragmentStyle::default()
+                    },
+                );
                 body.new_line();
             } else {
                 // Empty line for spacing consistency
@@ -456,8 +532,8 @@ pub fn screen(
     sugarloaf.set_rich_text_font_size(&footer_rt, 11.0);
 
     let key_bg_style = FragmentStyle {
-        
         color: black,
+        background_color: Some(highlight),
         ..FragmentStyle::default()
     };
 

@@ -7,7 +7,7 @@
 use std::time::Instant;
 
 fn main() {
-    println!("Rio Terminal - SIMD UTF-8 Validation Benchmark");
+    println!("Volt - SIMD UTF-8 Validation Benchmark");
     println!("================================================");
 
     // Test data: mix of ASCII and UTF-8

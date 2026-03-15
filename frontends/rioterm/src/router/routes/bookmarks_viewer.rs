@@ -6,6 +6,7 @@ pub fn screen(
     sugarloaf: &mut Sugarloaf,
     context_dimension: &ContextDimension,
     scroll_offset: usize,
+    selected_index: usize,
     bookmarks: &[crate::bookmarks::Bookmark],
 ) {
     let bg = [0.06, 0.06, 0.08, 1.0];
@@ -20,24 +21,16 @@ pub fn screen(
     let tag_color = [0.7, 0.5, 1.0, 1.0]; // purple for tags
 
     let layout = sugarloaf.window_size();
+    let scale = context_dimension.dimension.scale;
+    let full_w = layout.width / scale;
+    let full_h = layout.height / scale;
     let mut objects = Vec::with_capacity(16);
 
     // Background
     objects.push(Object::Quad(Quad {
         position: [0., 0.0],
         color: bg,
-        size: [
-            layout.width / context_dimension.dimension.scale,
-            layout.height / context_dimension.dimension.scale,
-        ],
-        ..Quad::default()
-    }));
-
-    // Accent bar on the left
-    objects.push(Object::Quad(Quad {
-        position: [0., 30.0],
-        color: accent,
-        size: [4., layout.height / context_dimension.dimension.scale],
+        size: [full_w, full_h],
         ..Quad::default()
     }));
 
@@ -140,23 +133,46 @@ pub fn screen(
             .new_line();
         body.new_line();
         body.add_text("Open with ", dim_style)
-            .add_text("Cmd+Shift+K", FragmentStyle {
-                color: accent,
-                ..FragmentStyle::default()
-            })
+            .add_text(
+                "Cmd+Shift+K",
+                FragmentStyle {
+                    color: accent,
+                    ..FragmentStyle::default()
+                },
+            )
             .add_text(" anytime.", dim_style)
             .new_line();
     } else {
         body.add_text("SAVED COMMANDS", header_style).new_line();
 
+        let clamped_selected = if bookmarks.is_empty() {
+            0
+        } else {
+            selected_index.min(bookmarks.len() - 1)
+        };
+
         let mut line_idx: usize = 0;
-        for bm in bookmarks {
+        for (i, bm) in bookmarks.iter().enumerate() {
             line_idx += 1;
             if line_idx <= scroll_offset {
                 continue;
             }
-            // Command
-            body.add_text("  ", dim_style);
+
+            let is_selected = i == clamped_selected;
+
+            // Selection indicator
+            if is_selected {
+                body.add_text(
+                    " > ",
+                    FragmentStyle {
+                        color: highlight,
+                        ..FragmentStyle::default()
+                    },
+                );
+            } else {
+                body.add_text("   ", dim_style);
+            }
+
             let label = bm
                 .name
                 .as_deref()
@@ -202,18 +218,39 @@ pub fn screen(
         }
     }
 
-    // Footer
-    body.new_line().new_line();
-    body.add_text(" \u{2191}\u{2193} ", key_bg_style)
-        .add_text(" scroll  ", footer_dim_style())
-        .add_text(" Escape ", key_bg_style)
-        .add_text(" close", footer_dim_style());
-
     body.build();
 
     objects.push(Object::RichText(RichText {
         id: body_rt,
         position: [40., context_dimension.margin.top_y + 85.],
+        lines: None,
+    }));
+
+    // Footer — pinned to bottom
+    let footer_rt = sugarloaf.create_temp_rich_text();
+    sugarloaf.set_rich_text_font_size(&footer_rt, 11.0);
+    let fc = sugarloaf.content().sel(footer_rt);
+    fc.clear().new_line();
+    fc.add_text(" \u{2191}\u{2193} ", key_bg_style)
+        .add_text(" navigate  ", footer_dim_style())
+        .add_text(" Enter ", key_bg_style)
+        .add_text(" paste  ", footer_dim_style())
+        .add_text(" d ", key_bg_style)
+        .add_text(" delete  ", footer_dim_style())
+        .add_text(" Escape ", key_bg_style)
+        .add_text(" close", footer_dim_style());
+    fc.build();
+
+    let footer_y = full_h - 28.0;
+    objects.push(Object::Quad(Quad {
+        position: [0., footer_y - 4.0],
+        color: [0.08, 0.08, 0.11, 1.0],
+        size: [full_w, 28.0],
+        ..Quad::default()
+    }));
+    objects.push(Object::RichText(RichText {
+        id: footer_rt,
+        position: [40., footer_y + 4.0],
         lines: None,
     }));
 

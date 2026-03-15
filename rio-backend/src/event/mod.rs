@@ -94,6 +94,9 @@ pub enum RioEvent {
     ToggleBookmarks,
     ToggleSlashCommands,
     ToggleLayouts,
+    ToggleSessionSharing,
+    ToggleSessionExport,
+    ToggleTimeTravel,
     SelectNativeTabByIndex(usize),
     SelectNativeTabLast,
     SelectNativeTabNext,
@@ -169,13 +172,22 @@ pub enum RioEvent {
     ColorChange(usize, usize, Option<ColorRgb>),
 
     /// OSC 133;A — shell prompt started at the given absolute row.
-    ShellPromptStart { row: usize },
+    ShellPromptStart {
+        row: usize,
+    },
     /// OSC 133;B — command input started at the given absolute row.
-    ShellCommandStart { row: usize },
+    ShellCommandStart {
+        row: usize,
+    },
     /// OSC 133;C — command output started at the given absolute row.
-    ShellOutputStart { row: usize },
+    ShellOutputStart {
+        row: usize,
+    },
     /// OSC 133;D — command finished at the given absolute row with exit code.
-    ShellCommandFinish { row: usize, exit_code: i32 },
+    ShellCommandFinish {
+        row: usize,
+        exit_code: i32,
+    },
 
     // No operation
     Noop,
@@ -268,6 +280,9 @@ impl Debug for RioEvent {
             RioEvent::ToggleBookmarks => write!(f, "ToggleBookmarks"),
             RioEvent::ToggleSlashCommands => write!(f, "ToggleSlashCommands"),
             RioEvent::ToggleLayouts => write!(f, "ToggleLayouts"),
+            RioEvent::ToggleSessionSharing => write!(f, "ToggleSessionSharing"),
+            RioEvent::ToggleSessionExport => write!(f, "ToggleSessionExport"),
+            RioEvent::ToggleTimeTravel => write!(f, "ToggleTimeTravel"),
         }
     }
 }

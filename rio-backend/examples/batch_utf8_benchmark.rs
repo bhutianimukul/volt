@@ -8,7 +8,7 @@ use rio_backend::{batch_utf8, simd_utf8};
 use std::time::Instant;
 
 fn main() {
-    println!("Rio Terminal - Batch UTF-8 Validation Benchmark");
+    println!("Volt - Batch UTF-8 Validation Benchmark");
     println!("=================================================");
 
     // Test scenarios that benefit from batching

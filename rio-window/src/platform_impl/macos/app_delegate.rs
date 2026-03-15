@@ -112,7 +112,7 @@ declare_class!(
                 let panel: *mut Object = msg_send![class!(NSAlert), new];
 
                 let prompt = "All sessions will be closed";
-                let title = "Quit Rio terminal?";
+                let title = "Quit Volt?";
                 let yes = "Yes";
                 let no = "No";
                 let cancel = "Cancel";

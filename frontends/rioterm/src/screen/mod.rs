@@ -706,12 +706,14 @@ impl Screen<'_> {
                     if let Some(preview) =
                         crate::consequences::analyze_command(&command_text)
                     {
-                        tracing::info!("Destructive command detected: {}", preview.description);
+                        tracing::info!(
+                            "Destructive command detected: {}",
+                            preview.description
+                        );
                         if !self.confirm_destructive_command(&preview) {
-                            self.context_manager.audit_logger.log_blocked(
-                                &command_text,
-                                &preview.description,
-                            );
+                            self.context_manager
+                                .audit_logger
+                                .log_blocked(&command_text, &preview.description);
                             return;
                         }
                     }
@@ -1031,6 +1033,18 @@ impl Screen<'_> {
                     Act::ShowLayouts => {
                         self.context_manager.toggle_layouts();
                     }
+                    Act::ShowSessionSharing => {
+                        self.context_manager.toggle_session_sharing();
+                    }
+                    Act::ShowSessionExport => {
+                        self.context_manager.toggle_session_export();
+                    }
+                    Act::ShowTimeTravel => {
+                        self.context_manager.toggle_time_travel();
+                    }
+                    Act::ShowTmuxPicker => {
+                        self.context_manager.toggle_tmux_picker();
+                    }
                     Act::OpenAiAssistant => {
                         if crate::ai_assistant::is_claude_available() {
                             self.split_right();
@@ -1164,16 +1178,17 @@ impl Screen<'_> {
                         self.render();
                     }
                     Act::JumpToPrevBlock => {
-                        let terminal =
-                            self.context_manager.current().terminal.lock();
+                        let terminal = self.context_manager.current().terminal.lock();
                         let display_offset = terminal.display_offset();
                         let history_size = terminal.grid.history_size();
                         // The absolute row at the top of the current viewport.
                         let current_top_row = history_size.saturating_sub(display_offset);
                         drop(terminal);
 
-                        if let Some(target_row) =
-                            self.context_manager.block_manager.previous_block_row(current_top_row)
+                        if let Some(target_row) = self
+                            .context_manager
+                            .block_manager
+                            .previous_block_row(current_top_row)
                         {
                             let mut terminal =
                                 self.context_manager.current_mut().terminal.lock();
@@ -1187,16 +1202,17 @@ impl Screen<'_> {
                         }
                     }
                     Act::JumpToNextBlock => {
-                        let terminal =
-                            self.context_manager.current().terminal.lock();
+                        let terminal = self.context_manager.current().terminal.lock();
                         let display_offset = terminal.display_offset();
                         let history_size = terminal.grid.history_size();
                         // The absolute row at the top of the current viewport.
                         let current_top_row = history_size.saturating_sub(display_offset);
                         drop(terminal);
 
-                        if let Some(target_row) =
-                            self.context_manager.block_manager.next_block_row(current_top_row)
+                        if let Some(target_row) = self
+                            .context_manager
+                            .block_manager
+                            .next_block_row(current_top_row)
                         {
                             let mut terminal =
                                 self.context_manager.current_mut().terminal.lock();
@@ -1314,7 +1330,10 @@ impl Screen<'_> {
                         } else {
                             "tmux new-session\r".to_string()
                         };
-                        self.ctx_mut().current_mut().messenger.send_write(cmd.into_bytes());
+                        self.ctx_mut()
+                            .current_mut()
+                            .messenger
+                            .send_write(cmd.into_bytes());
                     }
                     Act::ReceiveChar | Act::None => (),
                     _ => (),
@@ -1423,7 +1442,7 @@ impl Screen<'_> {
         } else {
             let win_height = self.sugarloaf.window_size().height as f64 / scale;
             let status_bar_h = 22.0_f64; // Must match STATUS_BAR_HEIGHT
-            // Tab bar sits above the status bar at the bottom
+                                         // Tab bar sits above the status bar at the bottom
             (
                 win_height - tab_bar_height - status_bar_h,
                 win_height - status_bar_h,
@@ -2180,6 +2199,61 @@ impl Screen<'_> {
         }
     }
 
+    /// Try to open a file path under the cursor (Cmd+Click).
+    /// Extracts the word under the mouse position and checks if it looks like file:line:col.
+    pub fn try_open_file_at_cursor(&self) -> bool {
+        // Only trigger when Cmd (super) is held
+        if !self.modifiers.state().super_key() {
+            return false;
+        }
+
+        let terminal = self.context_manager.current().terminal.lock();
+        let display_offset = terminal.display_offset();
+        let pos = self.mouse_position(display_offset);
+
+        // Extract text around the cursor position on the same line
+        let grid = &terminal.grid;
+        let row = pos.row;
+        let col = pos.col.0;
+
+        // Collect the full line text
+        let mut line_text = String::new();
+        let cols = grid.columns();
+        for c in 0..cols {
+            let cell = &grid[row][rio_backend::crosswords::pos::Column(c)];
+            line_text.push(cell.c);
+        }
+        drop(terminal);
+
+        let line_text = line_text.trim_end();
+        if line_text.is_empty() {
+            return false;
+        }
+
+        // Find word boundaries around the cursor
+        let chars: Vec<char> = line_text.chars().collect();
+        let mut start = col.min(chars.len().saturating_sub(1));
+        let mut end = start;
+
+        // Expand left to find start of file path
+        while start > 0 && !chars[start - 1].is_whitespace() {
+            start -= 1;
+        }
+        // Expand right to find end
+        while end + 1 < chars.len() && !chars[end + 1].is_whitespace() {
+            end += 1;
+        }
+
+        let word: String = chars[start..=end].iter().collect();
+
+        if let Some((file, line, col)) = crate::file_opener::parse_file_reference(&word) {
+            crate::file_opener::open_in_editor(&file, line, col);
+            return true;
+        }
+
+        false
+    }
+
     fn open_hyperlink(&self, hyperlink: Hyperlink) {
         // Apply post-processing to remove trailing delimiters and handle uneven brackets
         let processed_uri = post_process_hyperlink_uri(hyperlink.uri());
@@ -2806,11 +2880,7 @@ impl Screen<'_> {
                     let preview: String =
                         text.lines().take(5).collect::<Vec<_>>().join("\n");
                     let info = if line_count > 5 {
-                        format!(
-                            "{}...\n\n({} more lines)",
-                            preview,
-                            line_count - 5
-                        )
+                        format!("{}...\n\n({} more lines)", preview, line_count - 5)
                     } else {
                         preview
                     };
@@ -2984,12 +3054,18 @@ impl Screen<'_> {
         self.sugarloaf.render();
     }
 
-    pub fn render_bookmarks(&mut self, scroll_offset: usize, bookmarks: &[crate::bookmarks::Bookmark]) {
+    pub fn render_bookmarks(
+        &mut self,
+        scroll_offset: usize,
+        selected_index: usize,
+        bookmarks: &[crate::bookmarks::Bookmark],
+    ) {
         self.sugarloaf.clear();
         crate::router::routes::bookmarks_viewer::screen(
             &mut self.sugarloaf,
             &self.context_manager.current().dimension,
             scroll_offset,
+            selected_index,
             bookmarks,
         );
         self.sugarloaf.render();
@@ -3042,6 +3118,50 @@ impl Screen<'_> {
         self.sugarloaf.render();
     }
 
+    pub fn render_session_export(
+        &mut self,
+        selected_format: usize,
+        last_result: &Option<crate::router::routes::session_export::ExportResult>,
+        command_count: usize,
+    ) {
+        self.sugarloaf.clear();
+        crate::router::routes::session_export::screen(
+            &mut self.sugarloaf,
+            &self.context_manager.current().dimension,
+            selected_format,
+            last_result,
+            command_count,
+        );
+        self.sugarloaf.render();
+    }
+
+    pub fn render_session_sharing(
+        &mut self,
+        state: &crate::router::routes::session_sharing::SharingState,
+        selected_action: usize,
+    ) {
+        self.sugarloaf.clear();
+        crate::router::routes::session_sharing::screen(
+            &mut self.sugarloaf,
+            &self.context_manager.current().dimension,
+            state,
+            selected_action,
+        );
+        self.sugarloaf.render();
+    }
+
+    pub fn render_time_travel(&mut self, selected_index: usize, scroll_offset: usize) {
+        self.sugarloaf.clear();
+        crate::router::routes::time_travel::screen(
+            &mut self.sugarloaf,
+            &self.context_manager.current().dimension,
+            &self.context_manager.session_recorder,
+            selected_index,
+            scroll_offset,
+        );
+        self.sugarloaf.render();
+    }
+
     /// Extract the text on the current cursor line from the terminal grid.
     /// Strips common shell prompt prefixes to isolate the actual command.
     ///
@@ -3071,8 +3191,7 @@ impl Screen<'_> {
         // (`$`, `%`, `#`, `>`) followed by a space.  This avoids stripping
         // redirect operators or other in-command uses of these characters.
         // Handles prompts like "user@host:~$ ", "% ", "# ", "> ", etc.
-        if let Some(pos) =
-            trimmed.find(|c| c == '$' || c == '%' || c == '#' || c == '>')
+        if let Some(pos) = trimmed.find(|c| c == '$' || c == '%' || c == '#' || c == '>')
         {
             let after = &trimmed[pos + 1..];
             // Only treat this as a prompt if it is followed by whitespace
@@ -3110,7 +3229,7 @@ impl Screen<'_> {
                 // Set alert style based on severity
                 let style: i64 = match preview.severity {
                     crate::consequences::Severity::Danger => 2, // NSAlertStyleCritical
-                    _ => 0, // NSAlertStyleWarning
+                    _ => 0,                                     // NSAlertStyleWarning
                 };
                 let _: () = msg_send![alert, setAlertStyle: style];
 
@@ -3120,20 +3239,15 @@ impl Screen<'_> {
                     crate::consequences::Severity::Warning => "Warning",
                     crate::consequences::Severity::Info => "Info",
                 };
-                let title = format!(
-                    "{}: Destructive Command Detected",
-                    severity_label
-                );
+                let title = format!("{}: Destructive Command Detected", severity_label);
                 let title_cstr = CString::new(title).unwrap();
                 let title_ns: *mut Object = msg_send![ns_string_class,
                     stringWithUTF8String: title_cstr.as_ptr()];
                 let _: () = msg_send![alert, setMessageText: title_ns];
 
                 // Informative text with description, command, and details
-                let mut info = format!(
-                    "{}\n\nCommand: {}\n",
-                    preview.description, preview.command
-                );
+                let mut info =
+                    format!("{}\n\nCommand: {}\n", preview.description, preview.command);
                 if !preview.details.is_empty() {
                     info.push('\n');
                     for detail in &preview.details {

@@ -3,7 +3,7 @@
 use std::time::Instant;
 
 fn main() {
-    println!("Rio Terminal - SIMD UTF-8 Performance Test");
+    println!("Volt - SIMD UTF-8 Performance Test");
 
     println!("==========================================");
 

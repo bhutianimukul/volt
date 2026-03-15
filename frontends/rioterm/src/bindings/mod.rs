@@ -250,6 +250,10 @@ impl From<String> for Action {
             "showbookmarks" => Some(Action::ShowBookmarks),
             "showslashcommands" => Some(Action::ShowSlashCommands),
             "showlayouts" => Some(Action::ShowLayouts),
+            "showsessionsharing" => Some(Action::ShowSessionSharing),
+            "showsessionexport" => Some(Action::ShowSessionExport),
+            "showtimetravel" => Some(Action::ShowTimeTravel),
+            "showtmuxpicker" => Some(Action::ShowTmuxPicker),
             "selectprevtab" => Some(Action::SelectPrevTab),
             "selectnexttab" => Some(Action::SelectNextTab),
             "selectlasttab" => Some(Action::SelectLastTab),
@@ -407,11 +411,11 @@ pub enum Action {
     #[allow(dead_code)]
     HideOtherApplications,
 
-    /// Minimize the Rio window.
+    /// Minimize the Volt window.
     #[allow(dead_code)]
     Minimize,
 
-    /// Quit Rio.
+    /// Quit Volt.
     Quit,
 
     /// Clear warning and error notices.
@@ -543,6 +547,18 @@ pub enum Action {
 
     /// Show the layout presets overlay.
     ShowLayouts,
+
+    /// Show the session sharing UI.
+    ShowSessionSharing,
+
+    /// Show the session export UI.
+    ShowSessionExport,
+
+    /// Show the time travel (command timeline) view.
+    ShowTimeTravel,
+
+    /// Show the tmux session picker.
+    ShowTmuxPicker,
 
     /// Open the AI assistant (Claude Code) in a split pane.
     OpenAiAssistant,
@@ -1067,6 +1083,10 @@ pub fn platform_key_bindings(
         "k", ModifiersState::SUPER | ModifiersState::SHIFT; Action::ShowBookmarks;
         "p", ModifiersState::SUPER | ModifiersState::SHIFT; Action::ShowSlashCommands;
         "l", ModifiersState::SUPER | ModifiersState::SHIFT; Action::ShowLayouts;
+        "s", ModifiersState::SUPER | ModifiersState::SHIFT; Action::ShowSessionSharing;
+        "x", ModifiersState::SUPER | ModifiersState::SHIFT; Action::ShowSessionExport;
+        "t", ModifiersState::SUPER | ModifiersState::SHIFT; Action::ShowTimeTravel;
+        "m", ModifiersState::SUPER | ModifiersState::SHIFT; Action::ShowTmuxPicker;
 
         // AI assistant
         "i", ModifiersState::SUPER | ModifiersState::SHIFT; Action::OpenAiAssistant;

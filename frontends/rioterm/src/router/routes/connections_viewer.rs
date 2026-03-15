@@ -19,24 +19,16 @@ pub fn screen(
     let selected_bg = [0.12, 0.18, 0.15, 1.0];
 
     let layout = sugarloaf.window_size();
+    let scale = context_dimension.dimension.scale;
+    let full_w = layout.width / scale;
+    let full_h = layout.height / scale;
     let mut objects = Vec::with_capacity(16);
 
     // Background
     objects.push(Object::Quad(Quad {
         position: [0., 0.0],
         color: bg,
-        size: [
-            layout.width / context_dimension.dimension.scale,
-            layout.height / context_dimension.dimension.scale,
-        ],
-        ..Quad::default()
-    }));
-
-    // Accent bar on the left
-    objects.push(Object::Quad(Quad {
-        position: [0., 30.0],
-        color: accent,
-        size: [4., layout.height / context_dimension.dimension.scale],
+        size: [full_w, full_h],
         ..Quad::default()
     }));
 
@@ -214,7 +206,8 @@ pub fn screen(
         )
         .new_line();
 
-        for (i, (name, type_name, host_info, _command)) in connections.iter().enumerate() {
+        for (i, (name, type_name, host_info, _command)) in connections.iter().enumerate()
+        {
             let is_selected = i == selected_index;
 
             // Selection indicator
@@ -275,9 +268,20 @@ pub fn screen(
         }
     }
 
-    // Footer
-    body.new_line().new_line();
-    body.add_text(" \u{2191}\u{2193} ", key_bg_style)
+    body.build();
+
+    objects.push(Object::RichText(RichText {
+        id: body_rt,
+        position: [40., context_dimension.margin.top_y + 85.],
+        lines: None,
+    }));
+
+    // Footer — pinned to bottom
+    let footer_rt = sugarloaf.create_temp_rich_text();
+    sugarloaf.set_rich_text_font_size(&footer_rt, 11.0);
+    let fc = sugarloaf.content().sel(footer_rt);
+    fc.clear().new_line();
+    fc.add_text(" \u{2191}\u{2193} ", key_bg_style)
         .add_text(" navigate  ", dim_style())
         .add_text(" Enter ", key_bg_style)
         .add_text(" connect  ", dim_style())
@@ -289,12 +293,18 @@ pub fn screen(
         .add_text(" edit file  ", dim_style())
         .add_text(" Esc ", key_bg_style)
         .add_text(" close", dim_style());
+    fc.build();
 
-    body.build();
-
+    let footer_y = full_h - 28.0;
+    objects.push(Object::Quad(Quad {
+        position: [0., footer_y - 4.0],
+        color: [0.08, 0.08, 0.11, 1.0],
+        size: [full_w, 28.0],
+        ..Quad::default()
+    }));
     objects.push(Object::RichText(RichText {
-        id: body_rt,
-        position: [40., context_dimension.margin.top_y + 85.],
+        id: footer_rt,
+        position: [40., footer_y + 4.0],
         lines: None,
     }));
 

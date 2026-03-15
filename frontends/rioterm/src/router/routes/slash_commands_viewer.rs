@@ -3,7 +3,11 @@ use crate::slash_commands::{all_commands, CommandCategory};
 use rio_backend::sugarloaf::{FragmentStyle, Object, Quad, RichText, Sugarloaf};
 
 #[inline]
-pub fn screen(sugarloaf: &mut Sugarloaf, context_dimension: &ContextDimension, scroll_offset: usize) {
+pub fn screen(
+    sugarloaf: &mut Sugarloaf,
+    context_dimension: &ContextDimension,
+    scroll_offset: usize,
+) {
     let bg = [0.06, 0.06, 0.08, 1.0];
     let accent = [0.98, 0.73, 0.16, 1.0]; // yellow/gold (Volt brand)
     let dim = [0.45, 0.45, 0.5, 1.0];
@@ -13,24 +17,16 @@ pub fn screen(sugarloaf: &mut Sugarloaf, context_dimension: &ContextDimension, s
     let key_color = [0.4, 0.8, 1.0, 1.0];
 
     let layout = sugarloaf.window_size();
+    let scale = context_dimension.dimension.scale;
+    let full_w = layout.width / scale;
+    let full_h = layout.height / scale;
     let mut objects = Vec::with_capacity(16);
 
     // Background
     objects.push(Object::Quad(Quad {
         position: [0., 0.0],
         color: bg,
-        size: [
-            layout.width / context_dimension.dimension.scale,
-            layout.height / context_dimension.dimension.scale,
-        ],
-        ..Quad::default()
-    }));
-
-    // Accent bar on the left
-    objects.push(Object::Quad(Quad {
-        position: [0., 30.0],
-        color: accent,
-        size: [4., layout.height / context_dimension.dimension.scale],
+        size: [full_w, full_h],
         ..Quad::default()
     }));
 
@@ -142,18 +138,35 @@ pub fn screen(sugarloaf: &mut Sugarloaf, context_dimension: &ContextDimension, s
         }
     }
 
-    // Footer
-    body.new_line().new_line();
-    body.add_text(" \u{2191}\u{2193} ", key_bg_style)
-        .add_text(" scroll  ", dim_style)
-        .add_text(" Escape ", key_bg_style)
-        .add_text(" close", dim_style);
-
     body.build();
 
     objects.push(Object::RichText(RichText {
         id: body_rt,
         position: [40., context_dimension.margin.top_y + 85.],
+        lines: None,
+    }));
+
+    // Footer — pinned to bottom
+    let footer_rt = sugarloaf.create_temp_rich_text();
+    sugarloaf.set_rich_text_font_size(&footer_rt, 11.0);
+    let fc = sugarloaf.content().sel(footer_rt);
+    fc.clear().new_line();
+    fc.add_text(" \u{2191}\u{2193} ", key_bg_style)
+        .add_text(" scroll  ", dim_style)
+        .add_text(" Escape ", key_bg_style)
+        .add_text(" close", dim_style);
+    fc.build();
+
+    let footer_y = full_h - 28.0;
+    objects.push(Object::Quad(Quad {
+        position: [0., footer_y - 4.0],
+        color: [0.08, 0.08, 0.11, 1.0],
+        size: [full_w, 28.0],
+        ..Quad::default()
+    }));
+    objects.push(Object::RichText(RichText {
+        id: footer_rt,
+        position: [40., footer_y + 4.0],
         lines: None,
     }));
 
