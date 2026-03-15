@@ -822,11 +822,12 @@ impl Route<'_> {
                     self.path = RoutePath::Terminal;
                 }
                 Key::Character(c) if c.as_str() == "d" || c.as_str() == "D" => {
-                    // Delete selected bookmark
-                    if self.bookmarks_selected < self.bookmarks_cache.len() {
+                    // Delete selected bookmark — use the bookmark's actual ID, not array index
+                    if let Some(bm) = self.bookmarks_cache.get(self.bookmarks_selected) {
+                        let bm_id = bm.id;
                         self.bookmarks_cache.remove(self.bookmarks_selected);
                         let mut store = crate::bookmarks::BookmarkStore::load();
-                        store.remove(self.bookmarks_selected);
+                        store.remove(bm_id);
                         let _ = store.save();
                         if self.bookmarks_selected >= self.bookmarks_cache.len()
                             && self.bookmarks_selected > 0
@@ -1072,8 +1073,20 @@ impl Route<'_> {
             if key_event.state != rio_window::event::ElementState::Pressed {
                 return true;
             }
+            // Build category-grouped flat list matching the renderer's display order
             let all_cmds = crate::slash_commands::all_commands();
-            let cmd_count = all_cmds.len();
+            let categories = [
+                crate::slash_commands::CommandCategory::Navigation,
+                crate::slash_commands::CommandCategory::Appearance,
+                crate::slash_commands::CommandCategory::Tools,
+                crate::slash_commands::CommandCategory::Session,
+                crate::slash_commands::CommandCategory::Debug,
+            ];
+            let grouped: Vec<_> = categories
+                .iter()
+                .flat_map(|cat| all_cmds.iter().filter(move |c| c.category == *cat))
+                .collect();
+            let cmd_count = grouped.len();
             match &key_event.logical_key {
                 Key::Named(NamedKey::Escape) => {
                     self.slash_commands_scroll = 0;
@@ -1097,7 +1110,7 @@ impl Route<'_> {
                 }
                 Key::Named(NamedKey::Enter) => {
                     // Insert the selected slash command into the terminal
-                    if let Some(cmd) = all_cmds.get(self.slash_selected) {
+                    if let Some(cmd) = grouped.get(self.slash_selected) {
                         let text = format!("/{}", cmd.name);
                         self.window
                             .screen
